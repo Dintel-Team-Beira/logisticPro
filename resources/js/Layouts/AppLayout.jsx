@@ -1,63 +1,109 @@
-import { Link } from '@inertiajs/react';
+import { useState, useEffect } from 'react';
+import { Head } from '@inertiajs/react';
+import { ThemeProvider } from '@/contexts/ThemeContext';
+import { I18nProvider } from '@/contexts/I18nContext';
+import FloatingSidebar from '@/Components/Layout/FloatingSidebar';
+import Topbar from '@/Components/Layout/Topbar';
+import Breadcrumbs from '@/Components/Layout/Breadcrumbs';
+import FlashMessages from '@/Components/Layout/FlashMessages';
+import { AnimatePresence, motion } from 'framer-motion';
 
-export default function AppLayout({ children, auth }) {
-    return (
-        <div className="min-h-screen bg-gray-100">
-            {/* Navbar */}
-            <nav className="bg-white border-b border-gray-200 shadow-sm">
-                <div className="px-4 mx-auto max-w-7xl sm:px-6 lg:px-8">
-                    <div className="flex justify-between h-16">
-                        <div className="flex">
-                            {/* Logo */}
-                            <div className="flex items-center flex-shrink-0">
-                                <Link href="/" className="text-xl font-bold text-gray-800">
-                                    Shipment Manager
-                                </Link>
-                            </div>
+export default function AppLayout({ children, title, breadcrumbs }) {
+  const [isMobileSidebarOpen, setIsMobileSidebarOpen] = useState(false);
+  const [isMobile, setIsMobile] = useState(false);
 
-                            {/* Navigation Links */}
-                            <div className="hidden space-x-8 sm:-my-px sm:ml-10 sm:flex">
-                                <Link
-                                    href="/dashboard"
-                                    className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300"
-                                >
-                                    Dashboard
-                                </Link>
-                                <Link
-                                    href="/shipments"
-                                    className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300"
-                                >
-                                    Shipments
-                                </Link>
-                                <Link
-                                    href="/financas"
-                                    className="inline-flex items-center px-1 pt-1 text-sm font-medium text-gray-500 border-b-2 border-transparent hover:text-gray-700 hover:border-gray-300"
-                                >
-                                    Finançasdd
-                                </Link>
-                            </div>
-                        </div>
+  useEffect(() => {
+    const checkMobile = () => {
+      setIsMobile(window.innerWidth < 1024); // lg breakpoint
+    };
 
-                        {/* User Menu */}
-                        <div className="flex items-center">
-                            {auth?.user ? (
-                                <div className="relative ml-3">
-                                    <span className="text-sm text-gray-700">{auth.user.name}</span>
-                                </div>
-                            ) : (
-                                <Link href="/login" className="text-sm text-gray-700">
-                                    Login
-                                </Link>
-                            )}
-                        </div>
-                    </div>
-                </div>
-            </nav>
+    checkMobile();
+    window.addEventListener('resize', checkMobile);
 
-            {/* Page Content */}
-            <main className="py-6">
-                {children}
-            </main>
-        </div>
-    );
+    return () => window.removeEventListener('resize', checkMobile);
+  }, []);
+
+  // Close mobile sidebar when route changes
+  useEffect(() => {
+    setIsMobileSidebarOpen(false);
+  }, [window.location.pathname]);
+
+  return (
+    <ThemeProvider>
+      <I18nProvider>
+        <LayoutContent
+          title={title}
+          breadcrumbs={breadcrumbs}
+          isMobileSidebarOpen={isMobileSidebarOpen}
+          setIsMobileSidebarOpen={setIsMobileSidebarOpen}
+          isMobile={isMobile}
+        >
+          {children}
+        </LayoutContent>
+      </I18nProvider>
+    </ThemeProvider>
+  );
 }
+
+function LayoutContent({
+  title,
+  breadcrumbs,
+  children,
+  isMobileSidebarOpen,
+  setIsMobileSidebarOpen,
+  isMobile
+}) {
+  return (
+    <div className="min-h-screen transition-colors duration-300 bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+      {title && <Head title={title} />}
+
+      {/* Flash Messages */}
+      <FlashMessages />
+
+      {/* Topbar */}
+      <Topbar
+        onMenuToggle={() => setIsMobileSidebarOpen(!isMobileSidebarOpen)}
+        isMobile={isMobile}
+      />
+
+      {/* Sidebar */}
+      <FloatingSidebar
+        isOpen={isMobileSidebarOpen}
+        setIsOpen={setIsMobileSidebarOpen}
+        isMobile={isMobile}
+      />
+
+      {/* Main Content */}
+      <main
+        className={`
+          transition-all duration-300 ease-in-out
+          pt-16
+          ${isMobile ? '' : 'lg:ml-20'}
+          min-h-screen
+        `}
+      >
+        <div className="p-4 sm:p-6 lg:p-8 max-w-[1600px] mx-auto">
+          {/* Breadcrumbs */}
+          {breadcrumbs && <Breadcrumbs items={breadcrumbs} />}
+
+          {/* Page Content */}
+          <AnimatePresence mode="wait">
+            <motion.div
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: -20 }}
+              transition={{ duration: 0.2 }}
+            >
+              {children}
+            </motion.div>
+          </AnimatePresence>
+        </div>
+      </main>
+
+      {/* Footer */}
+      <Footer isMobile={isMobile} />
+    </div>
+  );
+}
+
+
