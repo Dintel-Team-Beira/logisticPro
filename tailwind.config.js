@@ -9,38 +9,37 @@ export default {
         './resources/views/**/*.blade.php',
         './resources/js/**/*.jsx',
     ],
-    darkMode: 'class',
+
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Inter var', ...defaultTheme.fontFamily.sans],
-                mono: ['JetBrains Mono', 'Fira Code', ...defaultTheme.fontFamily.mono],
+                sans: ['Inter', ...defaultTheme.fontFamily.sans],
             },
             colors: {
-                primary: {
-                    50: '#eff6ff',
-                    100: '#dbeafe',
-                    200: '#bfdbfe',
-                    300: '#93c5fd',
-                    400: '#60a5fa',
-                    500: '#3b82f6',
-                    600: '#2563eb',
-                    700: '#1d4ed8',
-                    800: '#1e40af',
-                    900: '#1e3a8a',
+                // Cores do Akaunting
+                sidebar: {
+                    DEFAULT: '#F7F9FC',
+                    dark: '#E8ECF3',
+                    text: '#6B7280',
+                    'text-active': '#1F2937',
+                    hover: '#EEF2F7',
+                    border: '#E5E9F2',
                 },
-            },
-            animation: {
-                'spin-slow': 'spin 3s linear infinite',
-                'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
-            },
-            transitionDuration: {
-                '250': '250ms',
+                primary: {
+                    50: '#EFF6FF',
+                    100: '#DBEAFE',
+                    200: '#BFDBFE',
+                    300: '#93C5FD',
+                    400: '#60A5FA',
+                    500: '#3B82F6',
+                    600: '#2563EB',
+                    700: '#1D4ED8',
+                    800: '#1E40AF',
+                    900: '#1E3A8A',
+                },
             },
         },
     },
-    plugins: [
-        forms,
-        require('@tailwindcss/typography'),
-    ],
+
+    plugins: [forms],
 };
