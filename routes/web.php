@@ -1,10 +1,16 @@
 <?php
 
-use App\Http\Controllers\ProfileController;
-use App\Http\Controllers\ShipmentController;
-use Illuminate\Foundation\Application;
-use Illuminate\Support\Facades\Route;
 use Inertia\Inertia;
+use Illuminate\Support\Facades\Route;
+use Illuminate\Foundation\Application;
+use App\Http\Controllers\UserController;
+use App\Http\Controllers\StageController;
+use App\Http\Controllers\ReportController;
+use App\Http\Controllers\InvoiceController;
+use App\Http\Controllers\ProfileController;
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\ShippingLineController;
 
 
 // routes/web.php
@@ -91,6 +97,20 @@ Route::middleware(['auth'])->group(function () {
     Route::middleware(['role:admin'])->group(function () {
         Route::resource('users', UserController::class);
     });
+
+    // Reports com rotas extras
+Route::middleware(['auth', 'role:admin,manager'])->group(function () {
+    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
+    Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
+    Route::post('/reports/custom-range', [ReportController::class, 'customRange'])->name('reports.custom-range');
+});
+
+// Shipping Lines com toggle status
+Route::middleware(['auth', 'role:admin,manager'])->group(function () {
+    Route::resource('shipping-lines', ShippingLineController::class);
+    Route::patch('/shipping-lines/{shippingLine}/toggle-status', [ShippingLineController::class, 'toggleStatus'])
+        ->name('shipping-lines.toggle-status');
+});
 
     // Profile
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
