@@ -47,7 +47,7 @@ class ShipmentController extends Controller
         ]);
     }
 
- public function create()
+    public function create()
     {
         return Inertia::render('Shipments/Create', [
             'shippingLines' => ShippingLine::where('active', true)->get(),

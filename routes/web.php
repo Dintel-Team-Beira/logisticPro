@@ -274,4 +274,12 @@ Route::middleware(['auth', 'verified'])->group(function () {
             ->name('shipments.documents.download');
     });
 });
+
+// / Shipping Lines (Admin/Manager only)
+Route::middleware(['auth'])->group(function () {
+    Route::resource('shipping-lines', ShippingLineController::class);
+    Route::patch('/shipping-lines/{shippingLine}/toggle-status',
+        [ShippingLineController::class, 'toggleStatus'])
+        ->name('shipping-lines.toggle-status');
+});
 require __DIR__.'/auth.php';
