@@ -1,0 +1,77 @@
+<?php
+
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+
+class Shipment extends Model
+{
+    use HasFactory, SoftDeletes;
+
+    protected $fillable = [
+        'reference_number',
+        'shipping_line_id',
+        'bl_number',
+        'container_number',
+        'vessel_name',
+        'arrival_date',
+        'origin_port',
+        'destination_port',
+        'cargo_description',
+        'status',
+        'created_by'
+    ];
+
+    protected $casts = [
+        'arrival_date' => 'date'
+    ];
+
+    protected static function boot()
+    {
+        parent::boot();
+
+        static::creating(function ($shipment) {
+            if (!$shipment->reference_number) {
+                $shipment->reference_number = 'SHP-' . date('Y') . '-' . str_pad(static::max('id') + 1, 5, '0', STR_PAD_LEFT);
+            }
+        });
+    }
+
+    public function shippingLine()
+    {
+        return $this->belongsTo(ShippingLine::class);
+    }
+
+    public function documents()
+    {
+        return $this->hasMany(Document::class);
+    }
+
+    public function invoices()
+    {
+        return $this->hasMany(Invoice::class);
+    }
+
+    public function stages()
+    {
+        return $this->hasMany(ShipmentStage::class);
+    }
+
+    public function activities()
+    {
+        return $this->hasMany(Activity::class);
+    }
+
+    public function creator()
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    public function getCurrentStage()
+    {
+        return $this->stages()->where('status', 'in_progress')->first()
+            ?? $this->stages()->where('status', 'pending')->first();
+    }
+}
