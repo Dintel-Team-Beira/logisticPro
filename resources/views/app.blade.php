@@ -42,7 +42,7 @@
         @vite(['resources/js/app.jsx', "resources/js/Pages/{$page['component']}.jsx"])
         @inertiaHead
     </head>
-    <body class="font-sans popins bg-[url('background.min.svg')] bg-cover bg-center bg-fixed bg-no-repeat">
+    <body class="font-sans popins bg-[url('/background.min.svg')] bg-cover bg-center bg-fixed bg-no-repeat">
 
         @inertia
     </body>

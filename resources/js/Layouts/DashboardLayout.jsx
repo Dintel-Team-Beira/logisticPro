@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
+import Logo  from '@/Components/Logo';
 import {
     Home,
     Package,
@@ -219,12 +220,15 @@ function Topbar({
 
                     {/* Logo */}
                     <Link href="/dashboard" className="flex items-center gap-3">
-                        <div className="p-2 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
+                      <Link href="/">
+                                        <Logo className="w-20 h-20 text-gray-500 fill-current" />
+                                    </Link>
+                        {/* <div className="p-2 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
                             <Ship className="w-6 h-6 text-white" />
-                        </div>
-                        <span className="hidden text-xl font-bold text-transparent md:block bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text">
+                        </div> */}
+                        {/* <span className="hidden text-xl font-bold text-transparent md:block bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text">
                             Logistic Pro
-                        </span>
+                        </span> */}
                     </Link>
                 </div>
 
@@ -340,7 +344,7 @@ function Sidebar({ sidebarOpen, menuItems, userRole }) {
             transition={{ duration: 0.3, ease: 'easeInOut' }}
             className="fixed bottom-0 z-30 hidden left-10 rounded-lg lg:block top-[100px]"
         >
-            <div className="overflow-y-auto border-r rounded-lg shadow-xl bg-white/80 backdrop-blur-xl border-gray-200/50">
+            <div className="overflow-y-auto border-r rounded-lg shadow-xl bg-white/50 backdrop-blur-xl border-gray-200/50">
                 <nav className="p-4 space-y-2">
                     {menuItems.map((item) => (
                         <MenuItem
@@ -394,11 +398,11 @@ function MenuItem({ item, sidebarOpen, currentPath, expanded, onToggle, userRole
                     className={`
                         w-full flex items-center justify-between px-4 py-3 rounded-xl
                         transition-all duration-200 group
-                        ${expanded ? 'bg-blue-50 text-blue-600' : 'text-gray-600 hover:bg-gray-50'}
+                        ${expanded ? 'bg-blue-50 text-[#358c9c]' : 'text-gray-600 hover:bg-gray-50'}
                     `}
                 >
                     <div className="flex items-center gap-3">
-                        <item.icon className={`h-5 w-5 ${expanded ? 'text-blue-600' : 'text-gray-500'}`} />
+                        <item.icon className={`h-5 w-5 ${expanded ? 'text-[#358c9c]' : 'text-gray-500'}`} />
                         {sidebarOpen && (
                             <span className="font-medium">{item.name}</span>
                         )}
@@ -428,7 +432,7 @@ function MenuItem({ item, sidebarOpen, currentPath, expanded, onToggle, userRole
                                             flex items-center gap-3 px-4 py-2 rounded-lg
                                             transition-all duration-200
                                             ${currentPath === subItem.href
-                                                ? 'bg-blue-100 text-blue-600 font-medium'
+                                                ? 'bg-blue-100 text-[#358c9c] font-medium'
                                                 : 'text-gray-600 hover:bg-gray-50'
                                             }
                                         `}
@@ -449,18 +453,19 @@ function MenuItem({ item, sidebarOpen, currentPath, expanded, onToggle, userRole
             <motion.div
                 whileHover={{ x: 4 }}
                 whileTap={{ scale: 0.98 }}
-                className={`
-                    relative flex items-center gap-3 px-4 py-3 rounded-xl
-                    transition-all duration-200 group
-                    ${isActive
-                        ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/50'
-                        : 'text-gray-600 hover:bg-gray-50'
-                    }
-                `}
+  className={`
+    relative flex items-center gap-3 px-4 py-3 rounded-xl
+    transition-all duration-200 group font-poppins font-medium
+    ${isActive
+      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/50'
+      : 'text-gray-600 hover:bg-gray-50'
+    }
+  `}
+
             >
                 <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'}`} />
                 {sidebarOpen && (
-                    <span className="flex-1 font-medium">{item.name}</span>
+                    <span className="flex-1 font-normal">{item.name}</span>
                 )}
                 {item.badge && sidebarOpen && (
                     <span className={`

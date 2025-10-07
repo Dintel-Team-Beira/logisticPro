@@ -119,7 +119,7 @@ export default function Login({ status, canResetPassword }) {
                         disabled={processing}
                     >
                         <span className="mr-2">{processing ? 'Signing in...' : 'Log in'}</span>
-                        <ArrowRight size={20} className={processing ? 'animate-spin' : ''} />
+                        <div size={20} className={processing ? 'loader-circle' : ''} />
                     </PrimaryButton>
                 </form>
             </div>

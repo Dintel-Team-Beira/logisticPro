@@ -13,8 +13,8 @@ export default {
     theme: {
         extend: {
             fontFamily: {
-                sans: ['Inter', ...defaultTheme.fontFamily.sans],
-            },
+        poppins: ['Poppins', 'sans-serif'],
+      },
             colors: {
                 // Cores do Akaunting
                 sidebar: {
