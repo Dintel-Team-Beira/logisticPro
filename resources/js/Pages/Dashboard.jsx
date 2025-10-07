@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import AkauntingLayout from '@/Layouts/AkauntingLayout';
-// import DashboardLayout from '@/Layouts/DashboardLayout';
+import DashboardLayout from '@/Layouts/DashboardLayout';
 import { Head, Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';
 import Card from '@/Components/Card';
@@ -140,7 +140,7 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
     ];
 
     return (
-        <AkauntingLayout>
+        <DashboardLayout>
             <Head title="Dashboard" />
 
             <div className="px-4 py-6 mx-auto space-y-6 sm:px-6 ">
@@ -148,7 +148,7 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-3xl font-bold text-gray-900">
-                            Bem-vindo de volta, {auth.user.name}! 👋
+                            {auth.user.name}! 👋
                         </p>
                         <p className="mt-1 text-sm text-gray-600">
                             Aqui está o resumo das suas operações
@@ -410,7 +410,7 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
                     </Card>
                 </div>
             </div>
-        </AkauntingLayout>
+        </DashboardLayout>
     );
 }
 
