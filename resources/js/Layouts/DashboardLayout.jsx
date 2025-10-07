@@ -223,7 +223,7 @@ function Topbar({
                             <Ship className="w-6 h-6 text-white" />
                         </div>
                         <span className="hidden text-xl font-bold text-transparent md:block bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text">
-                            ShipManager
+                              Logistic Pro
                         </span>
                     </Link>
                 </div>
