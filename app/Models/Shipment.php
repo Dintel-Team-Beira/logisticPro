@@ -25,7 +25,14 @@ class Shipment extends Model
     ];
 
     protected $casts = [
-        'arrival_date' => 'date'
+        'arrival_date' => 'date',
+        'metadata' => 'array',
+    'storage_alert' => 'boolean',
+    'cargo_weight' => 'decimal:2',
+    'cargo_value' => 'decimal:2',
+    'total_cost' => 'decimal:2',
+    'invoice_amount' => 'decimal:2',
+    'profit_margin' => 'decimal:2',
     ];
 
     protected static function boot()
@@ -38,6 +45,12 @@ class Shipment extends Model
             }
         });
     }
+
+
+    public function client()
+{
+    return $this->belongsTo(Client::class);
+}
 
     public function shippingLine()
     {
@@ -112,4 +125,7 @@ class Shipment extends Model
             'description' => $message,
         ]);
     }
+
+
+
 }

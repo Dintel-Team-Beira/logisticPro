@@ -4,8 +4,12 @@ namespace App\Http\Controllers;
 
 use App\Models\Shipment;
 use App\Models\ShippingLine;
+use App\Models\Client;
 use App\Services\ShipmentWorkflowService;
+use App\Enums\DocumentType;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Inertia;
 
 class ShipmentController extends Controller
@@ -43,40 +47,136 @@ class ShipmentController extends Controller
         ]);
     }
 
-    public function create()
+ public function create()
     {
         return Inertia::render('Shipments/Create', [
-            'shippingLines' => ShippingLine::where('active', true)->get()
+            'shippingLines' => ShippingLine::where('active', true)->get(),
+            'clients' => Client::orderBy('name')->get(),
         ]);
     }
-
+  /**
+     * Store - Baseado no SRS UC-001: Criar Novo Processo
+     */
     public function store(Request $request)
     {
         $validated = $request->validate([
+            // Cliente
+            'client_id' => 'required_without:new_client_name|nullable|exists:clients,id',
+            'new_client_name' => 'required_without:client_id|nullable|string',
+            'new_client_email' => 'required_with:new_client_name|nullable|email',
+            'new_client_phone' => 'nullable|string',
+            'new_client_address' => 'nullable|string',
+
+            // Linha e BL
             'shipping_line_id' => 'required|exists:shipping_lines,id',
-            'bl_number' => 'nullable|string',
+            'bl_number' => 'required|string',
+            'bl_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+
+            // Container
             'container_number' => 'nullable|string',
+            'container_type' => 'required|in:20DC,40DC,40HC,20RF,40RF,20OT,40OT',
             'vessel_name' => 'nullable|string',
             'arrival_date' => 'nullable|date',
+
+            // Rota
             'origin_port' => 'nullable|string',
-            'destination_port' => 'nullable|string',
-            'cargo_description' => 'nullable|string',
+            'destination_port' => 'required|string',
+
+            // Carga
+            'cargo_description' => 'required|string',
+            'cargo_weight' => 'nullable|numeric',
+            'cargo_value' => 'nullable|numeric',
         ]);
 
-        // Gerar número de referência automático (ALEK-YYYY-XXX)
-        $year = date('Y');
-        $lastShipment = Shipment::whereYear('created_at', $year)->count();
-        $referenceNumber = sprintf('ALEK-%s-%03d', $year, $lastShipment + 1);
+        DB::beginTransaction();
 
-        $shipment = Shipment::create([
-            ...$validated,
-            'reference_number' => $referenceNumber,
-            'created_by' => auth()->id(),
-            'status' => 'draft'
-        ]);
+        try {
+            // 1. Criar ou obter cliente (UC-001 - 3a)
+            if ($request->filled('new_client_name')) {
+                $client = Client::create([
+                    'name' => $validated['new_client_name'],
+                    'email' => $validated['new_client_email'],
+                    'phone' => $validated['new_client_phone'] ?? null,
+                    'address' => $validated['new_client_address'] ?? null,
+                ]);
+                $clientId = $client->id;
+            } else {
+                $clientId = $validated['client_id'];
+            }
 
-        return redirect()->route('shipments.show', $shipment)
-            ->with('success', 'Shipment criado com sucesso!');
+            // 2. Gerar número de referência (UC-001 - Passo 6)
+            // Formato: ALEK-YYYY-XXX
+            $year = date('Y');
+            $lastShipment = Shipment::whereYear('created_at', $year)->count();
+            $referenceNumber = sprintf('ALEK-%s-%03d', $year, $lastShipment + 1);
+
+            // 3. Criar Shipment (UC-001 - Passo 7)
+            $shipment = Shipment::create([
+                'reference_number' => $referenceNumber,
+                'client_id' => $clientId,
+                'shipping_line_id' => $validated['shipping_line_id'],
+                'bl_number' => $validated['bl_number'],
+                'container_number' => $validated['container_number'],
+                'container_type' => $validated['container_type'],
+                'vessel_name' => $validated['vessel_name'],
+                'arrival_date' => $validated['arrival_date'],
+                'origin_port' => $validated['origin_port'],
+                'destination_port' => $validated['destination_port'],
+                'cargo_description' => $validated['cargo_description'],
+                'cargo_weight' => $validated['cargo_weight'],
+                'cargo_value' => $validated['cargo_value'],
+                'created_by' => auth()->id(),
+                'status' => 'draft', // Fase 1
+            ]);
+
+            // 4. Upload do BL Original (UC-001 - Passo 4)
+            $blPath = $request->file('bl_file')->store("shipments/{$shipment->id}/bl", 'public');
+
+            $shipment->documents()->create([
+                'type' => DocumentType::BL_ORIGINAL,
+                'name' => 'BL Original - ' . $validated['bl_number'],
+                'path' => $blPath,
+                'size' => $request->file('bl_file')->getSize(),
+                'uploaded_by' => auth()->id(),
+                'metadata' => [
+                    'bl_number' => $validated['bl_number'],
+                    'uploaded_at_creation' => true,
+                ]
+            ]);
+
+            // 5. Registrar atividade (UC-001 - Passo 8)
+            $shipment->activities()->create([
+                'user_id' => auth()->id(),
+                'action' => 'created',
+                'description' => 'Shipment criado com BL anexado',
+                'metadata' => [
+                    'reference_number' => $referenceNumber,
+                    'client_name' => $client->name ?? Client::find($clientId)->name,
+                ]
+            ]);
+
+            DB::commit();
+
+            // 6. Enviar notificação (UC-001 - Passo 8)
+            // NotificationJob::dispatch($shipment, 'shipment_created');
+
+            // 7. Redirecionar com link (UC-001 - Passo 9)
+            return redirect()
+                ->route('shipments.show', $shipment)
+                ->with('success', "Shipment {$referenceNumber} criado com sucesso! Processo iniciado na Fase 1.");
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+
+            // Deletar arquivo se upload foi bem-sucedido mas processo falhou
+            if (isset($blPath)) {
+                Storage::disk('public')->delete($blPath);
+            }
+
+            return back()
+                ->withErrors(['error' => 'Erro ao criar shipment: ' . $e->getMessage()])
+                ->withInput();
+        }
     }
 
     /**

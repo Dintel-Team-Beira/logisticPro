@@ -52,13 +52,13 @@ export default function Login({ status, canResetPassword }) {
                         <InputLabel htmlFor="email" value="Email" className="block mb-2 text-sm font-medium text-gray-700" />
 
                         <div className="relative">
-                            <Mail className="absolute text-gray-400 transition-colors duration-200 transform -translate-y-1/2 left-3 top-1/2 group-focus-within:text-indigo-500" size={20} />
+                            <Mail className="absolute text-gray-400 transition-colors duration-200 transform -translate-y-1/2 left-3 top-1/2 group-focus-within:text-[#358c9c]" size={20} />
                             <TextInput
                                 id="email"
                                 type="email"
                                 name="email"
                                 value={data.email}
-                                className="block w-full py-3 pl-10 pr-4 transition-all duration-200 ease-in-out border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="block w-full py-3 pl-10 pr-4 transition-all duration-200 ease-in-out border border-gray-300 rounded-md focus:ring-2 focus:ring-[#358c9c] focus:border-[#358c9c]"
                                 autoComplete="username"
                                 isFocused={true}
                                 onChange={(e) => setData('email', e.target.value)}
@@ -73,13 +73,13 @@ export default function Login({ status, canResetPassword }) {
                         <InputLabel htmlFor="password" value="Password" className="block mb-2 text-sm font-medium text-gray-700" />
 
                         <div className="relative">
-                            <Lock className="absolute text-gray-400 transition-colors duration-200 transform -translate-y-1/2 left-3 top-1/2 group-focus-within:text-indigo-500" size={20} />
+                            <Lock className="absolute text-gray-400 transition-colors duration-200 transform -translate-y-1/2 left-3 top-1/2 group-focus-within:text-[#358c9c]" size={20} />
                             <TextInput
                                 id="password"
                                 type="password"
                                 name="password"
                                 value={data.password}
-                                className="block w-full py-3 pl-10 pr-4 transition-all duration-200 ease-in-out border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                                className="block w-full py-3 pl-10 pr-4 transition-all duration-200 ease-in-out border border-gray-300 rounded-md focus:ring-2 focus:ring-[#358c9c] focus:border-[#358c9c]"
                                 autoComplete="current-password"
                                 onChange={(e) => setData('password', e.target.value)}
                             />
@@ -96,7 +96,7 @@ export default function Login({ status, canResetPassword }) {
                                 name="remember"
                                 checked={data.remember}
                                 onChange={(e) => setData('remember', e.target.checked)}
-                                className="w-4 h-4 text-indigo-600 transition-all duration-200 ease-in-out border-gray-300 rounded focus:ring-indigo-500"
+                                className="w-4 h-4 text-[#f68716] transition-all duration-200 ease-in-out border-gray-300 rounded focus:ring-[#358c9c]"
                             />
                             <span className="text-sm text-gray-600 transition-colors duration-200 cursor-pointer ms-2 hover:text-gray-900">
                                 Remember me
@@ -106,7 +106,7 @@ export default function Login({ status, canResetPassword }) {
                         {canResetPassword && (
                             <Link
                                 href={route('password.request')}
-                                className="text-sm font-medium text-indigo-600 transition-colors duration-200 hover:text-indigo-500"
+                                className="text-sm font-medium text-[#f68716] transition-colors duration-200 hover:text-[#358c9c]"
                             >
                                 Forgot password?
                             </Link>
@@ -115,7 +115,7 @@ export default function Login({ status, canResetPassword }) {
 
                     {/* Submit Button */}
                     <PrimaryButton
-                        className="flex items-center justify-center w-full px-10 py-3 transition-all duration-200 ease-in-out transform bg-[#358c9c] mb-50 hover:bg-[#f68716] focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
+                        className="flex items-center justify-center w-full px-10 py-3 transition-all duration-200 ease-in-out transform bg-[#358c9c] mb-50 hover:bg-[#f68716] focus:outline-none focus:ring-2 focus:ring-[#358c9c] focus:ring-offset-2 hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
                         disabled={processing}
                     >
                         <span className="mr-2">{processing ? 'Signing in...' : 'Log in'}</span>
