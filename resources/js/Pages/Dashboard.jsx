@@ -143,12 +143,12 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
         <DashboardLayout>
             <Head title="Dashboard" />
 
-            <div className="px-4 py-6 mx-auto space-y-6 sm:px-6 ">
+            <div className="px-4 mx-auto space-y-6 sm:px-6 ">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
                         <p className="text-3xl font-bold text-gray-900">
-                            {auth.user.name}! 👋
+                            Dashboard
                         </p>
                         <p className="mt-1 text-sm text-gray-600">
                             Aqui está o resumo das suas operações
@@ -178,7 +178,7 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 backdrop-blur-xl">
                     {kpiCards.map((kpi, index) => (
                         <motion.div
                             key={kpi.title}

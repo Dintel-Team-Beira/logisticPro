@@ -121,7 +121,7 @@ export default function DashboardLayout({ children }) {
     }, [flash]);
 
     return (
-        <div className="min-h-screen bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50">
+        <div className="min-h-screen ">
             {/* Flash Messages */}
             <FlashMessages flash={flash} />
 
@@ -192,7 +192,7 @@ function Topbar({
         <motion.header
             initial={{ y: -100 }}
             animate={{ y: 0 }}
-            className="fixed top-0 left-0 right-0 z-40 border-b shadow-sm bg-white/80 backdrop-blur-xl border-gray-200/50"
+            className="fixed z-40 border-b rounded-lg shadow-sm left-10 right-12 top-3 bg-white/60 backdrop-blur-xl border-gray-200/50"
         >
             <div className="flex items-center justify-between h-16 px-4 lg:px-6">
                 {/* Left Section */}
@@ -223,7 +223,7 @@ function Topbar({
                             <Ship className="w-6 h-6 text-white" />
                         </div>
                         <span className="hidden text-xl font-bold text-transparent md:block bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text">
-                              Logistic Pro
+                            Logistic Pro
                         </span>
                     </Link>
                 </div>
@@ -338,9 +338,9 @@ function Sidebar({ sidebarOpen, menuItems, userRole }) {
             initial={{ x: -300 }}
             animate={{ x: 0, width: sidebarOpen ? 288 : 80 }}
             transition={{ duration: 0.3, ease: 'easeInOut' }}
-            className="fixed bottom-0 left-0 z-30 hidden lg:block top-16"
+            className="fixed bottom-0 z-30 hidden left-10 rounded-lg lg:block top-[100px]"
         >
-            <div className="h-full overflow-y-auto border-r shadow-xl bg-white/80 backdrop-blur-xl border-gray-200/50">
+            <div className="overflow-y-auto border-r rounded-lg shadow-xl bg-white/80 backdrop-blur-xl border-gray-200/50">
                 <nav className="p-4 space-y-2">
                     {menuItems.map((item) => (
                         <MenuItem
