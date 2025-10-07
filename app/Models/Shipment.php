@@ -59,10 +59,7 @@ class Shipment extends Model
         return $this->hasMany(ShipmentStage::class);
     }
 
-    public function activities()
-    {
-        return $this->hasMany(Activity::class);
-    }
+
 
     public function creator()
     {
@@ -73,5 +70,46 @@ class Shipment extends Model
     {
         return $this->stages()->where('status', 'in_progress')->first()
             ?? $this->stages()->where('status', 'pending')->first();
+    }
+
+
+
+    /**
+     * Relacionamento com atividades
+     */
+    public function activities()
+    {
+        return $this->hasMany(Activity::class)->orderBy('created_at', 'desc');
+    }
+
+    /**
+     * Helper para verificar se documento existe
+     */
+    public function hasDocument(string $type): bool
+    {
+        return $this->documents()->where('type', $type)->exists();
+    }
+
+    /**
+     * Helper para obter documento específico
+     */
+    public function getDocument(string $type)
+    {
+        return $this->documents()->where('type', $type)->first();
+    }
+
+    /**
+     * Helper para notificações (pode integrar com sistema de notificações)
+     */
+    public function notify(string $message): void
+    {
+        // Implementar sistema de notificações
+        // Por exemplo: enviar email, push notification, etc.
+
+        $this->activities()->create([
+            'user_id' => auth()->id() ?? 1,
+            'action' => 'notification',
+            'description' => $message,
+        ]);
     }
 }

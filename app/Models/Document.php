@@ -2,49 +2,69 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Storage;
+use Illuminate\Database\Eloquent\SoftDeletes;
 
+/**
+ * Model Document
+ * Representa documentos anexados aos shipments
+ */
 class Document extends Model
 {
-    use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
         'shipment_id',
         'type',
-        'file_name',
-        'file_path',
-        'mime_type',
-        'file_size',
-        'stage',
-        'uploaded_by'
+        'name',
+        'path',
+        'size',
+        'uploaded_by',
+        'metadata',
     ];
 
+    protected $casts = [
+        'metadata' => 'array',
+    ];
+
+    /**
+     * Relacionamento com Shipment
+     */
     public function shipment()
     {
         return $this->belongsTo(Shipment::class);
     }
 
+    /**
+     * Relacionamento com User (uploader)
+     */
     public function uploader()
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
+    /**
+     * Accessor para URL do documento
+     */
     public function getUrlAttribute()
     {
-        return Storage::url($this->file_path);
+        return asset('storage/' . $this->path);
     }
 
+    /**
+     * Accessor para tamanho formatado
+     */
     public function getFormattedSizeAttribute()
     {
-        $bytes = $this->file_size;
         $units = ['B', 'KB', 'MB', 'GB'];
+        $size = $this->size;
+        $unit = 0;
 
-        for ($i = 0; $bytes > 1024; $i++) {
-            $bytes /= 1024;
+        while ($size > 1024 && $unit < count($units) - 1) {
+            $size /= 1024;
+            $unit++;
         }
 
-        return round($bytes, 2) . ' ' . $units[$i];
+        return round($size, 2) . ' ' . $units[$unit];
     }
 }

@@ -1,291 +1,207 @@
-import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, useForm } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
-import StatusBadge from '@/Components/StatusBadge';
+import Input from '@/Components/Forms/Input';
+import Select from '@/Components/Forms/Select';
 import {
-    Package,
-    Plus,
-    Search,
-    Filter,
-    MoreVertical,
-    Eye,
-    Edit,
-    Trash2,
+    ArrowLeft,
+    Save,
     Ship,
+    Package,
     Calendar,
     MapPin,
-    Anchor,
+    FileText,
 } from 'lucide-react';
 
-export default function Index({ shipments, filters }) {
-    const [search, setSearch] = useState(filters.search || '');
-    const [selectedStatus, setSelectedStatus] = useState(filters.status || '');
+export default function Create({ shippingLines }) {
+    const { data, setData, post, processing, errors } = useForm({
+        shipping_line_id: '',
+        bl_number: '',
+        container_number: '',
+        vessel_name: '',
+        arrival_date: '',
+        origin_port: '',
+        destination_port: '',
+        cargo_description: '',
+    });
 
-    const handleSearch = (e) => {
+    const handleSubmit = (e) => {
         e.preventDefault();
-        router.get('/shipments', { search, status: selectedStatus }, {
-            preserveState: true,
-            replace: true,
-        });
-    };
-
-    const handleDelete = (shipmentId) => {
-        if (confirm('Tem certeza que deseja excluir este shipment?')) {
-            router.delete(`/shipments/${shipmentId}`);
-        }
+        post('/shipments');
     };
 
     return (
         <DashboardLayout>
-            <Head title="Shipments" />
+            <Head title="Novo Shipment" />
 
-            <div className="p-6 space-y-6">
+            <div className="p-6">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold text-slate-900">
-                            Shipments
-                        </h1>
-                        <p className="mt-1 text-sm text-slate-500">
-                            Gerencie todos os seus shipments
-                        </p>
-                    </div>
-                    <Link href="/shipments/create">
-                        <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors duration-200">
-                            <Plus className="w-4 h-4" />
-                            Novo Shipment
-                        </button>
+                <div className="mb-6">
+                    <Link
+                        href="/shipments"
+                        className="inline-flex items-center gap-2 mb-4 text-sm transition-colors text-slate-600 hover:text-slate-900"
+                    >
+                        <ArrowLeft className="w-4 h-4" />
+                        Voltar para Shipments
                     </Link>
+                    <h1 className="text-2xl font-semibold text-slate-900">
+                        Novo Shipment
+                    </h1>
+                    <p className="mt-1 text-sm text-slate-500">
+                        Crie um novo shipment no sistema
+                    </p>
                 </div>
 
-                {/* Stats */}
-                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
-                    <div className="p-4 bg-white border rounded-lg border-slate-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-600">Total</p>
-                                <p className="mt-1 text-2xl font-semibold text-slate-900">
-                                    {shipments.total || 0}
-                                </p>
-                            </div>
-                            <div className="p-2 rounded-lg bg-slate-100">
-                                <Package className="w-5 h-5 text-slate-600" />
-                            </div>
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Card 1: Informações da Linha de Navegação */}
+                    <div className="p-6 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Ship className="w-5 h-5 text-slate-600" />
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                Linha de Navegação
+                            </h2>
                         </div>
-                    </div>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <Select
+                                label="Linha de Navegação *"
+                                value={data.shipping_line_id}
+                                onChange={(e) => setData('shipping_line_id', e.target.value)}
+                                error={errors.shipping_line_id}
+                                required
+                            >
+                                <option value="">Selecione uma linha</option>
+                                {shippingLines?.map((line) => (
+                                    <option key={line.id} value={line.id}>
+                                        {line.name}
+                                    </option>
+                                ))}
+                            </Select>
 
-                    <div className="p-4 bg-white border rounded-lg border-slate-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-600">Em Progresso</p>
-                                <p className="mt-1 text-2xl font-semibold text-slate-900">15</p>
-                            </div>
-                            <div className="p-2 rounded-lg bg-blue-50">
-                                <Ship className="w-5 h-5 text-blue-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="p-4 bg-white border rounded-lg border-slate-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-600">Alfândegas</p>
-                                <p className="mt-1 text-2xl font-semibold text-slate-900">3</p>
-                            </div>
-                            <div className="p-2 rounded-lg bg-amber-50">
-                                <Anchor className="w-5 h-5 text-amber-600" />
-                            </div>
-                        </div>
-                    </div>
-
-                    <div className="p-4 bg-white border rounded-lg border-slate-200">
-                        <div className="flex items-center justify-between">
-                            <div>
-                                <p className="text-sm font-medium text-slate-600">Concluídos</p>
-                                <p className="mt-1 text-2xl font-semibold text-slate-900">8</p>
-                            </div>
-                            <div className="p-2 rounded-lg bg-emerald-50">
-                                <Package className="w-5 h-5 text-emerald-600" />
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                {/* Filters */}
-                <div className="p-4 bg-white border rounded-lg border-slate-200">
-                    <form onSubmit={handleSearch} className="flex gap-3">
-                        <div className="relative flex-1">
-                            <Search className="absolute w-4 h-4 -translate-y-1/2 text-slate-400 left-3 top-1/2" />
-                            <input
-                                type="text"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                placeholder="Buscar por referência, BL, container..."
-                                className="w-full py-2.5 pl-10 pr-4 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                            <Input
+                                label="Nome do Navio"
+                                icon={Ship}
+                                value={data.vessel_name}
+                                onChange={(e) => setData('vessel_name', e.target.value)}
+                                error={errors.vessel_name}
+                                placeholder="Ex: MSC MAYA"
                             />
                         </div>
-                        <select
-                            value={selectedStatus}
-                            onChange={(e) => setSelectedStatus(e.target.value)}
-                            className="px-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
-                        >
-                            <option value="">Todos os Status</option>
-                            <option value="draft">Rascunho</option>
-                            <option value="coleta_dispersa">Coleta</option>
-                            <option value="legalizacao">Legalização</option>
-                            <option value="alfandegas">Alfândegas</option>
-                            <option value="cornelder">Cornelder</option>
-                            <option value="taxacao">Taxação</option>
-                            <option value="completed">Concluído</option>
-                        </select>
-                        <button
-                            type="submit"
-                            className="px-5 py-2.5 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors"
-                        >
-                            Filtrar
-                        </button>
-                    </form>
-                </div>
+                    </div>
 
-                {/* Table */}
-                <div className="overflow-hidden bg-white border rounded-lg border-slate-200">
-                    <table className="w-full">
-                        <thead className="border-b bg-slate-50 border-slate-200">
-                            <tr>
-                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
-                                    Referência
-                                </th>
-                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
-                                    Linha de Navegação
-                                </th>
-                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
-                                    BL / Container
-                                </th>
-                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
-                                    Navio
-                                </th>
-                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
-                                    Status
-                                </th>
-                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
-                                    ETA
-                                </th>
-                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-600">
-                                    Ações
-                                </th>
-                            </tr>
-                        </thead>
-                        <tbody className="divide-y divide-slate-200">
-                            {shipments.data && shipments.data.length === 0 ? (
-                                <tr>
-                                    <td colSpan="7" className="px-4 py-12 text-center">
-                                        <Package className="w-12 h-12 mx-auto text-slate-300" />
-                                        <h3 className="mt-2 text-sm font-medium text-slate-900">
-                                            Nenhum shipment encontrado
-                                        </h3>
-                                        <p className="mt-1 text-sm text-slate-500">
-                                            Comece criando um novo shipment
-                                        </p>
-                                        <Link href="/shipments/create">
-                                            <button className="inline-flex items-center gap-2 px-4 py-2 mt-4 text-sm font-medium text-white rounded-lg bg-slate-900 hover:bg-slate-800">
-                                                <Plus className="w-4 h-4" />
-                                                Criar Shipment
-                                            </button>
-                                        </Link>
-                                    </td>
-                                </tr>
-                            ) : (
-                                shipments.data.map((shipment) => (
-                                    <tr key={shipment.id} className="transition-colors hover:bg-slate-50">
-                                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
-                                            {shipment.reference_number}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-slate-600">
-                                            {shipment.shipping_line?.name || 'N/A'}
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-slate-600">
-                                            <div className="space-y-0.5">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-xs text-slate-500">BL:</span>
-                                                    <span>{shipment.bl_number || 'N/A'}</span>
-                                                </div>
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="text-xs text-slate-500">CNT:</span>
-                                                    <span>{shipment.container_number || 'N/A'}</span>
-                                                </div>
-                                            </div>
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-slate-600">
-                                            {shipment.vessel_name || 'N/A'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <StatusBadge status={shipment.status} />
-                                        </td>
-                                        <td className="px-4 py-3 text-sm text-slate-600">
-                                            {shipment.arrival_date || 'N/A'}
-                                        </td>
-                                        <td className="px-4 py-3">
-                                            <div className="flex items-center justify-end gap-2">
-                                                <Link href={`/shipments/${shipment.id}`}>
-                                                    <button
-                                                        className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                                                        title="Ver detalhes"
-                                                    >
-                                                        <Eye className="w-4 h-4" />
-                                                    </button>
-                                                </Link>
-                                                <Link href={`/shipments/${shipment.id}/edit`}>
-                                                    <button
-                                                        className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
-                                                        title="Editar"
-                                                    >
-                                                        <Edit className="w-4 h-4" />
-                                                    </button>
-                                                </Link>
-                                                <button
-                                                    onClick={() => handleDelete(shipment.id)}
-                                                    className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
-                                                    title="Excluir"
-                                                >
-                                                    <Trash2 className="w-4 h-4" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                ))
-                            )}
-                        </tbody>
-                    </table>
-                </div>
+                    {/* Card 2: Documentação */}
+                    <div className="p-6 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center gap-2 mb-4">
+                            <FileText className="w-5 h-5 text-slate-600" />
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                Documentação
+                            </h2>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <Input
+                                label="Número do BL"
+                                icon={FileText}
+                                value={data.bl_number}
+                                onChange={(e) => setData('bl_number', e.target.value)}
+                                error={errors.bl_number}
+                                placeholder="Ex: 253157188"
+                            />
 
-                {/* Pagination */}
-                {shipments.links && (
-                    <div className="flex items-center justify-between">
-                        <p className="text-sm text-slate-600">
-                            Mostrando {shipments.from || 0} a {shipments.to || 0} de {shipments.total || 0} resultados
-                        </p>
-                        <div className="flex gap-1">
-                            {shipments.links.map((link, index) => (
-                                <Link
-                                    key={index}
-                                    href={link.url || '#'}
-                                    className={`
-                                        px-3 py-1.5 text-sm rounded-md transition-colors
-                                        ${link.active
-                                            ? 'bg-slate-900 text-white'
-                                            : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
-                                        }
-                                        ${!link.url && 'opacity-50 cursor-not-allowed'}
-                                    `}
-                                    preserveState
-                                    disabled={!link.url}
-                                >
-                                    <span dangerouslySetInnerHTML={{ __html: link.label }} />
-                                </Link>
-                            ))}
+                            <Input
+                                label="Número do Container"
+                                icon={Package}
+                                value={data.container_number}
+                                onChange={(e) => setData('container_number', e.target.value)}
+                                error={errors.container_number}
+                                placeholder="Ex: TCLU2437301"
+                            />
                         </div>
                     </div>
-                )}
+
+                    {/* Card 3: Rota e Data */}
+                    <div className="p-6 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center gap-2 mb-4">
+                            <MapPin className="w-5 h-5 text-slate-600" />
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                Rota e Cronograma
+                            </h2>
+                        </div>
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
+                            <Input
+                                label="Porto de Origem"
+                                icon={MapPin}
+                                value={data.origin_port}
+                                onChange={(e) => setData('origin_port', e.target.value)}
+                                error={errors.origin_port}
+                                placeholder="Ex: QINGDAO, CHINA"
+                            />
+
+                            <Input
+                                label="Porto de Destino"
+                                icon={MapPin}
+                                value={data.destination_port}
+                                onChange={(e) => setData('destination_port', e.target.value)}
+                                error={errors.destination_port}
+                                placeholder="Ex: BEIRA, MOZAMBIQUE"
+                            />
+
+                            <Input
+                                type="date"
+                                label="Data de Chegada (ETA)"
+                                icon={Calendar}
+                                value={data.arrival_date}
+                                onChange={(e) => setData('arrival_date', e.target.value)}
+                                error={errors.arrival_date}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Card 4: Descrição da Carga */}
+                    <div className="p-6 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center gap-2 mb-4">
+                            <Package className="w-5 h-5 text-slate-600" />
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                Descrição da Carga
+                            </h2>
+                        </div>
+                        <div>
+                            <label className="block mb-2 text-sm font-medium text-slate-700">
+                                Descrição
+                            </label>
+                            <textarea
+                                value={data.cargo_description}
+                                onChange={(e) => setData('cargo_description', e.target.value)}
+                                rows="4"
+                                className="w-full px-3 py-2 text-sm border rounded-lg border-slate-300 focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                                placeholder="Descreva o conteúdo da carga..."
+                            />
+                            {errors.cargo_description && (
+                                <p className="mt-1 text-xs text-red-500">
+                                    {errors.cargo_description}
+                                </p>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-3">
+                        <Link href="/shipments">
+                            <button
+                                type="button"
+                                className="px-4 py-2.5 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                            >
+                                Cancelar
+                            </button>
+                        </Link>
+                        <button
+                            type="submit"
+                            disabled={processing}
+                            className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <Save className="w-4 h-4" />
+                            {processing ? 'Criando...' : 'Criar Shipment'}
+                        </button>
+                    </div>
+                </form>
             </div>
         </DashboardLayout>
     );
