@@ -1,5 +1,4 @@
 import { useState } from 'react';
-import AkauntingLayout from '@/Layouts/AkauntingLayout';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import { Head, Link } from '@inertiajs/react';
 import { motion } from 'framer-motion';

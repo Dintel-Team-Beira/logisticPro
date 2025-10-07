@@ -1,58 +1,37 @@
 import { useState } from 'react';
-import DashboardLayout from '@/Layouts/DashboardLayout';
 import { Head, Link, router } from '@inertiajs/react';
-import { motion, AnimatePresence } from 'framer-motion';
-import Card from '@/Components/Card';
-import Badge from '@/Components/Badge';
-import Input from '@/Components/Input';
-import Button from '@/Components/Button';
+import DashboardLayout from '@/Layouts/DashboardLayout';
+import StatusBadge from '@/Components/StatusBadge';
 import {
+    Package,
+    Plus,
     Search,
     Filter,
-    Package,
-    Ship,
-    Eye,
-    Trash2,
-    Plus,
-    Download,
     MoreVertical,
+    Eye,
     Edit,
+    Trash2,
+    Ship,
+    Calendar,
     MapPin,
-    Calendar
+    Anchor,
 } from 'lucide-react';
 
-export default function ShipmentsIndex({ auth, shipments, filters }) {
-    const [searchTerm, setSearchTerm] = useState(filters.search || '');
-    const [statusFilter, setStatusFilter] = useState(filters.status || 'all');
-    const [viewMode, setViewMode] = useState('grid'); // 'grid' or 'list'
+export default function Index({ shipments, filters }) {
+    const [search, setSearch] = useState(filters.search || '');
+    const [selectedStatus, setSelectedStatus] = useState(filters.status || '');
 
     const handleSearch = (e) => {
         e.preventDefault();
-        router.get('/shipments', {
-            search: searchTerm,
-            status: statusFilter !== 'all' ? statusFilter : undefined
-        }, {
+        router.get('/shipments', { search, status: selectedStatus }, {
             preserveState: true,
-            replace: true
+            replace: true,
         });
     };
 
-    const getStatusBadge = (status) => {
-        const badges = {
-            draft: { variant: 'default', label: 'Rascunho', icon: '📝' },
-            coleta_dispersa: { variant: 'primary', label: 'Coleta', icon: '📦' },
-            legalizacao: { variant: 'warning', label: 'Legalização', icon: '📄' },
-            alfandegas: { variant: 'purple', label: 'Alfândegas', icon: '🏛️' },
-            cornelder: { variant: 'indigo', label: 'Cornelder', icon: '🚢' },
-            taxacao: { variant: 'warning', label: 'Taxação', icon: '💰' },
-            completed: { variant: 'success', label: 'Concluído', icon: '✅' }
-        };
-        return badges[status] || badges.draft;
-    };
-
-    const handleDelete = (id) => {
-        if (confirm('Tem certeza que deseja remover este shipment?')) {
-            router.delete(`/shipments/${id}`);
+    const handleDelete = (shipmentId) => {
+        if (confirm('Tem certeza que deseja excluir este shipment?')) {
+            router.delete(`/shipments/${shipmentId}`);
         }
     };
 
@@ -60,247 +39,254 @@ export default function ShipmentsIndex({ auth, shipments, filters }) {
         <DashboardLayout>
             <Head title="Shipments" />
 
-            {/* Header */}
-            <motion.div
-                initial={{ opacity: 0, y: -20 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="mb-8"
-            >
-                <div className="flex flex-col mb-6 md:flex-row md:items-center md:justify-between">
+            <div className="p-6 space-y-6">
+                {/* Header */}
+                <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="flex items-center gap-3 mb-2 text-3xl font-bold text-gray-900 md:text-4xl">
-                            <div className="p-3 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
-                                <Package className="w-8 h-8 text-white" />
-                            </div>
-                            Gestão de Shipments
+                        <h1 className="text-2xl font-semibold text-slate-900">
+                            Shipments
                         </h1>
-                        <p className="text-gray-600">
-                            Gerencie todos os seus shipments de forma eficiente
+                        <p className="mt-1 text-sm text-slate-500">
+                            Gerencie todos os seus shipments
                         </p>
                     </div>
                     <Link href="/shipments/create">
-                        <Button variant="primary" size="lg" className="mt-4 md:mt-0">
-                            <Plus className="w-5 h-5" />
+                        <button className="inline-flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-lg hover:bg-slate-800 transition-colors duration-200">
+                            <Plus className="w-4 h-4" />
                             Novo Shipment
-                        </Button>
+                        </button>
                     </Link>
                 </div>
 
-                {/* Filters */}
-                <Card>
-                    <div className="p-6">
-                        <form onSubmit={handleSearch} className="flex flex-col gap-4 lg:flex-row">
-                            <div className="flex-1">
-                                <Input
-                                    icon={Search}
-                                    placeholder="Buscar por referência, BL, container..."
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    className="w-full"
-                                />
+                {/* Stats */}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-4">
+                    <div className="p-4 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-600">Total</p>
+                                <p className="mt-1 text-2xl font-semibold text-slate-900">
+                                    {shipments.total || 0}
+                                </p>
                             </div>
-                            <div className="w-full lg:w-64">
-                                <select
-                                    value={statusFilter}
-                                    onChange={(e) => setStatusFilter(e.target.value)}
-                                    className="block w-full rounded-lg border-gray-300 shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 h-[42px]"
-                                >
-                                    <option value="all">Todos os Status</option>
-                                    <option value="draft">Rascunho</option>
-                                    <option value="coleta_dispersa">Coleta de Dispersa</option>
-                                    <option value="legalizacao">Legalização</option>
-                                    <option value="alfandegas">Alfândegas</option>
-                                    <option value="cornelder">Cornelder</option>
-                                    <option value="taxacao">Taxação</option>
-                                    <option value="completed">Concluído</option>
-                                </select>
+                            <div className="p-2 rounded-lg bg-slate-100">
+                                <Package className="w-5 h-5 text-slate-600" />
                             </div>
-                            <Button type="submit" variant="primary">
-                                <Filter className="w-5 h-5" />
-                                Filtrar
-                            </Button>
-                        </form>
+                        </div>
                     </div>
-                </Card>
-            </motion.div>
 
-            {/* Shipments Grid/List */}
-            <AnimatePresence mode="wait">
-                {shipments.data.length === 0 ? (
-                    <motion.div
-                        key="empty"
-                        initial={{ opacity: 0, scale: 0.95 }}
-                        animate={{ opacity: 1, scale: 1 }}
-                        exit={{ opacity: 0, scale: 0.95 }}
-                    >
-                        <Card className="py-20 text-center">
-                            <div className="inline-flex p-6 mb-6 bg-gray-100 rounded-full">
-                                <Ship className="w-16 h-16 text-gray-400" />
+                    <div className="p-4 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-600">Em Progresso</p>
+                                <p className="mt-1 text-2xl font-semibold text-slate-900">15</p>
                             </div>
-                            <h3 className="mb-3 text-2xl font-bold text-gray-900">
-                                Nenhum shipment encontrado
-                            </h3>
-                            <p className="max-w-md mx-auto mb-8 text-gray-600">
-                                Comece criando seu primeiro shipment para gerenciar suas operações de importação
-                            </p>
-                            <Link href="/shipments/create">
-                                <Button variant="primary" size="lg">
-                                    <Plus className="w-5 h-5" />
-                                    Criar Primeiro Shipment
-                                </Button>
-                            </Link>
-                        </Card>
-                    </motion.div>
-                ) : (
-                    <div className="grid grid-cols-1 gap-6">
-                        {shipments.data.map((shipment, index) => (
-                            <motion.div
-                                key={shipment.id}
-                                initial={{ opacity: 0, y: 20 }}
-                                animate={{ opacity: 1, y: 0 }}
-                                exit={{ opacity: 0, y: -20 }}
-                                transition={{ delay: index * 0.05 }}
-                            >
-                                <Card className="transition-all duration-300 hover:shadow-2xl group">
-                                    <div className="p-6">
-                                        <div className="flex flex-col gap-6 lg:flex-row lg:items-center">
-                                            {/* Left: Icon & Main Info */}
-                                            <div className="flex items-start flex-1 gap-4">
-                                                <div className="p-4 transition-transform duration-300 transform shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 rounded-2xl group-hover:scale-110">
-                                                    <Ship className="w-8 h-8 text-white" />
-                                                </div>
-                                                <div className="flex-1">
-                                                    <div className="flex items-center gap-3 mb-2">
-                                                        <Link
-                                                            href={`/shipments/${shipment.id}`}
-                                                            className="text-xl font-bold text-gray-900 transition-colors hover:text-blue-600"
-                                                        >
-                                                            {shipment.reference_number}
-                                                        </Link>
-                                                        <Badge
-                                                            variant={getStatusBadge(shipment.status).variant}
-                                                            className="px-3 py-1 text-xs"
-                                                        >
-                                                            {getStatusBadge(shipment.status).icon} {getStatusBadge(shipment.status).label}
-                                                        </Badge>
-                                                    </div>
-                                                    <p className="mb-3 text-sm font-medium text-gray-600">
-                                                        {shipment.shipping_line?.name}
-                                                    </p>
-
-                                                    <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
-                                                        <InfoPill
-                                                            icon={Package}
-                                                            label="Container"
-                                                            value={shipment.container_number || '-'}
-                                                        />
-                                                        <InfoPill
-                                                            icon={FileText}
-                                                            label="BL"
-                                                            value={shipment.bl_number || '-'}
-                                                        />
-                                                        <InfoPill
-                                                            icon={Ship}
-                                                            label="Navio"
-                                                            value={shipment.vessel_name || '-'}
-                                                        />
-                                                        <InfoPill
-                                                            icon={Calendar}
-                                                            label="Chegada"
-                                                            value={shipment.arrival_date ? new Date(shipment.arrival_date).toLocaleDateString('pt-BR') : '-'}
-                                                        />
-                                                    </div>
-                                                </div>
-                                            </div>
-
-                                            {/* Right: Progress & Actions */}
-                                            <div className="lg:w-80">
-                                                {/* Progress */}
-                                                <div className="mb-4">
-                                                    <div className="flex items-center justify-between mb-2 text-sm text-gray-600">
-                                                        <span className="font-medium">Progresso do Processo</span>
-                                                        <span className="font-bold">
-                                                            {shipment.stages?.filter(s => s.status === 'completed').length || 0} de 5
-                                                        </span>
-                                                    </div>
-                                                    <div className="w-full h-3 overflow-hidden bg-gray-200 rounded-full">
-                                                        <motion.div
-                                                            initial={{ width: 0 }}
-                                                            animate={{
-                                                                width: `${((shipment.stages?.filter(s => s.status === 'completed').length || 0) / 5) * 100}%`
-                                                            }}
-                                                            transition={{ duration: 1, ease: "easeOut" }}
-                                                            className="h-full rounded-full bg-gradient-to-r from-blue-500 via-purple-500 to-green-500"
-                                                        />
-                                                    </div>
-                                                </div>
-
-                                                {/* Actions */}
-                                                <div className="flex gap-2">
-                                                    <Link href={`/shipments/${shipment.id}`} className="flex-1">
-                                                        <Button variant="primary" size="sm" className="w-full">
-                                                            <Eye className="w-4 h-4" />
-                                                            Ver Detalhes
-                                                        </Button>
-                                                    </Link>
-                                                    <Button
-                                                        variant="danger"
-                                                        size="sm"
-                                                        onClick={() => handleDelete(shipment.id)}
-                                                    >
-                                                        <Trash2 className="w-4 h-4" />
-                                                    </Button>
-                                                </div>
-
-                                                <div className="mt-3 text-xs text-center text-gray-500">
-                                                    Criado em {new Date(shipment.created_at).toLocaleDateString('pt-BR')}
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                </Card>
-                            </motion.div>
-                        ))}
+                            <div className="p-2 rounded-lg bg-blue-50">
+                                <Ship className="w-5 h-5 text-blue-600" />
+                            </div>
+                        </div>
                     </div>
-                )}
-            </AnimatePresence>
 
-            {/* Pagination */}
-            {shipments.data.length > 0 && shipments.links.length > 3 && (
-                <div className="flex justify-center mt-8">
-                    <div className="flex gap-2">
-                        {shipments.links.map((link, index) => (
-                            <Link
-                                key={index}
-                                href={link.url || '#'}
-                                preserveState
-                                className={`
-                                    px-4 py-2 rounded-xl font-medium transition-all
-                                    ${link.active
-                                        ? 'bg-gradient-to-r from-blue-600 to-blue-700 text-white shadow-lg shadow-blue-500/50'
-                                        : 'bg-white text-gray-700 hover:bg-gray-50 border border-gray-200'
-                                    }
-                                    ${!link.url ? 'opacity-50 cursor-not-allowed' : ''}
-                                `}
-                            >
-                                <span dangerouslySetInnerHTML={{ __html: link.label }} />
-                            </Link>
-                        ))}
+                    <div className="p-4 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-600">Alfândegas</p>
+                                <p className="mt-1 text-2xl font-semibold text-slate-900">3</p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-amber-50">
+                                <Anchor className="w-5 h-5 text-amber-600" />
+                            </div>
+                        </div>
+                    </div>
+
+                    <div className="p-4 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <p className="text-sm font-medium text-slate-600">Concluídos</p>
+                                <p className="mt-1 text-2xl font-semibold text-slate-900">8</p>
+                            </div>
+                            <div className="p-2 rounded-lg bg-emerald-50">
+                                <Package className="w-5 h-5 text-emerald-600" />
+                            </div>
+                        </div>
                     </div>
                 </div>
-            )}
-        </DashboardLayout>
-    );
-}
 
-function InfoPill({ icon: Icon, label, value }) {
-    return (
-        <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-gray-50">
-            <Icon className="flex-shrink-0 w-4 h-4 text-gray-400" />
-            <div className="min-w-0">
-                <p className="text-xs text-gray-500">{label}</p>
-                <p className="text-sm font-semibold text-gray-900 truncate">{value}</p>
+                {/* Filters */}
+                <div className="p-4 bg-white border rounded-lg border-slate-200">
+                    <form onSubmit={handleSearch} className="flex gap-3">
+                        <div className="relative flex-1">
+                            <Search className="absolute w-4 h-4 -translate-y-1/2 text-slate-400 left-3 top-1/2" />
+                            <input
+                                type="text"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                placeholder="Buscar por referência, BL, container..."
+                                className="w-full py-2.5 pl-10 pr-4 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                            />
+                        </div>
+                        <select
+                            value={selectedStatus}
+                            onChange={(e) => setSelectedStatus(e.target.value)}
+                            className="px-4 py-2.5 text-sm border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-slate-900 focus:border-transparent"
+                        >
+                            <option value="">Todos os Status</option>
+                            <option value="draft">Rascunho</option>
+                            <option value="coleta_dispersa">Coleta</option>
+                            <option value="legalizacao">Legalização</option>
+                            <option value="alfandegas">Alfândegas</option>
+                            <option value="cornelder">Cornelder</option>
+                            <option value="taxacao">Taxação</option>
+                            <option value="completed">Concluído</option>
+                        </select>
+                        <button
+                            type="submit"
+                            className="px-5 py-2.5 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 transition-colors"
+                        >
+                            Filtrar
+                        </button>
+                    </form>
+                </div>
+
+                {/* Table */}
+                <div className="overflow-hidden bg-white border rounded-lg border-slate-200">
+                    <table className="w-full">
+                        <thead className="border-b bg-slate-50 border-slate-200">
+                            <tr>
+                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
+                                    Referência
+                                </th>
+                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
+                                    Linha de Navegação
+                                </th>
+                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
+                                    BL / Container
+                                </th>
+                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
+                                    Navio
+                                </th>
+                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
+                                    Status
+                                </th>
+                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-600">
+                                    ETA
+                                </th>
+                                <th className="px-4 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-600">
+                                    Ações
+                                </th>
+                            </tr>
+                        </thead>
+                        <tbody className="divide-y divide-slate-200">
+                            {shipments.data && shipments.data.length === 0 ? (
+                                <tr>
+                                    <td colSpan="7" className="px-4 py-12 text-center">
+                                        <Package className="w-12 h-12 mx-auto text-slate-300" />
+                                        <h3 className="mt-2 text-sm font-medium text-slate-900">
+                                            Nenhum shipment encontrado
+                                        </h3>
+                                        <p className="mt-1 text-sm text-slate-500">
+                                            Comece criando um novo shipment
+                                        </p>
+                                        <Link href="/shipments/create">
+                                            <button className="inline-flex items-center gap-2 px-4 py-2 mt-4 text-sm font-medium text-white rounded-lg bg-slate-900 hover:bg-slate-800">
+                                                <Plus className="w-4 h-4" />
+                                                Criar Shipment
+                                            </button>
+                                        </Link>
+                                    </td>
+                                </tr>
+                            ) : (
+                                shipments.data.map((shipment) => (
+                                    <tr key={shipment.id} className="transition-colors hover:bg-slate-50">
+                                        <td className="px-4 py-3 text-sm font-medium text-slate-900">
+                                            {shipment.reference_number}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-slate-600">
+                                            {shipment.shipping_line?.name || 'N/A'}
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-slate-600">
+                                            <div className="space-y-0.5">
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-xs text-slate-500">BL:</span>
+                                                    <span>{shipment.bl_number || 'N/A'}</span>
+                                                </div>
+                                                <div className="flex items-center gap-1.5">
+                                                    <span className="text-xs text-slate-500">CNT:</span>
+                                                    <span>{shipment.container_number || 'N/A'}</span>
+                                                </div>
+                                            </div>
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-slate-600">
+                                            {shipment.vessel_name || 'N/A'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <StatusBadge status={shipment.status} />
+                                        </td>
+                                        <td className="px-4 py-3 text-sm text-slate-600">
+                                            {shipment.arrival_date || 'N/A'}
+                                        </td>
+                                        <td className="px-4 py-3">
+                                            <div className="flex items-center justify-end gap-2">
+                                                <Link href={`/shipments/${shipment.id}`}>
+                                                    <button
+                                                        className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+                                                        title="Ver detalhes"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                </Link>
+                                                <Link href={`/shipments/${shipment.id}/edit`}>
+                                                    <button
+                                                        className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+                                                        title="Editar"
+                                                    >
+                                                        <Edit className="w-4 h-4" />
+                                                    </button>
+                                                </Link>
+                                                <button
+                                                    onClick={() => handleDelete(shipment.id)}
+                                                    className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                                                    title="Excluir"
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            )}
+                        </tbody>
+                    </table>
+                </div>
+
+                {/* Pagination */}
+                {shipments.links && (
+                    <div className="flex items-center justify-between">
+                        <p className="text-sm text-slate-600">
+                            Mostrando {shipments.from || 0} a {shipments.to || 0} de {shipments.total || 0} resultados
+                        </p>
+                        <div className="flex gap-1">
+                            {shipments.links.map((link, index) => (
+                                <Link
+                                    key={index}
+                                    href={link.url || '#'}
+                                    className={`
+                                        px-3 py-1.5 text-sm rounded-md transition-colors
+                                        ${link.active
+                                            ? 'bg-slate-900 text-white'
+                                            : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-50'
+                                        }
+                                        ${!link.url && 'opacity-50 cursor-not-allowed'}
+                                    `}
+                                    preserveState
+                                    disabled={!link.url}
+                                >
+                                    <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                                </Link>
+                            ))}
+                        </div>
+                    </div>
+                )}
             </div>
-        </div>
+        </DashboardLayout>
     );
 }
