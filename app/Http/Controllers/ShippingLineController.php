@@ -5,9 +5,66 @@ namespace App\Http\Controllers;
 use App\Models\ShippingLine;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-
+use App\Models\Shipment;
 class ShippingLineController extends Controller
 {
+
+ /**
+     * Avançar shipment para próxima fase
+     */
+    public function advance(Shipment $shipment)
+    {
+        // Verificar se pode avançar
+        $currentStage = $shipment->currentStage();
+
+        if (!$currentStage) {
+            return back()->withErrors(['error' => 'Nenhum stage ativo encontrado.']);
+        }
+
+        // Validações específicas por fase
+        switch ($currentStage->stage) {
+            case 'coleta_dispersa':
+                // Verificar se tem BL e pagamento foi feito
+                if (!$shipment->documents()->where('type', 'bl')->exists()) {
+                    return back()->withErrors(['error' => 'BL deve ser anexado antes de avançar.']);
+                }
+                if ($shipment->payment_status !== 'paid') {
+                    return back()->withErrors(['error' => 'Frete deve ser pago antes de avançar.']);
+                }
+                break;
+
+            case 'legalizacao':
+                // Verificar se tem Delivery Order
+                if (!$shipment->documents()->where('type', 'delivery_order')->exists()) {
+                    return back()->withErrors(['error' => 'Delivery Order deve ser emitido antes de avançar.']);
+                }
+                break;
+
+            case 'alfandegas':
+                // Verificar se tem autorização
+                if ($shipment->customs_status !== 'authorized') {
+                    return back()->withErrors(['error' => 'Autorização de saída deve ser obtida antes de avançar.']);
+                }
+                break;
+
+            case 'cornelder':
+                // Verificar se storage foi pago
+                if ($shipment->cornelder_payment_status !== 'paid') {
+                    return back()->withErrors(['error' => 'Storage Cornelder deve ser pago antes de avançar.']);
+                }
+                break;
+        }
+
+        // Avançar para próxima fase
+        $nextStage = $shipment->advanceToNextStage();
+
+        if ($nextStage) {
+            return back()->with('success', 'Processo avançou para: ' . $nextStage->stage);
+        }
+
+        return back()->with('info', 'Processo está na última fase de stages.');
+    }
+
     /**
      * Display a listing of shipping lines.
      */

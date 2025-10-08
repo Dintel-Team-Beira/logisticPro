@@ -141,7 +141,17 @@ class ShipmentController extends Controller
                 'created_by' => auth()->id(),
                 'status' => ShipmentStatus::COLETA_COTACAO_SOLICITADA->value, // Status inicial correto
             ]);
+                // Criar stage inicial (FASE 1: Coleta de Dispersa)
+                $shipment->startStage('coleta_dispersa');
 
+                // OU criar manualmente:
+                // ShipmentStage::create([
+                //     'shipment_id' => $shipment->id,
+                //     'stage' => 'coleta_dispersa',
+                //     'status' => 'in_progress',
+                //     'started_at' => now(),
+                //     'updated_by' => auth()->id(),
+                // ]);
             Log::info('Shipment criado', ['shipment_id' => $shipment->id]);
 
             // 4. Upload do BL Original (UC-001 - Passo 4)
