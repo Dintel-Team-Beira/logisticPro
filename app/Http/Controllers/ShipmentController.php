@@ -310,6 +310,15 @@ public function show(Shipment $shipment)
     }
 }
 
+public function edit(Shipment $shipment)
+{
+    return Inertia::render('Shipments/Edit', [
+        'shipment' => $shipment,
+        'shippingLines' => ShippingLine::where('active', true)->get(),
+        'clients' => Client::orderBy('name')->get(),
+    ]);
+}
+
     public function update(Request $request, Shipment $shipment)
     {
         $validated = $request->validate([
