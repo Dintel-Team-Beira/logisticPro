@@ -5,38 +5,40 @@ use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Application;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\StageController;
+use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProfileController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\SettingsController;
 use App\Http\Controllers\ShipmentController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\OperationsController;
+use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\ShippingLineController;
 use App\Http\Controllers\ShipmentPhaseController;
 
+/*
+|--------------------------------------------------------------------------
+| LOGISTICA PRO - ROTAS COMPLETAS
+|--------------------------------------------------------------------------
+| Sistema de Gestão de Operações de Importação
+| Desenvolvido por: Arnaldo Tomo
+|--------------------------------------------------------------------------
+*/
 
-// routes/web.php
-// Route::get('/', function () {
-//     return Inertia::render('Landing'); // Página de apresentação
-// })->name('home');
-
+// ============================================================================
+// HOME / LANDING
+// ============================================================================
 Route::get('/', function () {
     return auth()->check()
         ? redirect()->route('dashboard')
         : redirect()->route('login');
 })->name('app');
 
-
-// Route::get('/', function () {
-//     return Inertia::render('Welcome', [
-//         'canLogin' => Route::has('login'),
-//         'canRegister' => Route::has('register'),
-//         'laravelVersion' => Application::VERSION,
-//         'phpVersion' => PHP_VERSION,
-//     ]);
-// });
-
-
-
+// ============================================================================
+// DASHBOARD
+// ============================================================================
 Route::get('/dashboard', function () {
     return Inertia::render('Dashboard', [
         'stats' => [
@@ -50,236 +52,431 @@ Route::get('/dashboard', function () {
         'activities' => [], // Atividades recentes
     ]);
 })->middleware(['auth', 'verified'])->name('dashboard');
-
+// ============================================================================
+// PROFILE
+// ============================================================================
 Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 });
 
-
-
-// Protected routes
+// ============================================================================
+// SHIPMENTS (Processos de Importação) - CRUD Completo
+// ============================================================================
 Route::middleware(['auth'])->group(function () {
 
-
-
-    // Shipments
+    // CRUD Básico
     Route::resource('shipments', ShipmentController::class);
 
-    // Documents
-    Route::prefix('shipments/{shipment}')->group(function () {
-        Route::post('/documents', [DocumentController::class, 'store'])->name('documents.store');
-    });
-    Route::get('/documents/{document}/download', [DocumentController::class, 'download'])->name('documents.download');
-    Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])->name('documents.destroy');
+    // Ações Especiais de Shipment
+    Route::post('/shipments/{shipment}/advance', [ShipmentController::class, 'advance'])
+        ->name('shipments.advance');
+    Route::get('/shipments/{shipment}/progress', [ShipmentController::class, 'getProgress'])
+        ->name('shipments.progress');
+    Route::get('/shipments/{shipment}/checklist', [ShipmentController::class, 'getChecklist'])
+        ->name('shipments.checklist');
+});
 
-    // Stages
-    Route::post('/shipments/{shipment}/stages/{stage}/status', [StageController::class, 'updateStatus'])
-        ->name('stages.update-status');
+// ============================================================================
+// OPERAÇÕES - 7 FASES DO PROCESSO DE IMPORTAÇÃO
+// ============================================================================
+Route::middleware(['auth'])->prefix('operations')->name('operations.')->group(function () {
 
-    // Invoices
+    // ====================================
+    // FASE 1: COLETA DE DISPERSA
+    // ====================================
+    Route::get('/coleta', [OperationsController::class, 'coletaDispersa'])
+        ->name('coleta');
+
+    // RF-004: Solicitar Cotações
+    Route::post('/shipments/{shipment}/quotations/request', [ShipmentPhaseController::class, 'requestQuotation'])
+        ->name('shipments.quotations.request');
+
+    // RF-005: Registrar Cotação Recebida
+    Route::post('/shipments/{shipment}/quotations/register', [ShipmentPhaseController::class, 'registerQuotation'])
+        ->name('shipments.quotations.register');
+
+    // RF-006: Escolher Linha e Pagar Frete
+    Route::post('/shipments/{shipment}/select-line', [ShipmentPhaseController::class, 'selectShippingLine'])
+        ->name('shipments.select-line');
+    Route::post('/shipments/{shipment}/pay-freight', [ShipmentPhaseController::class, 'payFreight'])
+        ->name('shipments.pay-freight');
+
+    // ====================================
+    // FASE 2: LEGALIZAÇÃO
+    // ====================================
+    Route::get('/legalizacao', [OperationsController::class, 'legalizacao'])
+        ->name('legalizacao');
+
+    // RF-007: Carimbar BL
+    Route::post('/shipments/{shipment}/stamp-bl', [ShipmentPhaseController::class, 'stampBL'])
+        ->name('shipments.stamp-bl');
+
+    // RF-008: Emitir Delivery Order
+    Route::post('/shipments/{shipment}/issue-delivery-order', [ShipmentPhaseController::class, 'issueDeliveryOrder'])
+        ->name('shipments.issue-delivery-order');
+
+    // ====================================
+    // FASE 3: ALFÂNDEGAS
+    // ====================================
+    Route::get('/alfandegas', [OperationsController::class, 'alfandegas'])
+        ->name('alfandegas');
+
+    // RF-009: Submeter Documentos à Alfândega
+    Route::post('/shipments/{shipment}/submit-customs', [ShipmentPhaseController::class, 'submitToCustoms'])
+        ->name('shipments.submit-customs');
+
+    // RF-010: Obter Aviso de Taxação
+    Route::post('/shipments/{shipment}/get-tax-notice', [ShipmentPhaseController::class, 'getTaxNotice'])
+        ->name('shipments.get-tax-notice');
+
+    // RF-011: Pagar Taxas Alfandegárias
+    Route::post('/shipments/{shipment}/pay-customs', [ShipmentPhaseController::class, 'payCustomsTax'])
+        ->name('shipments.pay-customs');
+
+    // RF-012: Obter Autorização de Saída
+    Route::post('/shipments/{shipment}/get-authorization', [ShipmentPhaseController::class, 'getCustomsAuthorization'])
+        ->name('shipments.get-authorization');
+
+    // ====================================
+    // FASE 4: CORNELDER
+    // ====================================
+    Route::get('/cornelder', [OperationsController::class, 'cornelder'])
+        ->name('cornelder');
+
+    // RF-013: Obter Draft Cornelder
+    Route::post('/shipments/{shipment}/get-draft', [ShipmentPhaseController::class, 'getCornelderDraft'])
+        ->name('shipments.get-draft');
+
+    // RF-014: Pagar Storage
+    Route::post('/shipments/{shipment}/pay-storage', [ShipmentPhaseController::class, 'payStorage'])
+        ->name('shipments.pay-storage');
+
+    // RF-015: Emitir Recibo Cornelder
+    Route::post('/shipments/{shipment}/cornelder-receipt', [ShipmentPhaseController::class, 'issueCornelderReceipt'])
+        ->name('shipments.cornelder-receipt');
+
+    // ====================================
+    // FASE 5: TAXAÇÃO
+    // ====================================
+    Route::get('/taxacao', [OperationsController::class, 'taxacao'])
+        ->name('taxacao');
+
+    // RF-016: Emitir SAD
+    Route::post('/shipments/{shipment}/issue-sad', [ShipmentPhaseController::class, 'issueSAD'])
+        ->name('shipments.issue-sad');
+
+    // RF-017: Processar IDO
+    Route::post('/shipments/{shipment}/process-ido', [ShipmentPhaseController::class, 'processIDO'])
+        ->name('shipments.process-ido');
+
+    // ====================================
+    // FASE 6: FATURAÇÃO
+    // ====================================
+    Route::get('/faturacao', [OperationsController::class, 'faturacao'])
+        ->name('financas'); // Alias financas
+
+    // RF-020: Calcular Custos Totais
+    Route::post('/shipments/{shipment}/calculate-costs', [ShipmentPhaseController::class, 'calculateTotalCosts'])
+        ->name('shipments.calculate-costs');
+
+    // RF-021: Aplicar Margem de Lucro
+    Route::post('/shipments/{shipment}/apply-margin', [ShipmentPhaseController::class, 'applyProfitMargin'])
+        ->name('shipments.apply-margin');
+
+    // RF-022: Gerar Fatura ao Cliente
+    Route::post('/shipments/{shipment}/generate-invoice', [ShipmentPhaseController::class, 'generateClientInvoice'])
+        ->name('shipments.generate-invoice');
+
+    // RF-023: Enviar Fatura ao Cliente
+    Route::post('/shipments/{shipment}/send-invoice', [ShipmentPhaseController::class, 'sendInvoice'])
+        ->name('shipments.send-invoice');
+
+    // RF-024: Registrar Pagamento do Cliente
+    Route::post('/shipments/{shipment}/register-payment', [ShipmentPhaseController::class, 'registerClientPayment'])
+        ->name('shipments.register-payment');
+
+    // ====================================
+    // FASE 7: POD (Proof of Delivery)
+    // ====================================
+    Route::get('/pod', [OperationsController::class, 'pod'])
+        ->name('pod');
+
+    // RF-025: Registrar Devolução de Container
+    Route::post('/shipments/{shipment}/register-return', [ShipmentPhaseController::class, 'registerContainerReturn'])
+        ->name('shipments.register-return');
+
+    // Completar Processo
+    Route::post('/shipments/{shipment}/complete', [ShipmentPhaseController::class, 'completeProcess'])
+        ->name('shipments.complete');
+});
+
+// ============================================================================
+// DOCUMENTOS - Gestão de Documentos
+// ============================================================================
+Route::middleware(['auth'])->group(function () {
+
+    // RF-035: Repositório Centralizado de Documentos
+    Route::get('/documents', [DocumentController::class, 'index'])
+        ->name('documents.index');
+
+    // Upload de Documentos
+    Route::post('/shipments/{shipment}/documents', [DocumentController::class, 'store'])
+        ->name('documents.store');
+
+    // Visualizar Documento
+    Route::get('/documents/{document}', [DocumentController::class, 'show'])
+        ->name('documents.show');
+
+    // Download Documento
+    Route::get('/documents/{document}/download', [DocumentController::class, 'download'])
+        ->name('documents.download');
+
+    // Deletar Documento
+    Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])
+        ->name('documents.destroy');
+
+    // Buscar Documentos
+    Route::get('/documents/search', [DocumentController::class, 'search'])
+        ->name('documents.search');
+});
+
+// ============================================================================
+// FINANÇAS / INVOICES - Gestão de Faturas
+// ============================================================================
+Route::middleware(['auth'])->group(function () {
+
+    // CRUD de Faturas
     Route::resource('invoices', InvoiceController::class);
+
+    // Marcar Fatura como Paga
     Route::post('/invoices/{invoice}/pay', [InvoiceController::class, 'markAsPaid'])
         ->name('invoices.pay');
 
-    // Shipping Lines (Admin/Manager only)
-    Route::middleware(['role:admin,manager'])->group(function () {
-        Route::resource('shipping-lines', ShippingLineController::class);
-    });
+    // Gerar PDF da Fatura
+    Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'generatePDF'])
+        ->name('invoices.pdf');
 
-    // Reports (Admin/Manager only)
-    Route::middleware(['role:admin,manager'])->group(function () {
-        Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-        Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
-    });
+    // Enviar Fatura por Email
+    Route::post('/invoices/{invoice}/send', [InvoiceController::class, 'sendEmail'])
+        ->name('invoices.send');
 
-    // Users (Admin only)
-    Route::middleware(['role:admin'])->group(function () {
-        Route::resource('users', UserController::class);
-    });
-
-    // Reports com rotas extras
-Route::middleware(['auth', 'role:admin,manager'])->group(function () {
-    Route::get('/reports', [ReportController::class, 'index'])->name('reports.index');
-    Route::get('/reports/export', [ReportController::class, 'export'])->name('reports.export');
-    Route::post('/reports/custom-range', [ReportController::class, 'customRange'])->name('reports.custom-range');
+    // Dashboard Financeiro
+    Route::get('/financial-dashboard', [InvoiceController::class, 'dashboard'])
+        ->name('invoices.dashboard');
 });
 
-// Shipping Lines com toggle status
-Route::middleware(['auth', 'role:admin,manager'])->group(function () {
+// ============================================================================
+// RELATÓRIOS - RF-028, RF-029, RF-030
+// ============================================================================
+Route::middleware(['auth'])->prefix('reports')->name('reports.')->group(function () {
+
+    // Dashboard de Relatórios
+    Route::get('/', [ReportController::class, 'index'])
+        ->name('index');
+
+    // RF-028: Relatório de Processos
+    Route::get('/processes', [ReportController::class, 'processesReport'])
+        ->name('processes');
+    Route::post('/processes/export', [ReportController::class, 'exportProcesses'])
+        ->name('processes.export');
+
+    // RF-029: Relatório Financeiro
+    Route::get('/financial', [ReportController::class, 'financialReport'])
+        ->name('financial');
+    Route::post('/financial/export', [ReportController::class, 'exportFinancial'])
+        ->name('financial.export');
+
+    // RF-030: Relatório de Performance Operacional
+    Route::get('/performance', [ReportController::class, 'performanceReport'])
+        ->name('performance');
+    Route::post('/performance/export', [ReportController::class, 'exportPerformance'])
+        ->name('performance.export');
+
+    // Exportação Geral
+    Route::post('/export', [ReportController::class, 'export'])
+        ->name('export');
+
+    // Relatório Customizado
+    Route::post('/custom-range', [ReportController::class, 'customRange'])
+        ->name('custom-range');
+});
+
+// ============================================================================
+// CLIENTES - RF-031: CRUD de Clientes
+// ============================================================================
+Route::middleware(['auth'])->group(function () {
+
+    // CRUD Completo de Clientes
+    Route::resource('clients', ClientController::class);
+
+    // Ativar/Desativar Cliente
+    Route::patch('/clients/{client}/toggle-status', [ClientController::class, 'toggleStatus'])
+        ->name('clients.toggle-status');
+
+    // Histórico de Processos do Cliente
+    Route::get('/clients/{client}/shipments', [ClientController::class, 'shipments'])
+        ->name('clients.shipments');
+
+    // Relatório Financeiro do Cliente
+    Route::get('/clients/{client}/financial', [ClientController::class, 'financial'])
+        ->name('clients.financial');
+});
+
+// ============================================================================
+// LINHAS DE NAVEGAÇÃO - RF-032: CRUD de Linhas
+// ============================================================================
+Route::middleware(['auth'])->group(function () {
+
+    // CRUD Completo de Shipping Lines
     Route::resource('shipping-lines', ShippingLineController::class);
+
+    // Ativar/Desativar Linha
     Route::patch('/shipping-lines/{shippingLine}/toggle-status', [ShippingLineController::class, 'toggleStatus'])
         ->name('shipping-lines.toggle-status');
+
+    // Histórico de Processos da Linha
+    Route::get('/shipping-lines/{shippingLine}/shipments', [ShippingLineController::class, 'shipments'])
+        ->name('shipping-lines.shipments');
+
+    // Estatísticas da Linha
+    Route::get('/shipping-lines/{shippingLine}/stats', [ShippingLineController::class, 'statistics'])
+        ->name('shipping-lines.stats');
 });
 
+// ============================================================================
+// USUÁRIOS - Gestão de Usuários (Admin Only)
+// ============================================================================
+Route::middleware(['auth'])->prefix('users')->name('users.')->group(function () {
 
-    // Profile
-    Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
-    Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
-    Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+    // CRUD de Usuários
+    Route::resource('/', UserController::class)->parameters(['' => 'user']);
+
+    // Ativar/Desativar Usuário
+    Route::patch('/{user}/toggle-status', [UserController::class, 'toggleStatus'])
+        ->name('toggle-status');
+
+    // Redefinir Senha
+    Route::post('/{user}/reset-password', [UserController::class, 'resetPassword'])
+        ->name('reset-password');
+
+    // Histórico de Atividades do Usuário
+    Route::get('/{user}/activities', [UserController::class, 'activities'])
+        ->name('activities');
+
+    // Atualizar Permissões
+    Route::patch('/{user}/permissions', [UserController::class, 'updatePermissions'])
+        ->name('permissions');
 });
 
-// Fase 1: Coleta de Dispersa
-Route::middleware(['auth', 'verified'])->group(function () {
+// ============================================================================
+// CONFIGURAÇÕES - RF-033: Configurações Gerais
+// ============================================================================
+Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(function () {
 
-    // CRUD de Shipments
-    Route::resource('shipments', ShipmentController::class);
+    // Dashboard de Configurações
+    Route::get('/', [SettingsController::class, 'index'])
+        ->name('index');
 
-    // Avançar para próxima etapa
-    Route::post('/shipments/{shipment}/advance', [\App\Http\Controllers\ShipmentController::class, 'advance'])
-        ->name('shipments.advance');
+    // Configurações Financeiras
+    Route::get('/financial', [SettingsController::class, 'financial'])
+        ->name('financial');
+    Route::post('/financial', [SettingsController::class, 'updateFinancial'])
+        ->name('financial.update');
 
-    // Upload de documentos
-    Route::post('/shipments/{shipment}/documents/{docType}', [ShipmentController::class, 'uploadDocument'])
-        ->name('shipments.documents.upload');
+    // Configurações de Notificações
+    Route::get('/notifications', [SettingsController::class, 'notifications'])
+        ->name('notifications');
+    Route::post('/notifications', [SettingsController::class, 'updateNotifications'])
+        ->name('notifications.update');
 
-    // ===== FASE 1: COLETA DE DISPERSA =====
-    Route::prefix('shipments/{shipment}')->group(function () {
+    // Configurações de Documentos
+    Route::get('/documents', [SettingsController::class, 'documents'])
+        ->name('documents');
+    Route::post('/documents', [SettingsController::class, 'updateDocuments'])
+        ->name('documents.update');
+    Route::post('/documents/logo', [SettingsController::class, 'uploadLogo'])
+        ->name('documents.logo');
 
-        // RF-004: Solicitar Cotações
-        Route::post('/quotation/request', [ShipmentPhaseController::class, 'requestQuotation'])
-            ->name('shipments.quotation.request');
+    // Configurações de Usuários/Permissões
+    Route::get('/permissions', [SettingsController::class, 'permissions'])
+        ->name('permissions');
+    Route::post('/permissions', [SettingsController::class, 'updatePermissions'])
+        ->name('permissions.update');
 
-        // RF-005: Registrar Cotação Recebida
-        Route::post('/quotation/register', [ShipmentPhaseController::class, 'registerQuotation'])
-            ->name('shipments.quotation.register');
-
-        // RF-006: Registrar Pagamento
-        Route::post('/payment/register', [ShipmentPhaseController::class, 'registerPayment'])
-            ->name('shipments.payment.register');
-
-        // RF-007: Registrar Recibo
-        Route::post('/receipt/register', [ShipmentPhaseController::class, 'registerReceipt'])
-            ->name('shipments.receipt.register');
-    });
-
-    // ===== FASE 2: LEGALIZAÇÃO =====
-    Route::prefix('shipments/{shipment}')->group(function () {
-
-        // RF-008: Iniciar Legalização
-        Route::post('/legalization/start', [ShipmentPhaseController::class, 'startLegalization'])
-            ->name('shipments.legalization.start');
-
-        // RF-009: Registrar BL Carimbado
-        Route::post('/bl/stamped', [ShipmentPhaseController::class, 'registerStampedBL'])
-            ->name('shipments.bl.stamped');
-
-        // RF-010: Registrar Delivery Order
-        Route::post('/delivery-order', [ShipmentPhaseController::class, 'registerDeliveryOrder'])
-            ->name('shipments.delivery-order');
-    });
-
-    // ===== FASE 3: ALFÂNDEGAS =====
-    Route::prefix('shipments/{shipment}')->group(function () {
-
-        // RF-011: Submeter Declaração Aduaneira
-        Route::post('/customs/declaration', [ShipmentPhaseController::class, 'submitCustomsDeclaration'])
-            ->name('shipments.customs.declaration');
-
-        // RF-012: Registrar Aviso de Taxação
-        Route::post('/customs/notice', [ShipmentPhaseController::class, 'registerCustomsNotice'])
-            ->name('shipments.customs.notice');
-
-        // RF-013: Registrar Pagamento Alfândega
-        Route::post('/customs/payment', [ShipmentPhaseController::class, 'registerCustomsPayment'])
-            ->name('shipments.customs.payment');
-
-        // RF-014: Registrar Autorização de Saída
-        Route::post('/customs/authorization', [ShipmentPhaseController::class, 'registerCustomsAuthorization'])
-            ->name('shipments.customs.authorization');
-    });
-
-    // ===== FASE 4: CORNELDER =====
-    Route::prefix('shipments/{shipment}')->group(function () {
-
-        // RF-015: Solicitar Cotação Cornelder
-        Route::post('/cornelder/quotation', [ShipmentPhaseController::class, 'requestCornelderQuotation'])
-            ->name('shipments.cornelder.quotation');
-
-        // RF-016: Registrar Draft e Storage
-        Route::post('/cornelder/draft', [ShipmentPhaseController::class, 'registerDraftStorage'])
-            ->name('shipments.cornelder.draft');
-
-        // RF-017: Registrar Pagamento Cornelder
-        Route::post('/cornelder/payment', [ShipmentPhaseController::class, 'registerCornelderPayment'])
-            ->name('shipments.cornelder.payment');
-
-        // RF-018: Registrar Recibo Cornelder
-        Route::post('/cornelder/receipt', [ShipmentPhaseController::class, 'registerCornelderReceipt'])
-            ->name('shipments.cornelder.receipt');
-    });
-
-    // ===== FASE 5: TAXAÇÃO =====
-    Route::prefix('shipments/{shipment}')->group(function () {
-
-        // RF-019: Preparar Documentos de Taxação
-        Route::post('/taxation/prepare', [ShipmentPhaseController::class, 'prepareTaxationDocuments'])
-            ->name('shipments.taxation.prepare');
-
-        // RF-020: Gerar Carta de Taxação
-        Route::post('/taxation/letter', [ShipmentPhaseController::class, 'generateTaxationLetter'])
-            ->name('shipments.taxation.letter');
-    });
-
-    // ===== FASE 6: FATURAÇÃO =====
-    Route::prefix('shipments/{shipment}')->group(function () {
-
-        // RF-021: Calcular Custos Totais
-        Route::get('/invoice/calculate', [ShipmentPhaseController::class, 'calculateTotalCosts'])
-            ->name('shipments.invoice.calculate');
-
-        // RF-022: Gerar Fatura
-        Route::post('/invoice/generate', [ShipmentPhaseController::class, 'generateInvoice'])
-            ->name('shipments.invoice.generate');
-
-        // RF-023: Enviar Fatura ao Cliente
-        Route::post('/invoice/send', [ShipmentPhaseController::class, 'sendInvoice'])
-            ->name('shipments.invoice.send');
-
-        // RF-024: Registrar Pagamento do Cliente
-        Route::post('/invoice/payment', [ShipmentPhaseController::class, 'registerClientPayment'])
-            ->name('shipments.invoice.payment');
-    });
-
-    // ===== FASE 7: POD (Proof of Delivery) =====
-    Route::prefix('shipments/{shipment}')->group(function () {
-
-        // RF-025: Registrar Devolução de Container
-        Route::post('/pod/return', [ShipmentPhaseController::class, 'registerContainerReturn'])
-            ->name('shipments.pod.return');
-
-        // Completar Processo
-        Route::post('/complete', [ShipmentPhaseController::class, 'completeProcess'])
-            ->name('shipments.complete');
-    });
-
-    // ===== UTILIDADES =====
-    Route::prefix('shipments/{shipment}')->group(function () {
-
-        // Obter checklist de documentos
-        Route::get('/checklist', [ShipmentPhaseController::class, 'getChecklist'])
-            ->name('shipments.checklist');
-
-        // Obter progresso
-        Route::get('/progress', [ShipmentPhaseController::class, 'getProgress'])
-            ->name('shipments.progress');
-
-        // Ver documento
-        Route::get('/documents/{document}', [ShipmentPhaseController::class, 'viewDocument'])
-            ->name('shipments.documents.view');
-
-        // Download documento
-        Route::get('/documents/{document}/download', [ShipmentPhaseController::class, 'downloadDocument'])
-            ->name('shipments.documents.download');
-    });
+    // Backup
+    Route::post('/backup', [SettingsController::class, 'backup'])
+        ->name('backup');
 });
 
-// / Shipping Lines (Admin/Manager only)
+// ============================================================================
+// NOTIFICAÇÕES
+// ============================================================================
+Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
+
+    // Listar Notificações
+    Route::get('/', [NotificationController::class, 'index'])
+        ->name('index');
+
+    // Marcar como Lida
+    Route::post('/{notification}/read', [NotificationController::class, 'markAsRead'])
+        ->name('read');
+
+    // Marcar Todas como Lidas
+    Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])
+        ->name('read-all');
+
+    // Deletar Notificação
+    Route::delete('/{notification}', [NotificationController::class, 'destroy'])
+        ->name('destroy');
+
+    // Contar Não Lidas
+    Route::get('/unread-count', [NotificationController::class, 'unreadCount'])
+        ->name('unread-count');
+});
+
+// ============================================================================
+// STAGES - Atualização de Status de Fases
+// ============================================================================
 Route::middleware(['auth'])->group(function () {
-    Route::resource('shipping-lines', ShippingLineController::class);
-    Route::patch('/shipping-lines/{shippingLine}/toggle-status',
-        [ShippingLineController::class, 'toggleStatus'])
-        ->name('shipping-lines.toggle-status');
+    Route::post('/shipments/{shipment}/stages/{stage}/status', [StageController::class, 'updateStatus'])
+        ->name('stages.update-status');
 });
+
+// ============================================================================
+// API ENDPOINTS (Opcional - para futuro mobile app)
+// ============================================================================
+Route::middleware(['auth:sanctum'])->prefix('api')->name('api.')->group(function () {
+
+    // Dashboard Stats
+    Route::get('/dashboard/stats', [DashboardController::class, 'stats'])
+        ->name('dashboard.stats');
+
+    // Shipments API
+    Route::apiResource('shipments', ShipmentController::class);
+
+    // Quick Search
+    Route::get('/search', [ShipmentController::class, 'quickSearch'])
+        ->name('search');
+});
+
+// ============================================================================
+// AUDITORIA - RF-036: Logs de Auditoria (Admin Only)
+// ============================================================================
+Route::middleware(['auth'])->prefix('audit')->name('audit.')->group(function () {
+
+    Route::get('/', [AuditController::class, 'index'])
+        ->name('index');
+
+    Route::get('/logs', [AuditController::class, 'logs'])
+        ->name('logs');
+
+    Route::get('/export', [AuditController::class, 'export'])
+        ->name('export');
+});
+
+// ============================================================================
+// AUTENTICAÇÃO
+// ============================================================================
 require __DIR__.'/auth.php';
