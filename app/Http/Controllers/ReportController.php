@@ -385,7 +385,7 @@ class ReportController extends Controller
                 ->select('stage', DB::raw('COUNT(*) as count'))
                 ->groupBy('stage')
                 ->get(),
-            'total_size' => Document::whereBetween('created_at', [$startDate, $endDate])->sum('file_size'),
+            'total_size' => Document::whereBetween('created_at', [$startDate, $endDate])->sum('size'),
         ];
     }
 

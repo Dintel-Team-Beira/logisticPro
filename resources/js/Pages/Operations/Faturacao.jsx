@@ -1,3 +1,18 @@
+import React, { useState } from 'react';
+import { Head, router } from '@inertiajs/react';
+import DashboardLayout from '@/Layouts/DashboardLayout';
+import {
+  PhaseTimeline,
+  DocumentChecklist,
+  ShipmentCard,
+  PhaseHeader,
+  FilterBar
+} from '@/Components/Operations/OperationsComponents';
+import {
+  Ship, Send, DollarSign, CheckCircle2,
+  AlertTriangle, Clock, ArrowRight
+} from 'lucide-react';
+
 // ========================================
 // FASE 6: FATURAÇÃO
 // ========================================
