@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Head, Link, router, useForm } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
+
 import {
     ArrowLeft,
     Ship,
@@ -17,11 +18,32 @@ import {
     Truck,
 } from 'lucide-react';
 
+
+const getStageFromPhase = (phaseId) => {
+    const stageMap = {
+        1: 'coleta_dispersa',
+        2: 'legalizacao',
+        3: 'alfandegas',
+        4: 'cornelder',
+        5: 'taxacao',
+        6: 'financas',
+        7: 'pod',
+    };
+    return stageMap[phaseId] || 'coleta_dispersa';
+};
 export default function Show({ shipment, checklist, progress }) {
     const [activePhase, setActivePhase] = useState(progress.current_phase || 1);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [selectedDocType, setSelectedDocType] = useState(null);
 
+
+
+// Adicionar esta função helper no início do arquivo (fora do componente)
+
+// E atualizar o useState do currentStage:
+const [currentStage, setCurrentStage] = useState(
+    getStageFromPhase(progress.current_phase)
+);
     // Configuração das 7 Fases baseado no SRS
     const phases = [
         {
@@ -99,7 +121,8 @@ export default function Show({ shipment, checklist, progress }) {
         }
     };
 
-    const handleDocumentUpload = (docType) => {
+     const handleDocumentUpload = (docType) => {
+        console.log('Upload iniciado para:', docType); // Debug
         setSelectedDocType(docType);
         setUploadModalOpen(true);
     };
@@ -357,11 +380,16 @@ export default function Show({ shipment, checklist, progress }) {
 
             {/* Upload Modal */}
             {uploadModalOpen && (
-                <UploadModal
-                    shipment={shipment}
-                    docType={selectedDocType}
-                    onClose={() => setUploadModalOpen(false)}
-                />
+ <UploadModal
+        shipment={shipment}
+        docType={selectedDocType}
+        currentStage={currentStage}  // ✅ VERIFICAR se está aqui
+        onClose={() => {
+            setUploadModalOpen(false);
+            setSelectedDocType(null);
+            router.reload({ only: ['shipment', 'checklist'] });
+        }}
+    />
             )}
         </DashboardLayout>
     );
@@ -422,68 +450,183 @@ function InfoItem({ label, value }) {
 }
 
 // Modal de Upload
-function UploadModal({ shipment, docType, onClose }) {
-    const { data, setData, post, processing, errors } = useForm({
-        document: null,
-        notes: '',
-    });
+function UploadModal({ shipment, docType, currentStage, onClose }) {
+    const [file, setFile] = useState(null);
+    const [notes, setNotes] = useState('');
+    const [processing, setProcessing] = useState(false);
+    const [errors, setErrors] = useState({});
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        post(`/shipments/${shipment.id}/documents/${docType}`, {
-            onSuccess: () => onClose(),
+
+        if (!file) {
+            alert('Por favor, selecione um arquivo');
+            return;
+        }
+
+        setProcessing(true);
+        setErrors({});
+
+        // ✅ CRIAR FormData MANUALMENTE
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('type', docType);
+        formData.append('stage', currentStage);
+        formData.append('notes', notes);
+
+        // Debug - Ver o que está sendo enviado
+        console.log('📦 FormData manual criado:');
+        console.log('  - file:', file.name);
+        console.log('  - type:', docType);
+        console.log('  - stage:', currentStage);
+        console.log('  - notes:', notes);
+
+        // Verificar se FormData está correto
+        for (let [key, value] of formData.entries()) {
+            console.log(`  FormData[${key}]:`, value);
+        }
+
+        // ✅ ENVIAR COM router.post
+        router.post(`/shipments/${shipment.id}/documents`, formData, {
+            forceFormData: true,
+            preserveScroll: true,
+            preserveState: true,
+            onSuccess: () => {
+                console.log('✅ Upload bem-sucedido!');
+                setProcessing(false);
+                onClose();
+            },
+            onError: (errors) => {
+                console.error('❌ Erro no upload:', errors);
+                setErrors(errors);
+                setProcessing(false);
+            },
+            onFinish: () => {
+                setProcessing(false);
+            }
         });
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
-            <div className="w-full max-w-md p-6 bg-white rounded-lg">
-                <h3 className="mb-4 text-lg font-semibold text-slate-900">
-                    Upload de Documento
-                </h3>
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-md p-6 bg-white rounded-lg shadow-xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Header */}
+                <div className="flex items-center justify-between mb-4">
+                    <h3 className="text-lg font-semibold text-slate-900">
+                        Upload de Documento
+                    </h3>
+                    <button
+                        onClick={onClose}
+                        className="transition-colors text-slate-400 hover:text-slate-600"
+                    >
+                        ✕
+                    </button>
+                </div>
 
                 <form onSubmit={handleSubmit} className="space-y-4">
+                    {/* Campo Arquivo */}
                     <div>
                         <label className="block mb-2 text-sm font-medium text-slate-700">
-                            Arquivo
+                            Arquivo *
                         </label>
                         <input
                             type="file"
-                            onChange={(e) => setData('document', e.target.files[0])}
-                            className="w-full text-sm"
+                            onChange={(e) => setFile(e.target.files[0])}
+                            className="w-full px-3 py-2 text-sm border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
                             accept=".pdf,.jpg,.jpeg,.png"
+                            required
                         />
-                        {errors.document && (
-                            <p className="mt-1 text-xs text-red-600">{errors.document}</p>
+                        {errors.file && (
+                            <p className="mt-1 text-xs text-red-600">{errors.file}</p>
                         )}
+                        <p className="mt-1 text-xs text-slate-500">
+                            PDF, JPG, PNG (máx. 10MB)
+                        </p>
                     </div>
 
+                    {/* Preview dos dados */}
+                    <div className="p-3 border border-blue-200 rounded-lg bg-blue-50">
+                        <p className="mb-2 text-xs font-medium text-blue-900">
+                            📋 Dados que serão enviados:
+                        </p>
+                        <div className="space-y-1 text-xs text-blue-700">
+                            <div className="flex justify-between">
+                                <span>Tipo:</span>
+                                <strong>{docType}</strong>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Fase:</span>
+                                <strong>{currentStage}</strong>
+                            </div>
+                            <div className="flex justify-between">
+                                <span>Arquivo:</span>
+                                <strong className="truncate max-w-[200px]">
+                                    {file ? file.name : 'Nenhum selecionado'}
+                                </strong>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Campo Observações */}
                     <div>
                         <label className="block mb-2 text-sm font-medium text-slate-700">
-                            Observações
+                            Observações <span className="text-slate-400">(opcional)</span>
                         </label>
                         <textarea
-                            value={data.notes}
-                            onChange={(e) => setData('notes', e.target.value)}
+                            value={notes}
+                            onChange={(e) => setNotes(e.target.value)}
+                            className="w-full px-3 py-2 text-sm border rounded-lg border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             rows="3"
-                            className="w-full px-3 py-2 text-sm border rounded-lg border-slate-300"
+                            placeholder="Adicione observações sobre o documento..."
                         />
                     </div>
 
-                    <div className="flex gap-3">
+                    {/* Mostrar Erros */}
+                    {Object.keys(errors).length > 0 && (
+                        <div className="p-3 border border-red-200 rounded-lg bg-red-50">
+                            <p className="mb-2 text-sm font-medium text-red-800">
+                                ⚠️ Erros encontrados:
+                            </p>
+                            <ul className="space-y-1 text-xs text-red-600">
+                                {Object.entries(errors).map(([key, message]) => (
+                                    <li key={key}>• {key}: {message}</li>
+                                ))}
+                            </ul>
+                        </div>
+                    )}
+
+                    {/* Botões */}
+                    <div className="flex gap-3 pt-2">
                         <button
                             type="button"
                             onClick={onClose}
-                            className="flex-1 px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
+                            disabled={processing}
+                            className="flex-1 px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
                             Cancelar
                         </button>
                         <button
                             type="submit"
-                            disabled={processing}
-                            className="flex-1 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                            disabled={processing || !file}
+                            className="flex-1 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                         >
-                            {processing ? 'Enviando...' : 'Upload'}
+                            {processing ? (
+                                <span className="flex items-center justify-center gap-2">
+                                    <svg className="w-4 h-4 animate-spin" fill="none" viewBox="0 0 24 24">
+                                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Enviando...
+                                </span>
+                            ) : (
+                                '📤 Fazer Upload'
+                            )}
                         </button>
                     </div>
                 </form>

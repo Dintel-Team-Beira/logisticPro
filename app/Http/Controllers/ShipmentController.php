@@ -8,6 +8,8 @@ use App\Models\Client;
 use App\Services\ShipmentWorkflowService;
 use App\Enums\DocumentType;
 use App\Enums\ShipmentStatus;
+use App\Models\Activity;
+use App\Models\Document;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -60,169 +62,110 @@ class ShipmentController extends Controller
     /**
      * Store - Baseado no SRS UC-001: Criar Novo Processo
      */
-    public function store(Request $request)
+    public function store(Request $request, Shipment $shipment)
     {
         // Log para debug
-        Log::info('ShipmentController@store - Iniciando criação', [
-            'data' => $request->except('bl_file')
+        Log::info('DocumentController@store - Upload iniciado', [
+            'shipment_id' => $shipment->id,
+            'type' => $request->type,
+            'stage' => $request->stage,
+            'has_file' => $request->hasFile('file'),
         ]);
 
+        // ✅ Validação completa
         $validated = $request->validate([
-            // Cliente
-            'client_id' => 'required_without:new_client_name|nullable|exists:clients,id',
-            'new_client_name' => 'required_without:client_id|nullable|string|max:255',
-            'new_client_email' => 'required_with:new_client_name|nullable|email|max:255',
-            'new_client_phone' => 'nullable|string|max:50',
-            'new_client_address' => 'nullable|string|max:500',
-
-            // Linha e BL
-            'shipping_line_id' => 'required|exists:shipping_lines,id',
-            'bl_number' => 'required|string|max:100',
-            'bl_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-
-            // Container
-            'container_number' => 'nullable|string|max:50',
-            'container_type' => 'required|in:20DC,40DC,40HC,20RF,40RF,20OT,40OT',
-            'vessel_name' => 'nullable|string|max:100',
-            'arrival_date' => 'nullable|date',
-
-            // Rota
-            'origin_port' => 'nullable|string|max:100',
-            'destination_port' => 'required|string|max:100',
-
-            // Carga
-            'cargo_description' => 'required|string',
-            'cargo_weight' => 'nullable|numeric|min:0',
-            'cargo_value' => 'nullable|numeric|min:0',
+            'file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240', // 10MB
+            'type' => 'required|string|max:50',
+            'stage' => 'required|in:coleta_dispersa,legalizacao,alfandegas,cornelder,taxacao,financas,pod',
+            'notes' => 'nullable|string|max:500',
         ]);
-
-        DB::beginTransaction();
 
         try {
-            // 1. Criar ou obter cliente (UC-001 - 3a)
-            if ($request->filled('new_client_name')) {
-                $client = Client::create([
-                    'name' => $validated['new_client_name'],
-                    'email' => $validated['new_client_email'],
-                    'phone' => $validated['new_client_phone'] ?? null,
-                    'address' => $validated['new_client_address'] ?? null,
-                ]);
-                $clientId = $client->id;
+            // Upload do arquivo
+            $file = $request->file('file');
+            $path = $file->store("documents/shipments/{$shipment->id}/{$validated['stage']}", 'public');
 
-                Log::info('Novo cliente criado', ['client_id' => $clientId]);
-            } else {
-                $clientId = $validated['client_id'];
-                $client = Client::find($clientId);
-            }
-
-            // 2. Gerar número de referência (UC-001 - Passo 6)
-            // Formato: ALEK-YYYY-XXX
-            $year = date('Y');
-            $lastShipment = Shipment::whereYear('created_at', $year)->count();
-            $referenceNumber = sprintf('ALEK-%s-%03d', $year, $lastShipment + 1);
-
-            Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
-
-            // 3. Criar Shipment (UC-001 - Passo 7)
-            $shipment = Shipment::create([
-                'reference_number' => $referenceNumber,
-                'client_id' => $clientId,
-                'shipping_line_id' => $validated['shipping_line_id'],
-                'bl_number' => $validated['bl_number'],
-                'container_number' => $validated['container_number'] ?? null,
-                'container_type' => $validated['container_type'],
-                'vessel_name' => $validated['vessel_name'] ?? null,
-                'arrival_date' => $validated['arrival_date'] ?? null,
-                'origin_port' => $validated['origin_port'] ?? null,
-                'destination_port' => $validated['destination_port'],
-                'cargo_description' => $validated['cargo_description'],
-                'cargo_weight' => $validated['cargo_weight'] ?? null,
-                'cargo_value' => $validated['cargo_value'] ?? null,
-                'created_by' => auth()->id(),
-                'status' => ShipmentStatus::COLETA_COTACAO_SOLICITADA->value, // Status inicial correto
-            ]);
-                // Criar stage inicial (FASE 1: Coleta de Dispersa)
-                $shipment->startStage('coleta_dispersa');
-
-                // OU criar manualmente:
-                // ShipmentStage::create([
-                //     'shipment_id' => $shipment->id,
-                //     'stage' => 'coleta_dispersa',
-                //     'status' => 'in_progress',
-                //     'started_at' => now(),
-                //     'updated_by' => auth()->id(),
-                // ]);
-            Log::info('Shipment criado', ['shipment_id' => $shipment->id]);
-
-            // 4. Upload do BL Original (UC-001 - Passo 4)
-            $blPath = $request->file('bl_file')->store("shipments/{$shipment->id}/bl", 'public');
-
-            $shipment->documents()->create([
-                'type' => DocumentType::BL_ORIGINAL->value, // ✅ CORREÇÃO: Usar ->value
-                'name' => 'BL Original - ' . $validated['bl_number'],
-                'path' => $blPath,
-                'size' => $request->file('bl_file')->getSize(),
+            // Criar registro no banco
+            $document = Document::create([
+                'shipment_id' => $shipment->id,
+                'type' => $validated['type'],
+                'name' => $file->getClientOriginalName(),
+                'path' => $path,
+                'size' => $file->getSize(),
                 'uploaded_by' => auth()->id(),
                 'metadata' => [
-                    'bl_number' => $validated['bl_number'],
-                    'uploaded_at_creation' => true,
+                    'stage' => $validated['stage'],
+                    'notes' => $validated['notes'] ?? null,
+                    'mime_type' => $file->getMimeType(),
+                    'uploaded_at' => now()->toDateTimeString(),
                 ]
             ]);
 
-            Log::info('BL anexado', ['path' => $blPath]);
+            Log::info('Documento criado com sucesso', [
+                'document_id' => $document->id,
+                'path' => $path
+            ]);
 
-            // 5. Registrar atividade (UC-001 - Passo 8)
-            // VERIFICAR SE A TABELA 'activities' EXISTE
+            // Registrar atividade
             try {
-                $shipment->activities()->create([
+                Activity::create([
+                    'shipment_id' => $shipment->id,
                     'user_id' => auth()->id(),
-                    'action' => 'created',
-                    'description' => 'Shipment criado com BL anexado',
+                    'action' => 'document_uploaded',
+                    'description' => "Documento anexado: {$file->getClientOriginalName()}",
                     'metadata' => [
-                        'reference_number' => $referenceNumber,
-                        'client_name' => $client->name,
+                        'document_id' => $document->id,
+                        'document_type' => $validated['type'],
+                        'stage' => $validated['stage']
                     ]
                 ]);
             } catch (\Exception $e) {
-                // Se a tabela activities não existir, apenas loga
-                Log::warning('Não foi possível criar activity', ['error' => $e->getMessage()]);
+                Log::warning('Activity não registrada', ['error' => $e->getMessage()]);
             }
 
-            DB::commit();
+            // ✅ Verificar se deve atualizar status do shipment
+            $this->checkAndUpdateShipmentStatus($shipment, $validated['type'], $validated['stage']);
 
-            Log::info('Shipment criado com sucesso', [
-                'shipment_id' => $shipment->id,
-                'reference' => $referenceNumber
-            ]);
-
-            // 6. Enviar notificação (UC-001 - Passo 8)
-            // NotificationJob::dispatch($shipment, 'shipment_created');
-
-            // 7. Redirecionar com link (UC-001 - Passo 9)
-            return redirect()
-                ->route('shipments.show', $shipment)
-                ->with('success', "Shipment {$referenceNumber} criado com sucesso! Processo iniciado na Fase 1.");
+            return back()->with('success', 'Documento enviado com sucesso!');
 
         } catch (\Exception $e) {
-            DB::rollBack();
-
-            // Log do erro completo
-            Log::error('Erro ao criar shipment', [
+            Log::error('Erro ao fazer upload de documento', [
                 'error' => $e->getMessage(),
-                'trace' => $e->getTraceAsString(),
-                'data' => $request->except('bl_file')
+                'trace' => $e->getTraceAsString()
             ]);
 
-            // Deletar arquivo se upload foi bem-sucedido mas processo falhou
-            if (isset($blPath)) {
-                Storage::disk('public')->delete($blPath);
-            }
-
-            return back()
-                ->withErrors(['error' => 'Erro ao criar shipment: ' . $e->getMessage()])
-                ->withInput();
+            return back()->withErrors([
+                'error' => 'Erro ao fazer upload: ' . $e->getMessage()
+            ]);
         }
     }
+
+
+        /**
+     * Verificar e atualizar status do shipment baseado no documento anexado
+     */
+    private function checkAndUpdateShipmentStatus(Shipment $shipment, string $docType, string $stage)
+    {
+        try {
+            // Exemplo: Se anexou invoice na fase coleta, atualizar quotation_status
+            if ($stage === 'coleta_dispersa' && $docType === 'invoice') {
+                $shipment->update(['quotation_status' => 'received']);
+            }
+
+            // Exemplo: Se anexou receipt na fase coleta, pode marcar pagamento
+            if ($stage === 'coleta_dispersa' && $docType === 'receipt') {
+                $shipment->update(['payment_status' => 'paid']);
+            }
+
+            // Adicione mais regras conforme necessário
+        } catch (\Exception $e) {
+            Log::warning('Erro ao atualizar status do shipment', [
+                'error' => $e->getMessage()
+            ]);
+        }
+    }
+
+
 
     /**
      * Exibir detalhes do Shipment com todas as 7 fases
@@ -347,38 +290,260 @@ public function edit(Shipment $shipment)
         return back()->with('success', 'Shipment atualizado com sucesso!');
     }
 
-    public function destroy(Shipment $shipment)
+ /**
+     * Download de documento
+     */
+    public function download(Document $document)
     {
-        $shipment->delete();
+        try {
+            if (!Storage::disk('public')->exists($document->path)) {
+                return back()->withErrors(['error' => 'Arquivo não encontrado']);
+            }
 
-        return redirect()->route('shipments.index')
-            ->with('success', 'Shipment removido com sucesso!');
+            return Storage::disk('public')->download($document->path, $document->name);
+        } catch (\Exception $e) {
+            Log::error('Erro ao fazer download', [
+                'document_id' => $document->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return back()->withErrors(['error' => 'Erro ao baixar arquivo']);
+        }
     }
 
     /**
-     * Avançar para próxima etapa
+     * Deletar documento
      */
-    public function advance(Shipment $shipment)
+    public function destroy(Document $document)
     {
-        $nextStatus = $this->workflow->getNextStatus($shipment);
-
-        if (!$nextStatus) {
-            return back()->withErrors(['error' => 'Não há próxima etapa disponível.']);
-        }
-
         try {
-            $this->workflow->transition(
-                $shipment,
-                $nextStatus,
-                auth()->id(),
-                'Avançado automaticamente via interface'
-            );
+            // Deletar arquivo do storage
+            if (Storage::disk('public')->exists($document->path)) {
+                Storage::disk('public')->delete($document->path);
+            }
 
-            return back()->with('success', 'Etapa avançada com sucesso!');
+            // Registrar atividade
+            try {
+                Activity::create([
+                    'shipment_id' => $document->shipment_id,
+                    'user_id' => auth()->id(),
+                    'action' => 'document_deleted',
+                    'description' => "Documento removido: {$document->name}",
+                    'metadata' => [
+                        'document_id' => $document->id,
+                        'document_type' => $document->type
+                    ]
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Activity não registrada', ['error' => $e->getMessage()]);
+            }
+
+            // Deletar registro
+            $document->delete();
+
+            return back()->with('success', 'Documento removido com sucesso!');
+
         } catch (\Exception $e) {
-            return back()->withErrors(['error' => $e->getMessage()]);
+            Log::error('Erro ao deletar documento', [
+                'document_id' => $document->id,
+                'error' => $e->getMessage()
+            ]);
+
+            return back()->withErrors(['error' => 'Erro ao remover documento']);
         }
     }
+
+
+   /**
+ * Avançar para a próxima fase
+ *
+ * Este método permite avançar manualmente para a próxima fase do processo
+ * Baseado no sistema de stages
+ */
+public function advance(Request $request, Shipment $shipment)
+{
+    try {
+        DB::beginTransaction();
+
+        // Obter stage atual
+        $currentStage = $shipment->currentStage();
+
+        if (!$currentStage) {
+            return back()->withErrors(['error' => 'Nenhuma fase ativa encontrada.']);
+        }
+
+        // Validar se pode avançar (verificar documentos necessários, pagamentos, etc)
+        $validationErrors = $this->validatePhaseCompletion($shipment, $currentStage);
+
+        if (!empty($validationErrors)) {
+            return back()->withErrors(['error' => implode(', ', $validationErrors)]);
+        }
+
+        // Completar stage atual e avançar
+        $nextStage = $shipment->advanceToNextStage();
+
+        if ($nextStage) {
+            // Registrar atividade
+            try {
+                $shipment->activities()->create([
+                    'user_id' => auth()->id(),
+                    'action' => 'phase_advanced',
+                    'description' => "Avançado de '{$currentStage->stage}' para '{$nextStage->stage}'",
+                    'metadata' => [
+                        'from_stage' => $currentStage->stage,
+                        'to_stage' => $nextStage->stage,
+                        'from_phase' => $shipment->current_phase - 1,
+                        'to_phase' => $shipment->current_phase,
+                    ]
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Activity não registrada', ['error' => $e->getMessage()]);
+            }
+
+            DB::commit();
+
+            Log::info('Shipment avançou de fase', [
+                'shipment_id' => $shipment->id,
+                'from' => $currentStage->stage,
+                'to' => $nextStage->stage
+            ]);
+
+            return redirect()
+                ->route('shipments.show', $shipment)
+                ->with('success', "Processo avançou para Fase {$shipment->current_phase}: " . ucfirst(str_replace('_', ' ', $nextStage->stage)));
+        } else {
+            // Última fase completada
+            $shipment->update(['status' => 'completed']);
+
+            DB::commit();
+
+            return redirect()
+                ->route('shipments.show', $shipment)
+                ->with('success', 'Todas as fases completadas! Processo finalizado.');
+        }
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        Log::error('Erro ao avançar fase', [
+            'shipment_id' => $shipment->id,
+            'error' => $e->getMessage()
+        ]);
+
+        return back()->withErrors(['error' => 'Erro ao avançar fase: ' . $e->getMessage()]);
+    }
+}
+
+
+/**
+ * Validar se a fase atual pode ser completada
+ *
+ * @param Shipment $shipment
+ * @param ShipmentStage $currentStage
+ * @return array Array de erros (vazio se pode avançar)
+ */
+private function validatePhaseCompletion(Shipment $shipment, $currentStage): array
+{
+    $errors = [];
+
+    switch ($currentStage->stage) {
+        case 'coleta_dispersa':
+            // Fase 1: Verificar se tem cotação recebida e pagamento feito
+            if ($shipment->quotation_status !== 'received') {
+                $errors[] = 'Aguardando recebimento da cotação';
+            }
+            if ($shipment->payment_status !== 'paid') {
+                $errors[] = 'Pagamento à linha de navegação pendente';
+            }
+            // Verificar se tem BL anexado
+            if (!$shipment->documents()->where('type', 'bl')->exists()) {
+                $errors[] = 'BL Original deve ser anexado';
+            }
+            break;
+
+        case 'legalizacao':
+            // Fase 2: Verificar documentos de legalização
+            $requiredDocs = ['rascunho_du', 'draft_du'];
+            foreach ($requiredDocs as $docType) {
+                if (!$shipment->documents()->where('type', $docType)->exists()) {
+                    $errors[] = "Documento '{$docType}' não anexado";
+                }
+            }
+            break;
+
+        case 'alfandegas':
+            // Fase 3: Verificar pagamentos alfandegários
+            if ($shipment->customs_payment_status !== 'paid') {
+                $errors[] = 'Pagamento das taxas alfandegárias pendente';
+            }
+            break;
+
+        case 'cornelder':
+            // Fase 4: Verificar pagamento cornelder
+            if ($shipment->cornelder_payment_status !== 'paid') {
+                $errors[] = 'Pagamento da Cornelder pendente';
+            }
+            break;
+
+        case 'taxacao':
+            // Fase 5: Verificar se cliente foi faturado e pagou
+            if (!$shipment->client_invoice_id) {
+                $errors[] = 'Fatura do cliente não emitida';
+            }
+            if ($shipment->client_payment_status !== 'paid') {
+                $errors[] = 'Pagamento do cliente pendente';
+            }
+            break;
+    }
+
+    return $errors;
+}
+
+/**
+ * Obter progresso atual do shipment
+ * Endpoint para AJAX
+ */
+public function getProgress(Shipment $shipment)
+{
+    try {
+        $progressValue = $this->workflow->getProgress($shipment);
+        $currentPhase = $shipment->current_phase;
+
+        return response()->json([
+            'success' => true,
+            'progress' => $progressValue,
+            'current_phase' => $currentPhase,
+            'current_stage' => $shipment->currentStage()?->stage,
+            'can_advance' => empty($this->validatePhaseCompletion($shipment, $shipment->currentStage())),
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
+
+/**
+ * Obter checklist de documentos
+ * Endpoint para AJAX
+ */
+public function getChecklist(Shipment $shipment)
+{
+    try {
+        $checklist = $this->workflow->getDocumentChecklist($shipment);
+
+        return response()->json([
+            'success' => true,
+            'checklist' => $checklist
+        ]);
+    } catch (\Exception $e) {
+        return response()->json([
+            'success' => false,
+            'error' => $e->getMessage()
+        ], 500);
+    }
+}
 
     /**
      * Upload de documento específico
