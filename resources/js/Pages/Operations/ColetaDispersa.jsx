@@ -93,7 +93,7 @@ export default function ColetaDispersa({ shipments, stats, flash }) {
         <FilterBar onSearch={handleSearch} />
 
         {/* Grid de Processos */}
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-2 xl:grid-cols-3">
+        <div className="col ">
           {shipments.data.map((shipment) => (
             <ShipmentDetailedCard
               key={shipment.id}

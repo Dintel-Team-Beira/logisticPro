@@ -65,17 +65,24 @@ Route::middleware('auth')->group(function () {
 // SHIPMENTS (Processos de Importação) - CRUD Completo
 // ============================================================================
 Route::middleware(['auth'])->group(function () {
-
-    // CRUD Básico
+    // CRUD
     Route::resource('shipments', ShipmentController::class);
 
-    // Ações Especiais de Shipment
+    // Advance
     Route::post('/shipments/{shipment}/advance', [ShipmentController::class, 'advance'])
         ->name('shipments.advance');
+
+    // APIs
     Route::get('/shipments/{shipment}/progress', [ShipmentController::class, 'getProgress'])
         ->name('shipments.progress');
     Route::get('/shipments/{shipment}/checklist', [ShipmentController::class, 'getChecklist'])
         ->name('shipments.checklist');
+
+    // Documents
+    Route::post('/shipments/{shipment}/documents', [DocumentController::class, 'store'])
+        ->name('documents.store');
+    Route::get('/documents/{document}/download', [DocumentController::class, 'download'])
+        ->name('documents.download');
 });
 
 // ============================================================================

@@ -24,10 +24,10 @@ class DocumentController extends Controller
         $document = Document::create([
             'shipment_id' => $shipment->id,
             'type' => $request->type,
-            'file_name' => $file->getClientOriginalName(),
-            'file_path' => $path,
+            'name' => $file->getClientOriginalName(),
+            'path' => $path,
             'mime_type' => $file->getMimeType(),
-            'file_size' => $file->getSize(),
+            'size' => $file->getSize(),
             'stage' => $request->stage,
             'uploaded_by' => auth()->id()
         ]);

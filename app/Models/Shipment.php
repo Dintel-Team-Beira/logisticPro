@@ -69,7 +69,12 @@ class Shipment extends Model
         return $this->belongsTo(Client::class);
     }
 
+
     public function shippingLine()
+    {
+        return $this->belongsTo(ShippingLine::class);
+    }
+    public function shipping_line()
     {
         return $this->belongsTo(ShippingLine::class);
     }
@@ -220,6 +225,7 @@ class Shipment extends Model
         $stageName = self::getStageNameFromPhase($phase);
         return $query->inStage($stageName);
     }
+
 
     /**
      * Scope para filtrar shipments que completaram um stage
