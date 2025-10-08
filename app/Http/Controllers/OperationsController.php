@@ -3,20 +3,18 @@
 namespace App\Http\Controllers;
 
 use App\Models\Shipment;
-use App\Models\Client;
-use App\Models\ShippingLine;
+use App\Models\ShipmentStage;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
-use Illuminate\Support\Facades\DB;
+use Carbon\Carbon;
 
 /**
  * OperationsController
  *
- * Controller principal para as 7 fases de operações de importação
- * Gerencia as views de cada fase do processo
+ * Controller para as 7 fases de operações usando shipment_stages
+ * SEM necessidade de coluna current_phase
  *
  * @author Arnaldo Tomo
- * @package LogisticaPro
  */
 class OperationsController extends Controller
 {
@@ -28,18 +26,20 @@ class OperationsController extends Controller
      */
     public function coletaDispersa(Request $request)
     {
-        // Query base de shipments na fase 1
-        $query = Shipment::with(['client', 'shipping_line', 'documents', 'stages'])
-            ->where('current_phase', 1);
+        // Query usando scope inStage
+        $query = Shipment::with([
+                'client',
+                'shipping_line',
+                'documents',
+                'stages' => function($q) {
+                    $q->where('stage', 'coleta_dispersa');
+                }
+            ])
+            ->inStage('coleta_dispersa'); // Usa o scope!
 
-        // Filtros
+        // Aplicar filtros
         if ($request->has('search')) {
-            $search = $request->search;
-            $query->where(function($q) use ($search) {
-                $q->where('reference_number', 'like', "%{$search}%")
-                  ->orWhere('bl_number', 'like', "%{$search}%")
-                  ->orWhere('container_number', 'like', "%{$search}%");
-            });
+            $query->search($request->search);
         }
 
         if ($request->has('status')) {
@@ -49,19 +49,25 @@ class OperationsController extends Controller
         // Paginação
         $shipments = $query->latest()->paginate(15);
 
+        // Adicionar current_phase para cada shipment (via accessor)
+        $shipments->getCollection()->transform(function ($shipment) {
+            $shipment->current_phase = $shipment->current_phase;
+            return $shipment;
+        });
+
         // Estatísticas da fase
         $stats = [
-            'total' => Shipment::where('current_phase', 1)->count(),
+            'total' => Shipment::inStage('coleta_dispersa')->count(),
 
-            'awaiting_quotation' => Shipment::where('current_phase', 1)
+            'awaiting_quotation' => Shipment::inStage('coleta_dispersa')
                 ->where('quotation_status', 'pending')
                 ->count(),
 
-            'quotation_received' => Shipment::where('current_phase', 1)
+            'quotation_received' => Shipment::inStage('coleta_dispersa')
                 ->where('quotation_status', 'received')
                 ->count(),
 
-            'ready_to_advance' => Shipment::where('current_phase', 1)
+            'ready_to_advance' => Shipment::inStage('coleta_dispersa')
                 ->where('payment_status', 'paid')
                 ->whereHas('documents', function($q) {
                     $q->where('type', 'bl');
@@ -84,29 +90,46 @@ class OperationsController extends Controller
      */
     public function legalizacao(Request $request)
     {
-        $shipments = Shipment::with(['client', 'shipping_line', 'documents'])
-            ->where('current_phase', 2)
-            ->latest()
-            ->paginate(15);
+        $query = Shipment::with([
+                'client',
+                'shipping_line',
+                'documents',
+                'stages' => function($q) {
+                    $q->where('stage', 'legalizacao');
+                }
+            ])
+            ->inStage('legalizacao');
+
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        $shipments = $query->latest()->paginate(15);
+
+        // Adicionar current_phase
+        $shipments->getCollection()->transform(function ($shipment) {
+            $shipment->current_phase = $shipment->current_phase;
+            return $shipment;
+        });
 
         $stats = [
-            'total' => Shipment::where('current_phase', 2)->count(),
+            'total' => Shipment::inStage('legalizacao')->count(),
 
-            'awaiting_stamp' => Shipment::where('current_phase', 2)
+            'awaiting_stamp' => Shipment::inStage('legalizacao')
                 ->whereDoesntHave('documents', function($q) {
                     $q->where('type', 'bl')
-                      ->where('metadata->stamped', true);
+                      ->whereJsonContains('metadata->stamped', true);
                 })
                 ->count(),
 
-            'bl_stamped' => Shipment::where('current_phase', 2)
+            'bl_stamped' => Shipment::inStage('legalizacao')
                 ->whereHas('documents', function($q) {
                     $q->where('type', 'bl')
-                      ->where('metadata->stamped', true);
+                      ->whereJsonContains('metadata->stamped', true);
                 })
                 ->count(),
 
-            'do_issued' => Shipment::where('current_phase', 2)
+            'do_issued' => Shipment::inStage('legalizacao')
                 ->whereHas('documents', function($q) {
                     $q->where('type', 'delivery_order');
                 })
@@ -127,31 +150,48 @@ class OperationsController extends Controller
      */
     public function alfandegas(Request $request)
     {
-        $shipments = Shipment::with(['client', 'shipping_line', 'documents'])
-            ->where('current_phase', 3)
-            ->latest()
-            ->paginate(15);
+        $query = Shipment::with([
+                'client',
+                'shipping_line',
+                'documents',
+                'stages' => function($q) {
+                    $q->where('stage', 'alfandegas');
+                }
+            ])
+            ->inStage('alfandegas');
+
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        $shipments = $query->latest()->paginate(15);
+
+        // Adicionar current_phase
+        $shipments->getCollection()->transform(function ($shipment) {
+            $shipment->current_phase = $shipment->current_phase;
+            return $shipment;
+        });
 
         $stats = [
-            'total' => Shipment::where('current_phase', 3)->count(),
+            'total' => Shipment::inStage('alfandegas')->count(),
 
-            'submitted' => Shipment::where('current_phase', 3)
+            'submitted' => Shipment::inStage('alfandegas')
                 ->where('customs_status', 'submitted')
                 ->count(),
 
-            'awaiting_tax' => Shipment::where('current_phase', 3)
+            'awaiting_tax' => Shipment::inStage('alfandegas')
                 ->where('customs_status', 'submitted')
                 ->whereDoesntHave('documents', function($q) {
                     $q->where('type', 'aviso');
                 })
                 ->count(),
 
-            'authorized' => Shipment::where('current_phase', 3)
+            'authorized' => Shipment::inStage('alfandegas')
                 ->where('customs_status', 'authorized')
                 ->count(),
 
             // Processos com prazo vencendo
-            'overdue' => Shipment::where('current_phase', 3)
+            'overdue' => Shipment::inStage('alfandegas')
                 ->whereNotNull('customs_deadline')
                 ->where('customs_deadline', '<=', now()->addDays(3))
                 ->count(),
@@ -167,54 +207,58 @@ class OperationsController extends Controller
      * FASE 4: Cornelder
      * RF-013, RF-014, RF-015
      *
-     * ⚠️ ATENÇÃO: Esta fase possui monitor de storage crítico!
+     * ⚠️ ATENÇÃO: Monitor de storage crítico ativo!
      *
      * @return \Inertia\Response
      */
     public function cornelder(Request $request)
     {
-        $shipments = Shipment::with(['client', 'shipping_line', 'documents'])
-            ->where('current_phase', 4)
-            ->latest()
-            ->paginate(15);
+        $query = Shipment::with([
+                'client',
+                'shipping_line',
+                'documents',
+                'stages' => function($q) {
+                    $q->where('stage', 'cornelder');
+                }
+            ])
+            ->inStage('cornelder');
 
-        // Calcular dias de storage para cada shipment
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        $shipments = $query->latest()->paginate(15);
+
+        // Calcular storage para cada shipment
         $shipments->getCollection()->transform(function ($shipment) {
-            // Calcular dias desde a chegada
-            if ($shipment->arrival_date) {
-                $arrivalDate = \Carbon\Carbon::parse($shipment->arrival_date);
-                $shipment->storage_days = $arrivalDate->diffInDays(now());
-
-                // Dias FREE padrão ou da linha
-                $freeDays = $shipment->shipping_line->free_storage_days ?? 7;
-                $shipment->days_to_storage_deadline = $freeDays - $shipment->storage_days;
-
-                // Alerta se faltam 2 dias ou menos
-                $shipment->storage_alert = $shipment->days_to_storage_deadline <= 2;
-            }
+            // Usar accessors do Model
+            $shipment->current_phase = $shipment->current_phase;
+            $shipment->storage_days = $shipment->storage_days;
+            $shipment->days_to_storage_deadline = $shipment->days_to_storage_deadline;
+            $shipment->storage_alert = $shipment->is_storage_critical;
 
             return $shipment;
         });
 
+        // Calcular containers com storage crítico
+        $criticalShipments = Shipment::inStage('cornelder')
+            ->whereNotNull('arrival_date')
+            ->with('shippingLine')
+            ->get()
+            ->filter(function($shipment) {
+                return $shipment->is_storage_critical;
+            });
+
         $stats = [
-            'total' => Shipment::where('current_phase', 4)->count(),
+            'total' => Shipment::inStage('cornelder')->count(),
 
-            // Containers com storage crítico (≤ 2 dias restantes)
-            'critical_storage' => Shipment::where('current_phase', 4)
-                ->whereNotNull('arrival_date')
-                ->get()
-                ->filter(function($shipment) {
-                    $freeDays = $shipment->shipping_line->free_storage_days ?? 7;
-                    $storageDays = \Carbon\Carbon::parse($shipment->arrival_date)->diffInDays(now());
-                    return ($freeDays - $storageDays) <= 2;
-                })
-                ->count(),
+            'critical_storage' => $criticalShipments->count(),
 
-            'awaiting_payment' => Shipment::where('current_phase', 4)
+            'awaiting_payment' => Shipment::inStage('cornelder')
                 ->where('cornelder_payment_status', 'pending')
                 ->count(),
 
-            'ready' => Shipment::where('current_phase', 4)
+            'ready' => Shipment::inStage('cornelder')
                 ->where('cornelder_payment_status', 'paid')
                 ->whereHas('documents', function($q) {
                     $q->where('type', 'termo');
@@ -236,33 +280,49 @@ class OperationsController extends Controller
      */
     public function taxacao(Request $request)
     {
-        $shipments = Shipment::with(['client', 'shipping_line', 'documents'])
-            ->where('current_phase', 5)
-            ->latest()
-            ->paginate(15);
+        $query = Shipment::with([
+                'client',
+                'shipping_line',
+                'documents',
+                'stages' => function($q) {
+                    $q->where('stage', 'taxacao');
+                }
+            ])
+            ->inStage('taxacao');
+
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        $shipments = $query->latest()->paginate(15);
+
+        // Adicionar current_phase
+        $shipments->getCollection()->transform(function ($shipment) {
+            $shipment->current_phase = $shipment->current_phase;
+            return $shipment;
+        });
 
         $stats = [
-            'total' => Shipment::where('current_phase', 5)->count(),
+            'total' => Shipment::inStage('taxacao')->count(),
 
-            'awaiting_sad' => Shipment::where('current_phase', 5)
+            'awaiting_sad' => Shipment::inStage('taxacao')
                 ->whereDoesntHave('documents', function($q) {
                     $q->where('type', 'sad');
                 })
                 ->count(),
 
-            'sad_issued' => Shipment::where('current_phase', 5)
+            'sad_issued' => Shipment::inStage('taxacao')
                 ->whereHas('documents', function($q) {
                     $q->where('type', 'sad');
                 })
                 ->count(),
 
-            'released' => Shipment::where('current_phase', 5)
+            'released' => Shipment::inStage('taxacao')
                 ->whereHas('documents', function($q) {
                     $q->where('type', 'sad');
                 })
                 ->whereHas('documents', function($q) {
-                    $q->where('type', 'delivery_order')
-                      ->where('metadata->type', 'ido');
+                    $q->where('type', 'delivery_order');
                 })
                 ->count(),
         ];
@@ -277,19 +337,31 @@ class OperationsController extends Controller
      * FASE 6: Faturação
      * RF-020, RF-021, RF-022, RF-023, RF-024
      *
+     * Nota: Faturação não usa shipment_stages, usa status do shipment
+     *
      * @return \Inertia\Response
      */
     public function faturacao(Request $request)
     {
-        $shipments = Shipment::with([
-            'client',
-            'shipping_line',
-            'documents',
-            'clientInvoice'
-        ])
-            ->where('current_phase', 6)
-            ->latest()
-            ->paginate(15);
+        // Faturação é identificada por ter completado taxação
+        // e estar em processo de faturação
+        $query = Shipment::with([
+                'client',
+                'shipping_line',
+                'documents',
+                'clientInvoice'
+            ])
+            ->completedStage('taxacao') // Completou taxação
+            ->where(function($q) {
+                $q->whereNull('client_invoice_id') // Ainda não faturado
+                  ->orWhere('client_payment_status', '!=', 'paid'); // Ou não pago
+            });
+
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        $shipments = $query->latest()->paginate(15);
 
         // Calcular custos para cada shipment
         $shipments->getCollection()->transform(function ($shipment) {
@@ -306,21 +378,25 @@ class OperationsController extends Controller
             $shipment->profit_margin = $shipment->profit_margin ?? 15;
             $shipment->total_revenue = $shipment->total_cost * (1 + $shipment->profit_margin / 100);
 
+            $shipment->current_phase = 6;
+
             return $shipment;
         });
 
-        $stats = [
-            'total' => Shipment::where('current_phase', 6)->count(),
+        $baseQuery = Shipment::completedStage('taxacao');
 
-            'awaiting_calc' => Shipment::where('current_phase', 6)
+        $stats = [
+            'total' => $baseQuery->count(),
+
+            'awaiting_calc' => $baseQuery
                 ->whereNull('total_cost')
                 ->count(),
 
-            'invoice_generated' => Shipment::where('current_phase', 6)
+            'invoice_generated' => $baseQuery
                 ->whereNotNull('client_invoice_id')
                 ->count(),
 
-            'paid' => Shipment::where('current_phase', 6)
+            'paid' => $baseQuery
                 ->where('client_payment_status', 'paid')
                 ->count(),
         ];
@@ -339,27 +415,34 @@ class OperationsController extends Controller
      */
     public function pod(Request $request)
     {
-        $shipments = Shipment::with(['client', 'shipping_line', 'documents'])
-            ->where('current_phase', 7)
-            ->latest()
-            ->paginate(15);
+        // POD é identificado por ter invoice paga e aguardar devolução
+        $query = Shipment::with([
+                'client',
+                'shipping_line',
+                'documents'
+            ])
+            ->where('client_payment_status', 'paid')
+            ->where('status', '!=', 'completed');
 
-        // Calcular tempo total para cada processo
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        $shipments = $query->latest()->paginate(15);
+
+        // Calcular tempo total
         $shipments->getCollection()->transform(function ($shipment) {
-            $startDate = \Carbon\Carbon::parse($shipment->created_at);
-            $endDate = $shipment->completed_at
-                ? \Carbon\Carbon::parse($shipment->completed_at)
-                : now();
-
-            $shipment->days_elapsed = $startDate->diffInDays($endDate);
-
+            $shipment->days_elapsed = $shipment->days_elapsed;
+            $shipment->current_phase = 7;
             return $shipment;
         });
 
-        $stats = [
-            'total' => Shipment::where('current_phase', 7)->count(),
+        $baseQuery = Shipment::where('client_payment_status', 'paid');
 
-            'awaiting_return' => Shipment::where('current_phase', 7)
+        $stats = [
+            'total' => $baseQuery->count(),
+
+            'awaiting_return' => $baseQuery
                 ->where('status', 'active')
                 ->whereDoesntHave('documents', function($q) {
                     $q->where('type', 'receipt')
@@ -367,14 +450,14 @@ class OperationsController extends Controller
                 })
                 ->count(),
 
-            'returned' => Shipment::where('current_phase', 7)
+            'returned' => $baseQuery
                 ->whereHas('documents', function($q) {
                     $q->where('type', 'receipt')
                       ->where('stage', 'pod');
                 })
                 ->count(),
 
-            'completed' => Shipment::where('current_phase', 7)
+            'completed' => $baseQuery
                 ->where('status', 'completed')
                 ->count(),
         ];

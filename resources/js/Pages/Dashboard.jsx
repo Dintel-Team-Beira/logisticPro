@@ -142,7 +142,7 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
         <DashboardLayout>
             <Head title="Dashboard" />
 
-      <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/10 backdrop-blur-xl border-gray-200/80">
+      <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/80">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -157,7 +157,7 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
                         <select
                             value={period}
                             onChange={(e) => setPeriod(e.target.value)}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg shadow-sm hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
                         >
                             <option value="week">Esta Semana</option>
                             <option value="month">Este Mês</option>
