@@ -109,7 +109,7 @@ export default function Create() {
         <DashboardLayout>
             <Head title="Novo Shipment" />
 
-            <div className="p-6">
+          <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
                 {/* Header */}
                 <div className="mb-6">
                     <Link

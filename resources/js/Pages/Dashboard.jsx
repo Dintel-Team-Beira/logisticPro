@@ -142,7 +142,7 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
         <DashboardLayout>
             <Head title="Dashboard" />
 
-            <div className="px-4 mx-auto space-y-6 sm:px-6 ">
+      <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/10 backdrop-blur-xl border-gray-200/80">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -177,7 +177,7 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
                 </div>
 
                 {/* KPI Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 backdrop-blur-xl">
+                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 bg-white/10 backdrop-blur-xl">
                     {kpiCards.map((kpi, index) => (
                         <motion.div
                             key={kpi.title}
@@ -212,7 +212,7 @@ export default function Dashboard({ auth, stats, shipments, revenue, activities 
                 </div>
 
                 {/* Charts Row */}
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 bg-white/10 backdrop-blur-xl">
                     {/* Revenue Chart */}
                     <Card className="lg:col-span-2">
                         <div className="p-6 border-b border-gray-100">

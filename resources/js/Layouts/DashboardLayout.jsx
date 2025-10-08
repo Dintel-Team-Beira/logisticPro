@@ -220,15 +220,8 @@ function Topbar({
 
                     {/* Logo */}
                     <Link href="/dashboard" className="flex items-center gap-3">
-                      <Link href="/">
-                                        <Logo className="w-20 h-20 text-gray-500 fill-current" />
-                                    </Link>
-                        {/* <div className="p-2 shadow-lg bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
-                            <Ship className="w-6 h-6 text-white" />
-                        </div> */}
-                        {/* <span className="hidden text-xl font-bold text-transparent md:block bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text">
-                            Logistic Pro
-                        </span> */}
+                         <Logo className="w-20 h-20 text-gray-500 fill-current" />
+
                     </Link>
                 </div>
 
@@ -241,7 +234,7 @@ function Topbar({
                             placeholder="Buscar shipments, documentos..."
                             value={searchQuery}
                             onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-2.5 bg-gray-100 border-0 rounded-xl focus:ring-2 focus:ring-blue-500 focus:bg-white transition-all"
+                            className="w-full pl-12 pr-4 py-2.5 bg-gray-100 border-0 rounded-xl focus:ring-2 focus:ring-[#358c9c] focus:bg-white transition-all"
                         />
                     </div>
                 </div>
@@ -432,7 +425,7 @@ function MenuItem({ item, sidebarOpen, currentPath, expanded, onToggle, userRole
                                             flex items-center gap-3 px-4 py-2 rounded-lg
                                             transition-all duration-200
                                             ${currentPath === subItem.href
-                                                ? 'bg-blue-100 text-[#358c9c] font-medium'
+                                                ? 'bg-blue-100 text-[#f68716] font-medium'
                                                 : 'text-gray-600 hover:bg-gray-50'
                                             }
                                         `}
@@ -454,16 +447,16 @@ function MenuItem({ item, sidebarOpen, currentPath, expanded, onToggle, userRole
                 whileHover={{ x: 4 }}
                 whileTap={{ scale: 0.98 }}
   className={`
-    relative flex items-center gap-3 px-4 py-3 rounded-xl
-    transition-all duration-200 group font-poppins font-medium
+    relative flex items-center gap-3 px-4 py-2 my-2 rounded-xl
+    transition-all duration-200 group
     ${isActive
-      ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/50'
+      ? 'bg-[#358c9c]  text-white shadow-lg'
       : 'text-gray-600 hover:bg-gray-50'
     }
   `}
 
             >
-                <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-blue-600'}`} />
+                <item.icon className={`h-5 w-5 ${isActive ? 'text-white' : 'text-gray-500 group-hover:text-[#f68716]'}`} />
                 {sidebarOpen && (
                     <span className="flex-1 font-normal">{item.name}</span>
                 )}
@@ -512,12 +505,9 @@ function MobileSidebar({ mobileMenuOpen, setMobileMenuOpen, menuItems, userRole 
                             {/* Header */}
                             <div className="flex items-center justify-between p-4 border-b border-gray-200">
                                 <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl">
-                                        <Ship className="w-6 h-6 text-white" />
-                                    </div>
-                                    <span className="text-xl font-bold text-transparent bg-gradient-to-r from-blue-600 to-blue-800 bg-clip-text">
-                                        ShipManager
-                                    </span>
+                                  <Link href="/">
+                                        <Logo className="w-20 h-20 text-gray-500 fill-current" />
+                                    </Link>
                                 </div>
                                 <button
                                     onClick={() => setMobileMenuOpen(false)}
