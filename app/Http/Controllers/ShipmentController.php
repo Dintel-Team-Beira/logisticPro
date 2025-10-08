@@ -53,12 +53,15 @@ class ShipmentController extends Controller
             'shippingLines' => ShippingLine::where('active', true)->get(),
             'clients' => Client::orderBy('name')->get(),
         ]);
+
     }
   /**
      * Store - Baseado no SRS UC-001: Criar Novo Processo
      */
     public function store(Request $request)
     {
+
+        dd($request->all());
         $validated = $request->validate([
             // Cliente
             'client_id' => 'required_without:new_client_name|nullable|exists:clients,id',

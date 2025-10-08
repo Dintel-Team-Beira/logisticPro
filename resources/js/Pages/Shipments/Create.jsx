@@ -1,5 +1,6 @@
 import { useState } from 'react';
-import { Head, Link, useForm } from '@inertiajs/react';
+import React from 'react';
+import { Head, Link, useForm, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import Input from '@/Components/Forms/Input';
 import Select from '@/Components/Forms/Select';
@@ -18,10 +19,12 @@ import {
     ChevronRight,
 } from 'lucide-react';
 
-export default function Create({ shippingLines, clients }) {
+export default function Create() {
+  const { shippingLines, clients } = usePage().props;
     const [step, setStep] = useState(1);
     const [showNewClientForm, setShowNewClientForm] = useState(false);
     const [blFile, setBlFile] = useState(null);
+    const [dataa, setDataa]=useState(shippingLines);
 
     const { data, setData, post, processing, errors } = useForm({
         // Cliente
@@ -178,7 +181,7 @@ export default function Create({ shippingLines, clients }) {
                         })}
                     </div>
                 </div>
-
+        {/* {    console.log('shippingLines',shippingLines)} */}
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
                     {/* Step 1: Cliente */}
@@ -309,6 +312,7 @@ export default function Create({ shippingLines, clients }) {
                                     required
                                 >
                                     <option value="">Selecione uma linha</option>
+
                                     {shippingLines?.map((line) => (
                                         <option key={line.id} value={line.id}>
                                             {line.name}

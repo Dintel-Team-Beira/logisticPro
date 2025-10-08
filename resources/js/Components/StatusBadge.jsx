@@ -23,9 +23,5 @@ export default function StatusBadge({ status }) {
         red: 'bg-red-100 text-red-700',
     };
 
-    return (
 
-            {config.label}
-
-    );
 }

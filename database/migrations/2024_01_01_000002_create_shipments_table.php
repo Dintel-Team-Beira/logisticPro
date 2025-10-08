@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Container\Attributes\DB;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -25,12 +26,12 @@ return new class extends Migration
 
             // ===== RELACIONAMENTO COM CLIENTE =====
             // Adicionar DEPOIS de 'reference_number'
-            $table->foreignId('client_id')
-                ->after('reference_number')
-                ->nullable()
-                ->constrained('clients')
-                ->onDelete('restrict')
-                ->comment('Cliente/empresa dona da carga');
+            // $table->foreignId('client_id')
+            //     ->after('reference_number')
+            //     ->nullable()
+            //     ->constrained('clients')
+            //     ->onDelete('restrict')
+            //     ->comment('Cliente/empresa dona da carga');
 
             // ===== INFORMAÇÕES DO CONTAINER =====
             // Adicionar DEPOIS de 'container_number'
