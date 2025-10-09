@@ -77,13 +77,13 @@ export default function FloatingSidebar({ isOpen, setIsOpen, isMobile }) {
         },
       ],
     },
-    {
-      key: 'documents',
-      label: t('nav.documents'),
-      icon: FileText,
-      href: '/documents',
-      permission: PERMISSIONS.VIEW_DOCUMENTS,
-    },
+ {
+  key: 'documents',
+  label: 'Documentos',  // ou t('nav.documents') se usar i18n
+  icon: FileText,
+  href: '/documents',
+  permission: PERMISSIONS.VIEW_DOCUMENTS,
+},
     {
       key: 'finances',
       label: t('nav.finances'),
@@ -121,6 +121,7 @@ export default function FloatingSidebar({ isOpen, setIsOpen, isMobile }) {
       permission: PERMISSIONS.VIEW_SETTINGS,
     },
   ];
+
 
   // Filter menu items based on permissions
   const filteredMenuItems = menuItems.filter(item => {
