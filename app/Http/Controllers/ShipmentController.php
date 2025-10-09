@@ -463,38 +463,48 @@ public function advance(Shipment $shipment)
         return $checklist;
     }
 
-    /**
-     * Verificar se pode avançar para próxima fase
-     */
-    private function canAdvanceToNextPhase(Shipment $shipment): bool
-    {
-        $currentPhase = $shipment->current_phase;
+   /**
+ * Verificar se pode avançar para próxima fase
+ * CORREÇÃO: Agora inclui validações para todas as 7 fases
+ */
+private function canAdvanceToNextPhase(Shipment $shipment): bool
+{
+    $currentPhase = $shipment->current_phase;
 
-        // Regras específicas por fase
-        switch ($currentPhase) {
-            case 1: // Coleta Dispersa
-                return $shipment->quotation_status === 'received' &&
-                       $shipment->payment_status === 'paid' &&
-                       $shipment->documents()->where('type', 'bl')->exists();
+    // Regras específicas por fase
+    switch ($currentPhase) {
+        case 1: // Coleta Dispersa
+            return $shipment->quotation_status === 'received' &&
+                   $shipment->payment_status === 'paid' &&
+                   $shipment->documents()->where('type', 'bl')->exists();
 
-            case 2: // Legalização
-                return $shipment->documents()->where('type', 'bl')->exists() &&
-                       $shipment->documents()->where('type', 'carta_endosso')->exists();
+        case 2: // Legalização
+            return $shipment->documents()->where('type', 'bl')->exists() &&
+                   $shipment->documents()->where('type', 'carta_endosso')->exists();
 
-            case 3: // Alfândegas
-                return $shipment->customs_payment_status === 'paid';
+        case 3: // Alfândegas
+            return $shipment->customs_payment_status === 'paid';
 
-            case 4: // Cornelder
-                return $shipment->cornelder_payment_status === 'paid';
+        case 4: // Cornelder
+            return $shipment->cornelder_payment_status === 'paid';
 
-            case 5: // Taxação
-                return $shipment->client_invoice_id &&
-                       $shipment->client_payment_status === 'paid';
+        case 5: // Taxação
+            // Pode avançar se já tem a SAD/Termo ou pagamento customizado
+            return $shipment->documents()->where('type', 'sad')->exists() ||
+                   $shipment->documents()->where('type', 'termo')->exists();
 
-            default:
-                return true;
-        }
+        case 6: // Faturação
+            return $shipment->client_invoice_id !== null &&
+                   $shipment->client_payment_status === 'paid';
+
+        case 7: // POD
+            // POD é a última fase, não pode avançar mais
+            return false;
+
+        default:
+            return true;
     }
+}
 
     /**
      * API: Obter progresso

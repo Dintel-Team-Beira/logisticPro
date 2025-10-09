@@ -134,30 +134,33 @@ public function currentStage()
         ->first();
 }
 
-    /**
-     * Obter o número da fase atual (1-7)
-     *
-     * @return int
-     */
-    public function getCurrentPhaseAttribute(): int
-    {
-        $currentStage = $this->currentStage();
+  /**
+ * Obter o número da fase atual (1-7)
+ *
+ * @return int
+ */
+public function getCurrentPhaseAttribute(): int
+{
+    $currentStage = $this->currentStage();
 
-        if (!$currentStage) {
-            return 1; // Fase inicial
-        }
-
-        // Mapear stage para número de fase
-        $stageMap = [
-            'coleta_dispersa' => 1,
-            'legalizacao' => 2,
-            'alfandegas' => 3,
-            'cornelder' => 4,
-            'taxacao' => 5,
-        ];
-
-        return $stageMap[$currentStage->stage] ?? 1;
+    if (!$currentStage) {
+        return 1; // Fase inicial
     }
+
+    // Mapear stage para número de fase
+    $stageMap = [
+        'coleta_dispersa' => 1,
+        'legalizacao' => 2,
+        'alfandegas' => 3,
+        'cornelder' => 4,
+        'taxacao' => 5,
+        'financas' => 6,  // Adicionado
+        'faturacao' => 6, // Alias
+        'pod' => 7,       // Adicionado
+    ];
+
+    return $stageMap[$currentStage->stage] ?? 1;
+}
 
     /**
      * Verificar se está em um stage específico
@@ -327,44 +330,50 @@ public function currentStage()
         ]);
     }
 
-    /**
-     * Completar o stage atual e avançar para o próximo
-     *
-     * @return ShipmentStage|null
-     */
-    public function advanceToNextStage()
-    {
-        $currentStage = $this->currentStage();
+/**
+ * Completar o stage atual e avançar para o próximo
+ * CORREÇÃO: Agora inclui todas as 7 fases
+ *
+ * @return ShipmentStage|null
+ */
+public function advanceToNextStage()
+{
+    $currentStage = $this->currentStage();
 
-        if (!$currentStage) {
-            // Iniciar na primeira fase
-            return $this->startStage('coleta_dispersa');
-        }
-
-        // Completar stage atual
-        $currentStage->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-            'updated_by' => auth()->id(),
-        ]);
-
-        // Determinar próximo stage
-        $nextStages = [
-            'coleta_dispersa' => 'legalizacao',
-            'legalizacao' => 'alfandegas',
-            'alfandegas' => 'cornelder',
-            'cornelder' => 'taxacao',
-            'taxacao' => null, // Depois de taxação vai para faturação (gerenciado diferente)
-        ];
-
-        $nextStage = $nextStages[$currentStage->stage] ?? null;
-
-        if ($nextStage) {
-            return $this->startStage($nextStage);
-        }
-
-        return null;
+    if (!$currentStage) {
+        // Iniciar na primeira fase
+        return $this->startStage('coleta_dispersa');
     }
+
+    // Completar stage atual
+    $currentStage->update([
+        'status' => 'completed',
+        'completed_at' => now(),
+        'updated_by' => auth()->id(),
+    ]);
+
+    // Determinar próximo stage (TODAS as 7 fases)
+    $nextStages = [
+        'coleta_dispersa' => 'legalizacao',
+        'legalizacao' => 'alfandegas',
+        'alfandegas' => 'cornelder',
+        'cornelder' => 'taxacao',
+        'taxacao' => 'faturacao',    // Fase 6
+        'faturacao' => 'pod',         // Fase 7
+        'financas' => 'pod',          // Alias para faturacao
+        'pod' => null,                // Última fase
+    ];
+
+    $nextStage = $nextStages[$currentStage->stage] ?? null;
+
+    if ($nextStage) {
+        return $this->startStage($nextStage);
+    }
+
+    // Se chegou aqui, o processo está completo
+    $this->update(['status' => 'completed']);
+    return null;
+}
 
     /**
      * Bloquear o stage atual
