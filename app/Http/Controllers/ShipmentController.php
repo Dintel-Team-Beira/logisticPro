@@ -303,57 +303,134 @@ class ShipmentController extends Controller
             ->with('success', 'Shipment removido!');
     }
 
-    /**
-     * Avançar para próxima fase
-     */
-    public function advance(Shipment $shipment)
-    {
-        try {
-            DB::beginTransaction();
+  /**
+ * Avançar para próxima fase
+ * CORREÇÃO: Validação melhorada e verificação de duplicatas
+ */
+public function advance(Shipment $shipment)
+{
+    try {
+        DB::beginTransaction();
 
-            // Verificar se pode avançar
-            if (!$this->canAdvanceToNextPhase($shipment)) {
-                return back()->withErrors([
-                    'error' => 'Não é possível avançar. Complete os requisitos da fase atual.'
+        // Verificar se pode avançar
+        if (!$this->canAdvanceToNextPhase($shipment)) {
+            return back()->withErrors([
+                'error' => 'Não é possível avançar. Complete os requisitos da fase atual.'
+            ]);
+        }
+
+        // Obter o stage atual
+        $currentStage = $shipment->currentStage();
+
+        if (!$currentStage) {
+            DB::rollBack();
+            return back()->withErrors([
+                'error' => 'Nenhum stage ativo encontrado.'
+            ]);
+        }
+
+        // Verificar se o stage atual já está completado
+        if ($currentStage->status === 'completed') {
+            // Verificar se já existe um próximo stage em progresso
+            $inProgressStage = $shipment->stages()
+                ->where('status', 'in_progress')
+                ->where('id', '>', $currentStage->id)
+                ->first();
+
+            if ($inProgressStage) {
+                DB::rollBack();
+                return back()->with('info', 'Este processo já está na próxima fase!');
+            }
+        }
+
+        // Mapear fase atual para próxima
+        $nextStages = [
+            'coleta_dispersa' => 'legalizacao',
+            'legalizacao' => 'alfandegas',
+            'alfandegas' => 'cornelder',
+            'cornelder' => 'taxacao',
+            'taxacao' => 'faturacao',
+            'faturacao' => 'pod',
+            'pod' => null,
+        ];
+
+        $nextStageName = $nextStages[$currentStage->stage] ?? null;
+
+        // Se não houver próximo stage, processo está completo
+        if (!$nextStageName) {
+            $shipment->update(['status' => 'completed']);
+            DB::commit();
+            return back()->with('success', 'Processo completado com sucesso!');
+        }
+
+        // Verificar se o próximo stage já existe
+        $existingNextStage = $shipment->stages()
+            ->where('stage', $nextStageName)
+            ->first();
+
+        if ($existingNextStage) {
+            // Se já existe mas não está em progresso, ativar
+            if ($existingNextStage->status !== 'in_progress') {
+                $existingNextStage->update([
+                    'status' => 'in_progress',
+                    'started_at' => now(),
+                    'updated_by' => auth()->id(),
                 ]);
             }
 
-            // Avançar usando o método do Model
-            $nextStage = $shipment->advanceToNextStage();
-
-            if ($nextStage) {
-                // Registrar activity
-                try {
-                    $shipment->activities()->create([
-                        'user_id' => auth()->id(),
-                        'action' => 'phase_advanced',
-                        'description' => "Avançado para Fase {$shipment->current_phase}: " . ucfirst(str_replace('_', ' ', $nextStage->stage)),
-                    ]);
-                } catch (\Exception $e) {
-                    Log::warning('Activity não registrada');
-                }
-
-                DB::commit();
-
-                return back()->with('success', "Avançado para Fase {$shipment->current_phase}!");
-            } else {
-                // Processo completado
-                $shipment->update(['status' => 'completed']);
-                DB::commit();
-
-                return back()->with('success', 'Processo completado!');
+            // Completar o stage atual se ainda não foi
+            if ($currentStage->status !== 'completed') {
+                $currentStage->update([
+                    'status' => 'completed',
+                    'completed_at' => now(),
+                    'updated_by' => auth()->id(),
+                ]);
             }
 
-        } catch (\Exception $e) {
-            DB::rollBack();
-            Log::error('Erro ao avançar fase', [
-                'shipment_id' => $shipment->id,
-                'error' => $e->getMessage()
-            ]);
-
-            return back()->withErrors(['error' => 'Erro ao avançar: ' . $e->getMessage()]);
+            $nextStage = $existingNextStage;
+        } else {
+            // Avançar usando o método do Model
+            $nextStage = $shipment->advanceToNextStage();
         }
+
+        if ($nextStage) {
+            // Registrar activity
+            try {
+                $shipment->activities()->create([
+                    'user_id' => auth()->id(),
+                    'action' => 'phase_advanced',
+                    'description' => "Avançado para Fase {$shipment->current_phase}: " .
+                                   ucfirst(str_replace('_', ' ', $nextStage->stage)),
+                ]);
+            } catch (\Exception $e) {
+                Log::warning('Activity não registrada: ' . $e->getMessage());
+            }
+
+            DB::commit();
+
+            return back()->with('success',
+                "Avançado para Fase {$shipment->current_phase}: " .
+                ucfirst(str_replace('_', ' ', $nextStage->stage)) . "!"
+            );
+        }
+
+        DB::rollBack();
+        return back()->withErrors(['error' => 'Erro ao criar próximo stage.']);
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        Log::error('Erro ao avançar fase', [
+            'shipment_id' => $shipment->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return back()->withErrors([
+            'error' => 'Erro ao avançar: ' . $e->getMessage()
+        ]);
     }
+}
 
     /**
      * Obter checklist de documentos para uma fase

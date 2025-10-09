@@ -110,18 +110,29 @@ class Shipment extends Model
     // HELPER METHODS - GESTÃO DE STAGES
     // ========================================
 
-    /**
-     * Obter o stage atual (em progresso ou último completado)
-     *
-     * @return ShipmentStage|null
-     */
-    public function currentStage()
-    {
-        return $this->stages()
-            ->whereIn('status', ['in_progress', 'completed'])
-            ->latest('id')
-            ->first();
+ /**
+ * Obter o stage atual (prioriza in_progress, depois completed)
+ *
+ * @return ShipmentStage|null
+ */
+public function currentStage()
+{
+    // Primeiro, procurar por stage em progresso
+    $inProgressStage = $this->stages()
+        ->where('status', 'in_progress')
+        ->latest('id')
+        ->first();
+
+    if ($inProgressStage) {
+        return $inProgressStage;
     }
+
+    // Se não encontrar, retornar o último completado
+    return $this->stages()
+        ->where('status', 'completed')
+        ->latest('id')
+        ->first();
+}
 
     /**
      * Obter o número da fase atual (1-7)
