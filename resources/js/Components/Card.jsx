@@ -1,20 +1,20 @@
 import { motion } from 'framer-motion';
 
-export default function Card({ children, className = '', hover = true, ...props }) {
+export default function Card({ children, className = '', hover = false, ...props }) {
+    const Component = hover ? motion.div : 'div';
+
+    const hoverProps = hover ? {
+        whileHover: { y: -4, shadow: '0 20px 25px -5px rgb(0 0 0 / 0.1)' },
+        transition: { duration: 0.2 }
+    } : {};
+
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            whileHover={hover ? { y: -4, boxShadow: "0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)" } : {}}
-            className={`
-                bg-white rounded-xl
-                border border-gray-100
-                transition-all duration-300
-                ${className}
-            `}
+        <Component
+            className={`bg-white border border-slate-200 rounded-xl shadow-sm ${className}`}
+            {...hoverProps}
             {...props}
         >
             {children}
-        </motion.div>
+        </Component>
     );
 }

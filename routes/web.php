@@ -483,6 +483,92 @@ Route::middleware(['auth'])->prefix('audit')->name('audit.')->group(function () 
         ->name('export');
 });
 
+
+
+// ============================================================================
+// CONFIGURAÇÕES - RF-033: Configurações Gerais do Sistema
+// ============================================================================
+Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(function () {
+
+    // Dashboard de Configurações
+    Route::get('/', [SettingsController::class, 'index'])->name('index');
+
+    // ========================================
+    // PERFIL DO USUÁRIO
+    // ========================================
+
+    // RF-033.1: Atualizar Perfil
+    Route::put('/profile', [SettingsController::class, 'updateProfile'])
+        ->name('profile.update');
+
+    // RF-033.2: Upload de Avatar
+    Route::post('/profile/avatar', [SettingsController::class, 'uploadAvatar'])
+        ->name('profile.avatar');
+
+    // RF-033.3: Alterar Senha
+    Route::put('/password', [SettingsController::class, 'updatePassword'])
+        ->name('password.update');
+
+    // ========================================
+    // PREFERÊNCIAS DO SISTEMA
+    // ========================================
+
+    // RF-033.4: Preferências de Interface
+    Route::put('/preferences', [SettingsController::class, 'updatePreferences'])
+        ->name('preferences.update');
+
+    // RF-033.5: Configurações de Notificação
+    Route::put('/notifications', [SettingsController::class, 'updateNotifications'])
+        ->name('notifications.update');
+
+    // ========================================
+    // CONFIGURAÇÕES DA EMPRESA (Admin Only)
+    // ========================================
+
+    // RF-033.6: Dados da Empresa
+    Route::put('/company', [SettingsController::class, 'updateCompany'])
+        ->name('company.update')
+        ->middleware('role:admin');
+
+    // RF-033.7: Configurações de Faturação
+    Route::put('/invoices', [SettingsController::class, 'updateInvoiceSettings'])
+        ->name('invoices.update')
+        ->middleware('role:admin');
+
+    // ========================================
+    // API E INTEGRAÇÕES
+    // ========================================
+
+    // RF-033.8: Gerar Token API
+    Route::post('/api-token', [SettingsController::class, 'generateApiToken'])
+        ->name('api-token.generate');
+
+    // RF-033.9: Configurar Webhooks
+    Route::put('/webhooks', [SettingsController::class, 'updateWebhooks'])
+        ->name('webhooks.update')
+        ->middleware('role:admin');
+});
+
+// ============================================================================
+// API ROUTES - Para acesso externo
+// ============================================================================
+Route::middleware(['auth:sanctum'])->prefix('api/v1')->group(function () {
+
+    // Obter configurações do usuário
+    Route::get('/settings', function () {
+        return response()->json([
+            'user' => auth()->user(),
+            'settings' => auth()->user()->settings,
+        ]);
+    });
+
+    // Obter configurações da empresa
+    Route::get('/company-settings', function () {
+        return response()->json(
+            \App\Models\CompanySetting::getInstance()
+        );
+    })->middleware('role:admin');
+});
 // ============================================================================
 // AUTENTICAÇÃO
 // ============================================================================

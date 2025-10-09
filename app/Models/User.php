@@ -45,4 +45,47 @@ class User extends Authenticatable
             'password' => 'hashed',
         ];
     }
+
+      /**
+     * Relação com configurações
+     */
+    public function settings()
+    {
+        return $this->hasOne(UserSetting::class);
+    }
+
+    /**
+     * Obter configuração específica
+     */
+    public function getSetting(string $key, $default = null)
+    {
+        if (!$this->settings) {
+            return $default;
+        }
+
+        return $this->settings->$key ?? $default;
+    }
+
+    /**
+     * Verificar se notificação está ativa
+     */
+    public function hasNotificationEnabled(string $key): bool
+    {
+        return $this->settings?->isNotificationEnabled($key) ?? false;
+    }
+
+    /**
+     * Atualizar último login
+     */
+    public function updateLastLogin(): void
+    {
+        $this->update(['last_login_at' => now()]);
+    }
+
+    public function documents(){
+           return $this->belongsTo(Document::class,'uploaded_by');
+    }
+    public function shipments(){
+           return $this->belongsTo(Shipment::class,'created_by');
+    }
 }
