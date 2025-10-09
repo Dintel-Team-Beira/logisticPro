@@ -316,23 +316,24 @@ public function getCurrentPhaseAttribute(): int
 
     /**
      * Iniciar um novo stage
-     *
-     * @param string $stageName
-     * @return ShipmentStage
-     */
-    public function startStage(string $stageName)
-    {
-        return $this->stages()->create([
-            'stage' => $stageName,
-            'status' => 'in_progress',
-            'started_at' => now(),
-            'updated_by' => auth()->id(),
-        ]);
-    }
+ * CORREÇÃO: Adiciona fallback para updated_by quando auth() não está disponível
+ *
+ * @param string $stageName
+ * @return ShipmentStage
+ */
+public function startStage(string $stageName)
+{
+    return $this->stages()->create([
+        'stage' => $stageName,
+        'status' => 'in_progress',
+        'started_at' => now(),
+        'updated_by' => auth()->id() ?? $this->created_by ?? 1,
+    ]);
+}
 
 /**
  * Completar o stage atual e avançar para o próximo
- * CORREÇÃO: Agora inclui todas as 7 fases
+ * CORREÇÃO: Fallback para updated_by
  *
  * @return ShipmentStage|null
  */
@@ -349,7 +350,7 @@ public function advanceToNextStage()
     $currentStage->update([
         'status' => 'completed',
         'completed_at' => now(),
-        'updated_by' => auth()->id(),
+        'updated_by' => auth()->id() ?? $this->created_by ?? 1,
     ]);
 
     // Determinar próximo stage (TODAS as 7 fases)
@@ -358,10 +359,9 @@ public function advanceToNextStage()
         'legalizacao' => 'alfandegas',
         'alfandegas' => 'cornelder',
         'cornelder' => 'taxacao',
-        'taxacao' => 'faturacao',    // Fase 6
-        'faturacao' => 'pod',         // Fase 7
-        'financas' => 'pod',          // Alias para faturacao
-        'pod' => null,                // Última fase
+        'taxacao' => 'faturacao',
+        'faturacao' => 'pod',
+        'pod' => null,
     ];
 
     $nextStage = $nextStages[$currentStage->stage] ?? null;
@@ -374,6 +374,7 @@ public function advanceToNextStage()
     $this->update(['status' => 'completed']);
     return null;
 }
+
 
     /**
      * Bloquear o stage atual
