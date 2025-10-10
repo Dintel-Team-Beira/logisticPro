@@ -26,9 +26,9 @@ class SettingsController extends Controller
             'companySettings' => $this->getCompanySettings(),
             'notificationPreferences' => $this->getNotificationPreferences(),
             'stats' => [
-                'documents_uploaded' => $user->documents()->count(),
-                'shipments_created' => $user->shipments()->count(),
-                'last_login' => $user->last_login_at,
+                'documents_uploaded' => $user->documents()->count() ?? 0,
+                'shipments_created' => $user->shipments()->count() ?? 0,
+                'last_login' => $user->last_login_at ? $user->last_login_at->diffForHumans() : null,
             ]
         ]);
     }
@@ -52,8 +52,6 @@ class SettingsController extends Controller
         ]);
 
         $user->update($validated);
-
-        $user->activity()->causedBy($user)->log('Perfil atualizado');
 
         return back()->with('success', 'Perfil atualizado com sucesso!');
     }
@@ -97,10 +95,6 @@ class SettingsController extends Controller
         $user->update([
             'password' => Hash::make($request->password)
         ]);
-
-        $user->activity()
-            ->causedBy($user)
-            ->log('Senha alterada');
 
         return back()->with('success', 'Senha alterada com sucesso!');
     }
@@ -170,14 +164,17 @@ class SettingsController extends Controller
      */
     public function updateCompany(Request $request)
     {
-        $this->authorize('admin');
+        // Verificar se é admin
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Acesso negado');
+        }
 
         $validated = $request->validate([
             'company_name' => ['required', 'string', 'max:255'],
             'company_email' => ['required', 'email'],
             'company_phone' => ['required', 'string'],
-            'company_address' => ['required', 'string'],
-            'tax_id' => ['required', 'string'],
+            'company_address' => ['nullable', 'string'],
+            'tax_id' => ['nullable', 'string'],
             'logo' => ['nullable', 'image', 'max:2048'],
         ]);
 
@@ -198,7 +195,9 @@ class SettingsController extends Controller
      */
     public function updateInvoiceSettings(Request $request)
     {
-        $this->authorize('admin');
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Acesso negado');
+        }
 
         $validated = $request->validate([
             'invoice_prefix' => ['required', 'string', 'max:10'],
@@ -234,10 +233,6 @@ class SettingsController extends Controller
         // Gerar novo token
         $token = $user->createToken('api-token')->plainTextToken;
 
-          $user->activity()
-            ->causedBy($user)
-            ->log('Token API gerado');
-
         return back()->with([
             'success' => 'Token API gerado com sucesso!',
             'token' => $token
@@ -249,7 +244,9 @@ class SettingsController extends Controller
      */
     public function updateWebhooks(Request $request)
     {
-        $this->authorize('admin');
+        if (Auth::user()->role !== 'admin') {
+            abort(403, 'Acesso negado');
+        }
 
         $validated = $request->validate([
             'webhooks' => ['array'],
@@ -288,7 +285,8 @@ class SettingsController extends Controller
 
     private function getCompanySettings()
     {
-        if (!Auth::user()->role==='admin') {
+        // CORREÇÃO: Remover o ternário incorreto
+        if (Auth::user()->role !== 'admin') {
             return null;
         }
 

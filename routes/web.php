@@ -39,19 +39,7 @@ Route::get('/', function () {
 // ============================================================================
 // DASHBOARD
 // ============================================================================
-Route::get('/dashboard', function () {
-    return Inertia::render('Dashboard', [
-        'stats' => [
-            'total_revenue' => 234567,
-            'active_shipments' => 23,
-            'in_customs' => 5,
-            'completion_rate' => 94.2,
-        ],
-        'shipments' => [], // Depois você busca do banco
-        'revenue' => [], // Dados de receita
-        'activities' => [], // Atividades recentes
-    ]);
-})->middleware(['auth', 'verified'])->name('dashboard');
+Route::get('/dashboard', [DashboardController::class,'index'])->middleware(['auth', 'verified'])->name('dashboard');
 // ============================================================================
 // PROFILE
 // ============================================================================

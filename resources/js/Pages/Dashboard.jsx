@@ -1,431 +1,364 @@
-import { useState } from 'react';
+import React, { useState } from 'react';
+import { Link, Head } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
-import { Head, Link } from '@inertiajs/react';
-import { motion } from 'framer-motion';
-import Card from '@/Components/Card';
 import {
-    Package,
-    Ship,
-    DollarSign,
-    TrendingUp,
-    TrendingDown,
-    Clock,
-    CheckCircle2,
-    AlertCircle,
-    FileText,
-    Calendar,
-    ArrowUpRight,
-    ArrowDownRight,
-    MapPin,
-    Users,
-    Building2,
-    ChevronRight,
+    Package, Ship, DollarSign, TrendingUp, TrendingDown, Clock,
+    CheckCircle2, AlertCircle, FileText, Calendar, ArrowUpRight,
+    MapPin, Users, Building2, Layers, XCircle, AlertTriangle
 } from 'lucide-react';
 import {
-    LineChart,
-    Line,
-    BarChart,
-    Bar,
-    PieChart,
-    Pie,
-    Cell,
-    XAxis,
-    YAxis,
-    CartesianGrid,
-    Tooltip,
-    ResponsiveContainer,
-    Legend,
-    Area,
-    AreaChart,
+    LineChart, Line, BarChart, Bar, PieChart, Pie, Cell,
+    XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend
 } from 'recharts';
 
-export default function Dashboard({ auth, stats, shipments, revenue, activities }) {
+export default function Dashboard({ auth, stats, recentShipments, financialSummary, stageStats, recentActivities, alerts }) {
     const [period, setPeriod] = useState('month');
 
-    // Dados de exemplo - depois você substitui por dados reais
-    const revenueData = [
-        { name: 'Jan', valor: 45000, despesas: 32000 },
-        { name: 'Fev', valor: 52000, despesas: 35000 },
-        { name: 'Mar', valor: 48000, despesas: 33000 },
-        { name: 'Abr', valor: 61000, despesas: 38000 },
-        { name: 'Mai', valor: 55000, despesas: 36000 },
-        { name: 'Jun', valor: 67000, despesas: 41000 },
-    ];
+    // Verific permissões baseadas em role
+    const canViewFinances = ['admin', 'manager'].includes(auth.user?.role);
+    const canViewDetailed = ['admin'].includes(auth.user?.role);
+    const canManage = ['admin', 'manager', 'operator'].includes(auth.user?.role);
 
-    const shipmentsStatus = [
-        { name: 'Coleta', value: 12, color: '#3B82F6' },
-        { name: 'Legalização', value: 8, color: '#8B5CF6' },
-        { name: 'Alfândegas', value: 5, color: '#F59E0B' },
-        { name: 'Concluído', value: 45, color: '#10B981' },
-    ];
+    // Formatar moeda
+    const formatCurrency = (value) => {
+        return new Intl.NumberFormat('pt-MZ', {
+            style: 'currency',
+            currency: 'MZN',
+            minimumFractionDigits: 0
+        }).format(value || 0);
+    };
 
-    const upcomingEvents = [
-        { id: 1, title: 'Chegada do navio MSC MAYA', date: '2025-10-08', type: 'arrival' },
-        { id: 2, title: 'Vencimento BL #253157188', date: '2025-10-10', type: 'deadline' },
-        { id: 3, title: 'Reunião com MAERSK', date: '2025-10-12', type: 'meeting' },
-    ];
+    // Cores para gráficos
+    const COLORS = {
+        coleta: '#3B82F6',
+        legalizacao: '#8B5CF6',
+        alfandegas: '#F59E0B',
+        cornelder: '#10B981',
+        taxacao: '#EC4899',
+        concluido: '#6366F1'
+    };
 
-    const kpiCards = [
-        {
-            title: 'Receita Total',
-            value: 'MZN 234,567',
-            change: '+12.5%',
-            trend: 'up',
-            icon: DollarSign,
-            color: 'from-green-500 to-emerald-600',
-            bgColor: 'bg-green-50',
-            textColor: 'text-green-600',
-        },
-        {
-            title: 'Shipments Ativos',
-            value: '23',
-            change: '+8.2%',
-            trend: 'up',
-            icon: Package,
-            color: 'from-blue-500 to-blue-600',
-            bgColor: 'bg-blue-50',
-            textColor: 'text-blue-600',
-        },
-        {
-            title: 'Em Alfândegas',
-            value: '5',
-            change: '-2.1%',
-            trend: 'down',
-            icon: Building2,
-            color: 'from-orange-500 to-orange-600',
-            bgColor: 'bg-orange-50',
-            textColor: 'text-orange-600',
-        },
-        {
-            title: 'Taxa de Conclusão',
-            value: '94.2%',
-            change: '+3.4%',
-            trend: 'up',
-            icon: CheckCircle2,
-            color: 'from-purple-500 to-purple-600',
-            bgColor: 'bg-purple-50',
-            textColor: 'text-purple-600',
-        },
-    ];
+    // Status badge
+    const getStatusBadge = (status) => {
+        const statusConfig = {
+            'pending': { color: 'bg-yellow-100 text-yellow-800', icon: Clock },
+            'in_progress': { color: 'bg-blue-100 text-blue-800', icon: Clock },
+            'completed': { color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
+            'blocked': { color: 'bg-red-100 text-red-800', icon: XCircle },
+            'paid': { color: 'bg-green-100 text-green-800', icon: CheckCircle2 },
+            'overdue': { color: 'bg-red-100 text-red-800', icon: AlertTriangle }
+        };
 
-    const recentShipments = [
-        {
-            id: 1,
-            reference: 'SHP-2025-00123',
-            bl: 'MAEU253157188',
-            vessel: 'MSC MAYA',
-            status: 'in_transit',
-            eta: '2025-10-15',
-            value: 'MZN 45,000',
-        },
-        {
-            id: 2,
-            reference: 'SHP-2025-00122',
-            bl: 'TGHU2437301',
-            vessel: 'CMA AFRICA',
-            status: 'customs',
-            eta: '2025-10-12',
-            value: 'MZN 32,800',
-        },
-        {
-            id: 3,
-            reference: 'SHP-2025-00121',
-            bl: 'OOLU6234567',
-            vessel: 'ONE DIAMOND',
-            status: 'legalization',
-            eta: '2025-10-10',
-            value: 'MZN 28,500',
-        },
-    ];
+        const config = statusConfig[status] || statusConfig['pending'];
+        const Icon = config.icon;
+
+        return (
+            <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium ${config.color}`}>
+                <Icon className="w-3 h-3" />
+                {status}
+            </span>
+        );
+    };
 
     return (
         <DashboardLayout>
             <Head title="Dashboard" />
 
-      <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/80">
+            <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
                 {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <p className="text-3xl font-bold text-gray-900">
-                            Dashboard
-                        </p>
-                        <p className="mt-1 text-sm text-gray-600">
-                            Aqui está o resumo das suas operações
-                        </p>
-                    </div>
-                    <div className="flex gap-3">
-                        <select
-                            value={period}
-                            onChange={(e) => setPeriod(e.target.value)}
-                            className="px-4 py-2 text-sm font-medium text-gray-700 bg-white border border-gray-300 rounded-lg hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                        >
-                            <option value="week">Esta Semana</option>
-                            <option value="month">Este Mês</option>
-                            <option value="year">Este Ano</option>
-                        </select>
-                        <Link href="/shipments/create">
-                            <motion.button
-                                whileHover={{ scale: 1.02 }}
-                                whileTap={{ scale: 0.98 }}
-                                className="px-6 py-2 text-sm font-semibold text-white rounded-lg shadow-lg bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800"
+                <div className="mb-8">
+                    <div className="flex items-center justify-between">
+                        <div>
+                            <h1 className="text-3xl font-bold text-slate-900">Dashboard Operacional</h1>
+                            <p className="mt-1 text-slate-600">Bem-vindo de volta, {auth.user.name}</p>
+                        </div>
+                        <div className="flex items-center gap-3">
+                            <select
+                                value={period}
+                                onChange={(e) => setPeriod(e.target.value)}
+                                className="px-4 py-2 bg-white border rounded-lg border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500"
                             >
-                                <Package className="inline-block w-4 h-4 mr-2" />
-                                Novo Shipment
-                            </motion.button>
-                        </Link>
+                                <option value="week">Esta Semana</option>
+                                <option value="month">Este Mês</option>
+                                <option value="quarter">Este Trimestre</option>
+                                <option value="year">Este Ano</option>
+                            </select>
+                            <div className="flex items-center gap-2 px-4 py-2 border border-blue-200 rounded-lg bg-blue-50">
+                                <Users className="w-5 h-5 text-blue-600" />
+                                <span className="text-sm font-medium capitalize text-slate-700">{auth.user.role}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
-                {/* KPI Cards */}
-                <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4 bg-white/10 backdrop-blur-xl">
-                    {kpiCards.map((kpi, index) => (
-                        <motion.div
-                            key={kpi.title}
-                            initial={{ opacity: 0, y: 20 }}
-                            animate={{ opacity: 1, y: 0 }}
-                            transition={{ delay: index * 0.1 }}
-                        >
-                            <Card className="relative overflow-hidden">
-                                <div className="p-6">
-                                    <div className="flex items-center justify-between mb-4">
-                                        <div className={`p-3 rounded-xl ${kpi.bgColor}`}>
-                                            <kpi.icon className={`w-6 h-6 ${kpi.textColor}`} />
-                                        </div>
-                                        <div className="flex items-center gap-1 text-sm font-semibold">
-                                            {kpi.trend === 'up' ? (
-                                                <ArrowUpRight className="w-4 h-4 text-green-500" />
-                                            ) : (
-                                                <ArrowDownRight className="w-4 h-4 text-red-500" />
-                                            )}
-                                            <span className={kpi.trend === 'up' ? 'text-green-600' : 'text-red-600'}>
-                                                {kpi.change}
-                                            </span>
-                                        </div>
-                                    </div>
-                                    <p className="text-sm font-medium text-gray-600">{kpi.title}</p>
-                                    <p className="mt-2 text-3xl font-bold text-gray-900">{kpi.value}</p>
-                                </div>
-                                <div className={`absolute bottom-0 left-0 right-0 h-1 bg-gradient-to-r ${kpi.color}`} />
-                            </Card>
-                        </motion.div>
-                    ))}
-                </div>
-
-                {/* Charts Row */}
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3 bg-white/10 backdrop-blur-xl">
-                    {/* Revenue Chart */}
-                    <Card className="lg:col-span-2">
-                        <div className="p-6 border-b border-gray-100">
-                            <div className="flex items-center justify-between">
-                                <div>
-                                    <h3 className="text-lg font-bold text-gray-900">Receitas vs Despesas</h3>
-                                    <p className="text-sm text-gray-600">Últimos 6 meses</p>
-                                </div>
-                                <div className="flex gap-4">
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 bg-blue-500 rounded-full"></div>
-                                        <span className="text-sm text-gray-600">Receitas</span>
-                                    </div>
-                                    <div className="flex items-center gap-2">
-                                        <div className="w-3 h-3 bg-red-500 rounded-full"></div>
-                                        <span className="text-sm text-gray-600">Despesas</span>
-                                    </div>
-                                </div>
+                {/* Alertas Urgentes */}
+                {alerts && alerts.length > 0 && (
+                    <div className="p-4 mb-6 border-l-4 border-orange-500 rounded-lg bg-gradient-to-r from-orange-50 to-red-50">
+                        <div className="flex items-start gap-3">
+                            <AlertTriangle className="w-5 h-5 text-orange-600 mt-0.5" />
+                            <div className="flex-1">
+                                <h3 className="font-semibold text-slate-900">Alertas Urgentes ({alerts.length})</h3>
+                                <ul className="mt-2 space-y-1">
+                                    {alerts.slice(0, 3).map((alert, index) => (
+                                        <li key={index} className="text-sm text-slate-700">• {alert.message}</li>
+                                    ))}
+                                </ul>
                             </div>
-                        </div>
-                        <div className="p-6">
-                            <ResponsiveContainer width="100%" height={300}>
-                                <AreaChart data={revenueData}>
-                                    <defs>
-                                        <linearGradient id="colorReceita" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#3B82F6" stopOpacity={0} />
-                                        </linearGradient>
-                                        <linearGradient id="colorDespesa" x1="0" y1="0" x2="0" y2="1">
-                                            <stop offset="5%" stopColor="#EF4444" stopOpacity={0.3} />
-                                            <stop offset="95%" stopColor="#EF4444" stopOpacity={0} />
-                                        </linearGradient>
-                                    </defs>
-                                    <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                                    <XAxis dataKey="name" stroke="#9CA3AF" />
-                                    <YAxis stroke="#9CA3AF" />
-                                    <Tooltip
-                                        contentStyle={{
-                                            backgroundColor: '#fff',
-                                            border: '1px solid #E5E7EB',
-                                            borderRadius: '8px',
-                                        }}
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="valor"
-                                        stroke="#3B82F6"
-                                        strokeWidth={3}
-                                        fill="url(#colorReceita)"
-                                    />
-                                    <Area
-                                        type="monotone"
-                                        dataKey="despesas"
-                                        stroke="#EF4444"
-                                        strokeWidth={3}
-                                        fill="url(#colorDespesa)"
-                                    />
-                                </AreaChart>
-                            </ResponsiveContainer>
-                        </div>
-                    </Card>
-
-                    {/* Pie Chart */}
-                    <Card>
-                        <div className="p-6 border-b border-gray-100">
-                            <h3 className="text-lg font-bold text-gray-900">Status dos Shipments</h3>
-                            <p className="text-sm text-gray-600">Distribuição atual</p>
-                        </div>
-                        <div className="p-6">
-                            <ResponsiveContainer width="100%" height={300}>
-                                <PieChart>
-                                    <Pie
-                                        data={shipmentsStatus}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={90}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {shipmentsStatus.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={entry.color} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip />
-                                </PieChart>
-                            </ResponsiveContainer>
-                            <div className="mt-4 space-y-2">
-                                {shipmentsStatus.map((status) => (
-                                    <div key={status.name} className="flex items-center justify-between">
-                                        <div className="flex items-center gap-2">
-                                            <div
-                                                className="w-3 h-3 rounded-full"
-                                                style={{ backgroundColor: status.color }}
-                                            />
-                                            <span className="text-sm text-gray-600">{status.name}</span>
-                                        </div>
-                                        <span className="text-sm font-semibold text-gray-900">{status.value}</span>
-                                    </div>
-                                ))}
-                            </div>
-                        </div>
-                    </Card>
-                </div>
-
-                {/* Bottom Row */}
-                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
-                    {/* Recent Shipments */}
-                    <Card className="lg:col-span-2">
-                        <div className="flex items-center justify-between p-6 border-b border-gray-100">
-                            <div>
-                                <h3 className="text-lg font-bold text-gray-900">Shipments Recentes</h3>
-                                <p className="text-sm text-gray-600">Últimos registros</p>
-                            </div>
-                            <Link href="/shipments" className="text-sm font-medium text-blue-600 hover:text-blue-700">
-                                Ver todos <ChevronRight className="inline-block w-4 h-4" />
+                            <Link href="/alerts" className="text-sm font-medium text-orange-600 hover:text-orange-700">
+                                Ver todos
                             </Link>
                         </div>
-                        <div className="p-6">
-                            <div className="space-y-4">
-                                {recentShipments.map((shipment) => (
-                                    <Link key={shipment.id} href={`/shipments/${shipment.id}`}>
-                                        <motion.div
-                                            whileHover={{ x: 4 }}
-                                            className="flex items-center gap-4 p-4 transition-all border border-gray-100 rounded-lg cursor-pointer hover:shadow-md hover:border-blue-200"
-                                        >
-                                            <div className="p-3 bg-blue-100 rounded-lg">
-                                                <Ship className="w-6 h-6 text-blue-600" />
-                                            </div>
-                                            <div className="flex-1">
-                                                <div className="flex items-center gap-2">
-                                                    <p className="font-semibold text-gray-900">{shipment.reference}</p>
-                                                    <StatusBadge status={shipment.status} />
-                                                </div>
-                                                <p className="text-sm text-gray-600">
-                                                    {shipment.vessel} • BL: {shipment.bl}
-                                                </p>
-                                            </div>
-                                            <div className="text-right">
-                                                <p className="font-semibold text-gray-900">{shipment.value}</p>
-                                                <p className="text-sm text-gray-600">ETA: {shipment.eta}</p>
-                                            </div>
-                                        </motion.div>
-                                    </Link>
-                                ))}
-                            </div>
-                        </div>
-                    </Card>
+                    </div>
+                )}
 
-                    {/* Upcoming Events */}
-                    <Card>
-                        <div className="p-6 border-b border-gray-100">
-                            <h3 className="text-lg font-bold text-gray-900">Próximos Eventos</h3>
-                            <p className="text-sm text-gray-600">Agenda importante</p>
+                {/* Cards de Estatísticas Principais */}
+                <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
+                    {/* Total Shipments Ativos */}
+                    <div className="p-6 transition-shadow bg-white border shadow-sm rounded-xl border-slate-100 hover:shadow-md">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 rounded-lg bg-blue-50">
+                                <Package className="w-6 h-6 text-blue-600" />
+                            </div>
+                            <span className="flex items-center gap-1 text-xs font-medium text-blue-600">
+                                <TrendingUp className="w-4 h-4" />
+                                +{stats?.shipmentsGrowth || 0}%
+                            </span>
                         </div>
-                        <div className="p-6">
-                            <div className="space-y-4">
-                                {upcomingEvents.map((event) => (
-                                    <div key={event.id} className="flex gap-3">
-                                        <div className="flex flex-col items-center">
-                                            <div
-                                                className={`
-                                                    w-10 h-10 rounded-lg flex items-center justify-center
-                                                    ${event.type === 'arrival' ? 'bg-blue-100' : ''}
-                                                    ${event.type === 'deadline' ? 'bg-red-100' : ''}
-                                                    ${event.type === 'meeting' ? 'bg-green-100' : ''}
-                                                `}
-                                            >
-                                                {event.type === 'arrival' && (
-                                                    <Ship className="w-5 h-5 text-blue-600" />
-                                                )}
-                                                {event.type === 'deadline' && (
-                                                    <Clock className="w-5 h-5 text-red-600" />
-                                                )}
-                                                {event.type === 'meeting' && (
-                                                    <Users className="w-5 h-5 text-green-600" />
-                                                )}
-                                            </div>
-                                            {event.id !== upcomingEvents.length && (
-                                                <div className="w-px h-8 mt-2 bg-gray-200" />
-                                            )}
+                        <h3 className="mb-1 text-sm font-medium text-slate-600">Processos Ativos</h3>
+                        <p className="text-3xl font-bold text-slate-900">{stats?.activeShipments || 0}</p>
+                        <p className="mt-2 text-xs text-slate-500">
+                            {stats?.newThisWeek || 0} novos esta semana
+                        </p>
+                    </div>
+
+                    {/* Receita Total (Admin/Manager) */}
+                    {canViewFinances && (
+                        <div className="p-6 transition-shadow bg-white border shadow-sm rounded-xl border-slate-100 hover:shadow-md">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-3 rounded-lg bg-green-50">
+                                    <DollarSign className="w-6 h-6 text-green-600" />
+                                </div>
+                                <span className="flex items-center gap-1 text-xs font-medium text-green-600">
+                                    <TrendingUp className="w-4 h-4" />
+                                    +{financialSummary?.revenueGrowth || 0}%
+                                </span>
+                            </div>
+                            <h3 className="mb-1 text-sm font-medium text-slate-600">Receita Total</h3>
+                            <p className="text-3xl font-bold text-slate-900">
+                                {formatCurrency(financialSummary?.totalRevenue || 0)}
+                            </p>
+                            <p className="mt-2 text-xs text-slate-500">
+                                Este {period === 'month' ? 'mês' : 'período'}
+                            </p>
+                        </div>
+                    )}
+
+                    {/* Documentos Pendentes */}
+                    <div className="p-6 transition-shadow bg-white border shadow-sm rounded-xl border-slate-100 hover:shadow-md">
+                        <div className="flex items-center justify-between mb-4">
+                            <div className="p-3 rounded-lg bg-purple-50">
+                                <FileText className="w-6 h-6 text-purple-600" />
+                            </div>
+                            <span className="text-xs font-medium text-purple-600">
+                                {stats?.documentsUrgent || 0} urgentes
+                            </span>
+                        </div>
+                        <h3 className="mb-1 text-sm font-medium text-slate-600">Documentos Pendentes</h3>
+                        <p className="text-3xl font-bold text-slate-900">{stats?.pendingDocuments || 0}</p>
+                        <Link href="/documents" className="inline-block mt-2 text-xs text-purple-600 hover:text-purple-700">
+                            Ver todos →
+                        </Link>
+                    </div>
+
+                    {/* Faturas Pendentes (Admin/Manager) */}
+                    {canViewFinances && (
+                        <div className="p-6 transition-shadow bg-white border shadow-sm rounded-xl border-slate-100 hover:shadow-md">
+                            <div className="flex items-center justify-between mb-4">
+                                <div className="p-3 rounded-lg bg-orange-50">
+                                    <AlertCircle className="w-6 h-6 text-orange-600" />
+                                </div>
+                                <span className="text-xs font-medium text-orange-600">
+                                    {stats?.overdueInvoices || 0} vencidas
+                                </span>
+                            </div>
+                            <h3 className="mb-1 text-sm font-medium text-slate-600">Faturas Pendentes</h3>
+                            <p className="text-3xl font-bold text-slate-900">{stats?.pendingInvoices || 0}</p>
+                            <p className="mt-2 text-xs text-slate-500">
+                                Valor: {formatCurrency(stats?.pendingAmount || 0)}
+                            </p>
+                        </div>
+                    )}
+                </div>
+
+                {/* Gráficos e Detalhes */}
+                <div className="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-3">
+                    {/* Distribuição por Fase (Pizza) */}
+                    <div className="p-6 bg-white border shadow-sm lg:col-span-1 rounded-xl border-slate-100">
+                        <h2 className="mb-4 text-xl font-bold text-slate-900">Processos por Fase</h2>
+                        <ResponsiveContainer width="100%" height={250}>
+                            <PieChart>
+                                <Pie
+                                    data={stageStats?.distribution || []}
+                                    dataKey="value"
+                                    nameKey="name"
+                                    cx="50%"
+                                    cy="50%"
+                                    outerRadius={80}
+                                    label
+                                >
+                                    {(stageStats?.distribution || []).map((entry, index) => (
+                                        <Cell key={`cell-${index}`} fill={Object.values(COLORS)[index % Object.values(COLORS).length]} />
+                                    ))}
+                                </Pie>
+                                <Tooltip />
+                                <Legend />
+                            </PieChart>
+                        </ResponsiveContainer>
+                        <div className="mt-4 space-y-2">
+                            {(stageStats?.distribution || []).map((stage, index) => (
+                                <div key={index} className="flex items-center justify-between text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div
+                                            className="w-3 h-3 rounded"
+                                            style={{ backgroundColor: Object.values(COLORS)[index % Object.values(COLORS).length] }}
+                                        />
+                                        <span className="text-slate-700">{stage.name}</span>
+                                    </div>
+                                    <span className="font-semibold text-slate-900">{stage.value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* Evolução Financeira (Admin/Manager) */}
+                    {canViewFinances && (
+                        <div className="p-6 bg-white border shadow-sm lg:col-span-2 rounded-xl border-slate-100">
+                            <div className="flex items-center justify-between mb-4">
+                                <h2 className="text-xl font-bold text-slate-900">Evolução Financeira</h2>
+                                <div className="flex gap-4 text-sm">
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-green-500 rounded" />
+                                        <span className="text-slate-600">Receita</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-red-500 rounded" />
+                                        <span className="text-slate-600">Despesas</span>
+                                    </div>
+                                    <div className="flex items-center gap-2">
+                                        <div className="w-3 h-3 bg-blue-500 rounded" />
+                                        <span className="text-slate-600">Lucro</span>
+                                    </div>
+                                </div>
+                            </div>
+                            <ResponsiveContainer width="100%" height={250}>
+                                <LineChart data={financialSummary?.monthlyData || []}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                    <XAxis dataKey="month" stroke="#64748b" />
+                                    <YAxis stroke="#64748b" />
+                                    <Tooltip
+                                        formatter={(value) => formatCurrency(value)}
+                                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '0.5rem' }}
+                                    />
+                                    <Line type="monotone" dataKey="revenue" stroke="#10B981" strokeWidth={2} />
+                                    <Line type="monotone" dataKey="expenses" stroke="#EF4444" strokeWidth={2} />
+                                    <Line type="monotone" dataKey="profit" stroke="#3B82F6" strokeWidth={2} />
+                                </LineChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
+
+                    {/* Evolução de Processos (Viewer/Operator) */}
+                    {!canViewFinances && (
+                        <div className="p-6 bg-white border shadow-sm lg:col-span-2 rounded-xl border-slate-100">
+                            <h2 className="mb-4 text-xl font-bold text-slate-900">Evolução de Processos</h2>
+                            <ResponsiveContainer width="100%" height={250}>
+                                <BarChart data={stats?.monthlyShipments || []}>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                                    <XAxis dataKey="month" stroke="#64748b" />
+                                    <YAxis stroke="#64748b" />
+                                    <Tooltip
+                                        contentStyle={{ backgroundColor: '#fff', border: '1px solid #e2e8f0', borderRadius: '0.5rem' }}
+                                    />
+                                    <Bar dataKey="count" fill="#3B82F6" radius={[8, 8, 0, 0]} />
+                                </BarChart>
+                            </ResponsiveContainer>
+                        </div>
+                    )}
+                </div>
+
+                {/* Shipments Recentes e Atividades */}
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
+                    {/* Processos Recentes */}
+                    <div className="p-6 bg-white border shadow-sm rounded-xl border-slate-100">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-slate-900">Processos Recentes</h2>
+                            <Link href="/shipments" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                                Ver todos →
+                            </Link>
+                        </div>
+                        <div className="space-y-3">
+                            {(recentShipments || []).map((shipment) => (
+                                <Link
+                                    key={shipment.id}
+                                    href={`/shipments/${shipment.id}`}
+                                    className="flex items-center justify-between p-4 transition-colors rounded-lg bg-slate-50 hover:bg-slate-100 group"
+                                >
+                                    <div className="flex items-center flex-1 gap-4">
+                                        <div className="p-2 bg-blue-100 rounded-lg">
+                                            <Ship className="w-5 h-5 text-blue-600" />
                                         </div>
-                                        <div className="flex-1">
-                                            <p className="text-sm font-semibold text-gray-900">{event.title}</p>
-                                            <p className="text-xs text-gray-600 mt-0.5">
-                                                <Calendar className="inline-block w-3 h-3 mr-1" />
-                                                {event.date}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-sm font-semibold truncate transition-colors text-slate-900 group-hover:text-blue-600">
+                                                {shipment.reference_number}
+                                            </p>
+                                            <p className="mt-1 text-xs text-slate-600">
+                                                {shipment.client?.name} • {shipment.shipping_line?.name}
                                             </p>
                                         </div>
                                     </div>
-                                ))}
-                            </div>
+                                    <div className="flex flex-col items-end gap-2">
+                                        {getStatusBadge(shipment.stages?.[0]?.status || 'pending')}
+                                        <span className="text-xs text-slate-500">
+                                            Fase {shipment.current_phase || 1}
+                                        </span>
+                                    </div>
+                                </Link>
+                            ))}
                         </div>
-                    </Card>
+                    </div>
+
+                    {/* Atividades Recentes */}
+                    <div className="p-6 bg-white border shadow-sm rounded-xl border-slate-100">
+                        <div className="flex items-center justify-between mb-4">
+                            <h2 className="text-xl font-bold text-slate-900">Atividades Recentes</h2>
+                            {canViewDetailed && (
+                                <Link href="/audit" className="text-sm font-medium text-blue-600 hover:text-blue-700">
+                                    Ver histórico →
+                                </Link>
+                            )}
+                        </div>
+                        <div className="space-y-3">
+                            {(recentActivities || []).map((activity, index) => (
+                                <div key={index} className="flex items-start gap-3 p-3 rounded-lg bg-slate-50">
+                                    <div className="p-2 rounded-lg bg-slate-200">
+                                        {activity.action === 'created' && <Package className="w-4 h-4 text-slate-600" />}
+                                        {activity.action === 'updated' && <Clock className="w-4 h-4 text-blue-600" />}
+                                        {activity.action === 'completed' && <CheckCircle2 className="w-4 h-4 text-green-600" />}
+                                        {activity.action === 'document_uploaded' && <FileText className="w-4 h-4 text-purple-600" />}
+                                        {activity.action === 'invoice_paid' && <DollarSign className="w-4 h-4 text-green-600" />}
+                                    </div>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm text-slate-900">{activity.description}</p>
+                                        <p className="mt-1 text-xs text-slate-500">
+                                            {activity.user?.name} • {new Date(activity.created_at).toLocaleString('pt-MZ')}
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
                 </div>
             </div>
         </DashboardLayout>
-    );
-}
-
-function StatusBadge({ status }) {
-    const statusConfig = {
-        in_transit: { label: 'Em Trânsito', color: 'bg-blue-100 text-blue-700' },
-        customs: { label: 'Alfândegas', color: 'bg-orange-100 text-orange-700' },
-        legalization: { label: 'Legalização', color: 'bg-purple-100 text-purple-700' },
-        completed: { label: 'Concluído', color: 'bg-green-100 text-green-700' },
-    };
-
-    const config = statusConfig[status] || statusConfig.in_transit;
-
-    return (
-        <span className={`px-2 py-1 text-xs font-medium rounded-full ${config.color}`}>
-            {config.label}
-        </span>
     );
 }

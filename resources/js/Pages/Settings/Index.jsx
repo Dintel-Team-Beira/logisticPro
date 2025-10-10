@@ -24,6 +24,10 @@ import {
     Clock,
     MapPin,
     Calendar,
+    Package,
+    BarChart3,
+    FileText,
+    X,
 } from 'lucide-react';
 
 export default function Settings({ auth, userSettings, companySettings, notificationPreferences, stats }) {
@@ -54,9 +58,6 @@ export default function Settings({ auth, userSettings, companySettings, notifica
         e.preventDefault();
         profileForm.put(route('settings.profile.update'), {
             preserveScroll: true,
-            onSuccess: () => {
-                // Flash message já é tratado pelo backend
-            }
         });
     };
 
@@ -127,11 +128,27 @@ export default function Settings({ auth, userSettings, companySettings, notifica
         });
     };
 
+    // Form: Empresa
+    const companyForm = useForm({
+        company_name: companySettings?.company_name || '',
+        company_email: companySettings?.company_email || '',
+        company_phone: companySettings?.company_phone || '',
+        company_address: companySettings?.company_address || '',
+        tax_id: companySettings?.tax_id || '',
+    });
+
+    const handleCompanySubmit = (e) => {
+        e.preventDefault();
+        companyForm.put(route('settings.company.update'), {
+            preserveScroll: true,
+        });
+    };
+
     return (
         <DashboardLayout>
             <Head title="Configurações" />
 
-                 <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
+            <div className="p-6 space-y-6">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
@@ -593,7 +610,7 @@ export default function Settings({ auth, userSettings, companySettings, notifica
                                         </div>
                                     )}
 
-                                    {/* TAB: Notificações */}
+                                    {/* TAB: Notificações - CORRIGIDO */}
                                     {activeTab === 'notifications' && (
                                         <div className="space-y-6">
                                             <div>
@@ -611,7 +628,7 @@ export default function Settings({ auth, userSettings, companySettings, notifica
                                                         { key: 'storage_warnings', label: 'Avisos de storage crítico', icon: AlertCircle },
                                                         { key: 'deadline_alerts', label: 'Alertas de prazos', icon: Clock },
                                                         { key: 'daily_summary', label: 'Resumo diário', icon: Mail },
-                                                        { key: 'weekly_report', label: 'Relatório semanal', icon: BarChart },
+                                                        { key: 'weekly_report', label: 'Relatório semanal', icon: BarChart3 },
                                                     ].map((notification) => {
                                                         const Icon = notification.icon;
                                                         return (
@@ -652,7 +669,112 @@ export default function Settings({ auth, userSettings, companySettings, notifica
                                         </div>
                                     )}
 
-                                    {/* TAB: API (Simplificado) */}
+                                    {/* TAB: Empresa - CORRIGIDO */}
+                                    {activeTab === 'company' && auth.user.role === 'admin' && (
+                                        <div className="space-y-6">
+                                            <div>
+                                                <h2 className="text-2xl font-bold text-slate-900">Informações da Empresa</h2>
+                                                <p className="mt-1 text-slate-600">Configure os dados da sua empresa</p>
+                                            </div>
+
+                                            <form onSubmit={handleCompanySubmit} className="space-y-4">
+                                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                                    <div>
+                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                                                            <Building2 className="inline-block w-4 h-4 mr-2" />
+                                                            Nome da Empresa
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={companyForm.data.company_name}
+                                                            onChange={e => companyForm.setData('company_name', e.target.value)}
+                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                                                            <Mail className="inline-block w-4 h-4 mr-2" />
+                                                            Email da Empresa
+                                                        </label>
+                                                        <input
+                                                            type="email"
+                                                            value={companyForm.data.company_email}
+                                                            onChange={e => companyForm.setData('company_email', e.target.value)}
+                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                                                            <Phone className="inline-block w-4 h-4 mr-2" />
+                                                            Telefone
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={companyForm.data.company_phone}
+                                                            onChange={e => companyForm.setData('company_phone', e.target.value)}
+                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                                            required
+                                                        />
+                                                    </div>
+
+                                                    <div>
+                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                                                            <FileText className="inline-block w-4 h-4 mr-2" />
+                                                            NUIT (Tax ID)
+                                                        </label>
+                                                        <input
+                                                            type="text"
+                                                            value={companyForm.data.tax_id}
+                                                            onChange={e => companyForm.setData('tax_id', e.target.value)}
+                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                                        />
+                                                    </div>
+
+                                                    <div className="md:col-span-2">
+                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                                                            <MapPin className="inline-block w-4 h-4 mr-2" />
+                                                            Endereço
+                                                        </label>
+                                                        <textarea
+                                                            value={companyForm.data.company_address}
+                                                            onChange={e => companyForm.setData('company_address', e.target.value)}
+                                                            rows={3}
+                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                                                            placeholder="Endereço completo da empresa"
+                                                        />
+                                                    </div>
+                                                </div>
+
+                                                <div className="p-4 rounded-lg bg-amber-50">
+                                                    <div className="flex gap-3">
+                                                        <AlertCircle className="flex-shrink-0 w-5 h-5 text-amber-600" />
+                                                        <p className="text-sm text-amber-900">
+                                                            Estas informações aparecerão nas faturas e documentos oficiais da empresa.
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="flex justify-end pt-4">
+                                                    <motion.button
+                                                        type="submit"
+                                                        disabled={companyForm.processing}
+                                                        whileHover={{ scale: 1.02 }}
+                                                        whileTap={{ scale: 0.98 }}
+                                                        className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
+                                                    >
+                                                        <Save className="w-4 h-4" />
+                                                        {companyForm.processing ? 'Salvando...' : 'Salvar Empresa'}
+                                                    </motion.button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    )}
+
+                                    {/* TAB: API */}
                                     {activeTab === 'api' && auth.user.role === 'admin' && (
                                         <div className="space-y-6">
                                             <div>
