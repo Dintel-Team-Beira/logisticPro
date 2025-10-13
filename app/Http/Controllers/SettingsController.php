@@ -42,6 +42,8 @@ class SettingsController extends Controller
      */
     public function updateProfile(Request $request)
     {
+
+        // dd($request->all());
         $user = Auth::user();
 
         $validated = $request->validate([
@@ -159,36 +161,43 @@ class SettingsController extends Controller
     // CONFIGURAÇÕES DA EMPRESA (Admin Only)
     // ============================================================================
 
-    /**
-     * RF-033.6: Atualizar Dados da Empresa
-     */
-    public function updateCompany(Request $request)
-    {
-        // Verificar se é admin
-        if (Auth::user()->role !== 'admin') {
-            abort(403, 'Acesso negado');
-        }
-
-        $validated = $request->validate([
-            'company_name' => ['required', 'string', 'max:255'],
-            'company_email' => ['required', 'email'],
-            'company_phone' => ['required', 'string'],
-            'company_address' => ['nullable', 'string'],
-            'tax_id' => ['nullable', 'string'],
-            'logo' => ['nullable', 'image', 'max:2048'],
-        ]);
-
-        if ($request->hasFile('logo')) {
-            $validated['logo'] = $request->file('logo')->store('company', 'public');
-        }
-
-        CompanySetting::updateOrCreate(
-            ['id' => 1],
-            $validated
-        );
-
-        return back()->with('success', 'Dados da empresa atualizados!');
+   /**
+ * RF-033.6: Atualizar Dados da Empresa (COMPLETO)
+ */
+public function updateCompany(Request $request)
+{
+    // dd($request->all());
+    if (Auth::user()->role !== 'admin') {
+        abort(403, 'Acesso negado');
     }
+
+    $validated = $request->validate([
+        'company_name' => ['sometimes', 'required', 'string', 'max:255'],
+        'company_email' => ['sometimes', 'required', 'email'],
+        'company_phone' => ['sometimes', 'required', 'string'],
+        'company_address' => ['sometimes', 'nullable', 'string'],
+        'tax_id' => ['sometimes', 'nullable', 'string'],
+        'logo' => ['sometimes', 'nullable', 'image', 'max:2048'],
+        'maintenance_mode' => ['sometimes', 'boolean'],
+        'two_factor_enabled' => ['sometimes', 'boolean'],
+        'session_timeout' => ['sometimes', 'integer', 'min:5', 'max:1440'],
+    ]);
+
+    $companySetting = CompanySetting::firstOrCreate(['id' => 1]);
+
+    // Upload de logo
+    if ($request->hasFile('logo')) {
+        // Remover logo antigo
+        if ($companySetting->logo) {
+            Storage::disk('public')->delete($companySetting->logo);
+        }
+        $validated['logo'] = $request->file('logo')->store('company', 'public');
+    }
+
+    $companySetting->update($validated);
+
+    return back()->with('success', 'Configurações da empresa atualizadas!');
+}
 
     /**
      * RF-033.7: Configurações de Faturação
@@ -292,7 +301,7 @@ class SettingsController extends Controller
 
         return CompanySetting::firstOrCreate(['id' => 1], [
             'company_name' => 'ALEK Logistics & Transport, LDA',
-            'company_email' => 'info@alek.co.mz',
+            'company_email' => 'info@alek.co.mzqq',
             'company_phone' => '+258 84 000 0000',
         ]);
     }
