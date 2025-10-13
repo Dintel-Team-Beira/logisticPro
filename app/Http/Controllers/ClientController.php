@@ -196,7 +196,7 @@ class ClientController extends Controller
      */
     public function block(Request $request, Client $client)
     {
-        dd($client);
+        // dd($client);
         $request->validate([
             'reason' => 'required|string|max:500'
         ]);
