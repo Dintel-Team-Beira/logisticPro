@@ -86,9 +86,9 @@ class User extends Authenticatable
     }
 
     public function documents(){
-           return $this->belongsTo(Document::class,'uploaded_by');
+           return $this->hasMany(Document::class,'uploaded_by');
     }
     public function shipments(){
-           return $this->belongsTo(Shipment::class,'created_by');
+           return $this->hasMany(Shipment::class,'created_by');
     }
 }
