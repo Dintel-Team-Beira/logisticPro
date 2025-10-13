@@ -64,7 +64,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
         <DashboardLayout>
             <Head title="Dashboard" />
 
-            <div className="min-h-screen p-6 bg-gradient-to-br from-slate-50 to-slate-100">
+          <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
                 {/* Header */}
                 <div className="mb-8">
                     <div className="flex items-center justify-between">
