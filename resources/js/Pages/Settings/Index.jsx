@@ -29,6 +29,7 @@ import {
     FileText,
     X,
 } from 'lucide-react';
+import Select from '@/Components/Forms/Select';
 
 export default function Settings({ auth, userSettings, companySettings, notificationPreferences, stats }) {
     const [activeTab, setActiveTab] = useState('profile');
@@ -137,6 +138,23 @@ export default function Settings({ auth, userSettings, companySettings, notifica
         tax_id: companySettings?.tax_id || '',
     });
 
+
+    // Form: Faturação/Invoice
+const invoiceForm = useForm({
+    invoice_prefix: companySettings?.invoice_settings?.invoice_prefix || 'INV',
+    next_invoice_number: companySettings?.invoice_settings?.next_invoice_number || 1,
+    default_payment_terms: companySettings?.invoice_settings?.default_payment_terms || 30,
+    default_margin_percentage: companySettings?.invoice_settings?.default_margin_percentage || 15,
+    bank_details: companySettings?.invoice_settings?.bank_details || '',
+    invoice_notes: companySettings?.invoice_settings?.invoice_notes || '',
+});
+
+// Form: Configurações Avançadas
+const advancedForm = useForm({
+    maintenance_mode: companySettings?.maintenance_mode || false,
+    two_factor_enabled: companySettings?.two_factor_enabled || false,
+    session_timeout: companySettings?.session_timeout || 120,
+});
     const handleCompanySubmit = (e) => {
         e.preventDefault();
         companyForm.put(route('settings.company.update'), {
@@ -144,11 +162,17 @@ export default function Settings({ auth, userSettings, companySettings, notifica
         });
     };
 
+        const roleOptions = [
+        { value: 'admin', label: 'Administrador' },
+        { value: 'manager', label: 'Gerente' },
+        { value: 'operator', label: 'Operador' },
+        { value: 'viewer', label: 'Visualizador' },
+    ];
     return (
         <DashboardLayout>
             <Head title="Configurações" />
 
-            <div className="p-6 space-y-6">
+      <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -20 }}
@@ -374,13 +398,22 @@ export default function Settings({ auth, userSettings, companySettings, notifica
                                                             <Briefcase className="inline-block w-4 h-4 mr-2" />
                                                             Departamento
                                                         </label>
-                                                        <input
+                                                          <Select
+                                                                                    //   label="Função"
+                                                                                      options={roleOptions}
+                                                                                      value={profileForm.data.department}
+                                                                                     onChange={e => profileForm.setData('department', e.target.value)}
+                                                                                    //   error={errors.role}
+                                                                                      helper="Define as permissões do usuário no sistema"
+                                                                                      required
+                                                                                  />
+                                                        {/* <input
                                                             type="text"
                                                             value={profileForm.data.department}
                                                             onChange={e => profileForm.setData('department', e.target.value)}
                                                             className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
                                                             placeholder="Ex: Operações"
-                                                        />
+                                                        /> */}
                                                     </div>
                                                 </div>
 
@@ -670,110 +703,388 @@ export default function Settings({ auth, userSettings, companySettings, notifica
                                     )}
 
                                     {/* TAB: Empresa - CORRIGIDO */}
-                                    {activeTab === 'company' && auth.user.role === 'admin' && (
-                                        <div className="space-y-6">
-                                            <div>
-                                                <h2 className="text-2xl font-bold text-slate-900">Informações da Empresa</h2>
-                                                <p className="mt-1 text-slate-600">Configure os dados da sua empresa</p>
-                                            </div>
+                           {/* TAB: Empresa - VERSÃO COMPLETA */}
+{activeTab === 'company' && auth.user.role === 'admin' && (
+    <div className="space-y-6">
+        <div>
+            <h2 className="text-2xl font-bold text-slate-900">Configurações da Empresa</h2>
+            <p className="mt-1 text-slate-600">Configure os dados e preferências da empresa</p>
+        </div>
 
-                                            <form onSubmit={handleCompanySubmit} className="space-y-4">
-                                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                                    <div>
-                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
-                                                            <Building2 className="inline-block w-4 h-4 mr-2" />
-                                                            Nome da Empresa
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={companyForm.data.company_name}
-                                                            onChange={e => companyForm.setData('company_name', e.target.value)}
-                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
-                                                            required
-                                                        />
-                                                    </div>
+        {/* Seção 1: Dados Básicos */}
+        <div className="p-6 border rounded-lg border-slate-200 bg-slate-50">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">
+                <Building2 className="inline-block w-5 h-5 mr-2" />
+                Informações da Empresa
+            </h3>
 
-                                                    <div>
-                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
-                                                            <Mail className="inline-block w-4 h-4 mr-2" />
-                                                            Email da Empresa
-                                                        </label>
-                                                        <input
-                                                            type="email"
-                                                            value={companyForm.data.company_email}
-                                                            onChange={e => companyForm.setData('company_email', e.target.value)}
-                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
-                                                            required
-                                                        />
-                                                    </div>
+            <form onSubmit={handleCompanySubmit} className="space-y-4">
+                {/* Logo Upload */}
+                <div className="pb-4 border-b border-slate-200">
+                    <label className="block mb-3 text-sm font-medium text-slate-700">
+                        Logo da Empresa
+                    </label>
+                    <div className="flex items-center gap-6">
+                        <div className="relative group">
+                            {companySettings?.logo ? (
+                                <img
+                                    src={`/storage/${companySettings.logo}`}
+                                    alt="Logo"
+                                    className="object-contain w-24 h-24 p-2 bg-white border-4 rounded-lg border-slate-200"
+                                />
+                            ) : (
+                                <div className="flex items-center justify-center w-24 h-24 border-4 rounded-lg bg-slate-100 border-slate-200">
+                                    <Building2 className="w-12 h-12 text-slate-400" />
+                                </div>
+                            )}
+                            <label className="absolute inset-0 flex items-center justify-center transition-opacity bg-black rounded-lg opacity-0 cursor-pointer bg-opacity-40 group-hover:opacity-100">
+                                <Upload className="w-6 h-6 text-white" />
+                                <input
+                                    type="file"
+                                    accept="image/*"
+                                    onChange={(e) => {
+                                        const file = e.target.files[0];
+                                        if (file) {
+                                            const formData = new FormData();
+                                            formData.append('logo', file);
+                                            router.post(route('settings.company.update'), formData, {
+                                                forceFormData: true,
+                                                preserveScroll: true,
+                                            });
+                                        }
+                                    }}
+                                    className="hidden"
+                                />
+                            </label>
+                        </div>
+                        <div>
+                            <p className="text-sm font-medium text-slate-900">
+                                {companySettings?.company_name || 'Nome da Empresa'}
+                            </p>
+                            <p className="text-sm text-slate-600">Clique no logo para alterar</p>
+                            <p className="mt-1 text-xs text-slate-500">Recomendado: 500x500px, PNG ou JPG</p>
+                        </div>
+                    </div>
+                </div>
 
-                                                    <div>
-                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
-                                                            <Phone className="inline-block w-4 h-4 mr-2" />
-                                                            Telefone
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={companyForm.data.company_phone}
-                                                            onChange={e => companyForm.setData('company_phone', e.target.value)}
-                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
-                                                            required
-                                                        />
-                                                    </div>
+                {/* Dados da Empresa */}
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            <Building2 className="inline-block w-4 h-4 mr-2" />
+                            Nome da Empresa *
+                        </label>
+                        <input
+                            type="text"
+                            value={companyForm.data.company_name}
+                            onChange={e => companyForm.setData('company_name', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            required
+                        />
+                        {companyForm.errors.company_name && (
+                            <p className="mt-1 text-sm text-red-600">{companyForm.errors.company_name}</p>
+                        )}
+                    </div>
 
-                                                    <div>
-                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
-                                                            <FileText className="inline-block w-4 h-4 mr-2" />
-                                                            NUIT (Tax ID)
-                                                        </label>
-                                                        <input
-                                                            type="text"
-                                                            value={companyForm.data.tax_id}
-                                                            onChange={e => companyForm.setData('tax_id', e.target.value)}
-                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
-                                                        />
-                                                    </div>
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            <Mail className="inline-block w-4 h-4 mr-2" />
+                            Email da Empresa *
+                        </label>
+                        <input
+                            type="email"
+                            value={companyForm.data.company_email}
+                            onChange={e => companyForm.setData('company_email', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            required
+                        />
+                        {companyForm.errors.company_email && (
+                            <p className="mt-1 text-sm text-red-600">{companyForm.errors.company_email}</p>
+                        )}
+                    </div>
 
-                                                    <div className="md:col-span-2">
-                                                        <label className="block mb-2 text-sm font-medium text-slate-700">
-                                                            <MapPin className="inline-block w-4 h-4 mr-2" />
-                                                            Endereço
-                                                        </label>
-                                                        <textarea
-                                                            value={companyForm.data.company_address}
-                                                            onChange={e => companyForm.setData('company_address', e.target.value)}
-                                                            rows={3}
-                                                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
-                                                            placeholder="Endereço completo da empresa"
-                                                        />
-                                                    </div>
-                                                </div>
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            <Phone className="inline-block w-4 h-4 mr-2" />
+                            Telefone *
+                        </label>
+                        <input
+                            type="text"
+                            value={companyForm.data.company_phone}
+                            onChange={e => companyForm.setData('company_phone', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            placeholder="+258 84 000 0000"
+                            required
+                        />
+                    </div>
 
-                                                <div className="p-4 rounded-lg bg-amber-50">
-                                                    <div className="flex gap-3">
-                                                        <AlertCircle className="flex-shrink-0 w-5 h-5 text-amber-600" />
-                                                        <p className="text-sm text-amber-900">
-                                                            Estas informações aparecerão nas faturas e documentos oficiais da empresa.
-                                                        </p>
-                                                    </div>
-                                                </div>
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            <FileText className="inline-block w-4 h-4 mr-2" />
+                            NUIT (Tax ID)
+                        </label>
+                        <input
+                            type="text"
+                            value={companyForm.data.tax_id}
+                            onChange={e => companyForm.setData('tax_id', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            placeholder="123456789"
+                        />
+                    </div>
 
-                                                <div className="flex justify-end pt-4">
-                                                    <motion.button
-                                                        type="submit"
-                                                        disabled={companyForm.processing}
-                                                        whileHover={{ scale: 1.02 }}
-                                                        whileTap={{ scale: 0.98 }}
-                                                        className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
-                                                    >
-                                                        <Save className="w-4 h-4" />
-                                                        {companyForm.processing ? 'Salvando...' : 'Salvar Empresa'}
-                                                    </motion.button>
-                                                </div>
-                                            </form>
-                                        </div>
-                                    )}
+                    <div className="md:col-span-2">
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            <MapPin className="inline-block w-4 h-4 mr-2" />
+                            Endereço Completo
+                        </label>
+                        <textarea
+                            value={companyForm.data.company_address}
+                            onChange={e => companyForm.setData('company_address', e.target.value)}
+                            rows={3}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            placeholder="Endereço completo da empresa"
+                        />
+                    </div>
+                </div>
 
+                <div className="flex justify-end pt-4">
+                    <motion.button
+                        type="submit"
+                        disabled={companyForm.processing}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
+                    >
+                        <Save className="w-4 h-4" />
+                        {companyForm.processing ? 'Salvando...' : 'Salvar Informações'}
+                    </motion.button>
+                </div>
+            </form>
+        </div>
+
+        {/* Seção 2: Configurações de Faturação */}
+        <div className="p-6 border rounded-lg border-slate-200 bg-slate-50">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">
+                <DollarSign className="inline-block w-5 h-5 mr-2" />
+                Configurações de Faturação
+            </h3>
+
+            <form onSubmit={(e) => {
+                e.preventDefault();
+                router.put(route('settings.invoices.update'), {
+                    invoice_prefix: invoiceForm.data.invoice_prefix,
+                    next_invoice_number: invoiceForm.data.next_invoice_number,
+                    default_payment_terms: invoiceForm.data.default_payment_terms,
+                    default_margin_percentage: invoiceForm.data.default_margin_percentage,
+                    bank_details: invoiceForm.data.bank_details,
+                    invoice_notes: invoiceForm.data.invoice_notes,
+                }, {
+                    preserveScroll: true,
+                });
+            }} className="space-y-4">
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            Prefixo da Fatura
+                        </label>
+                        <input
+                            type="text"
+                            value={invoiceForm.data.invoice_prefix}
+                            onChange={e => invoiceForm.setData('invoice_prefix', e.target.value)}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            placeholder="INV"
+                            maxLength={10}
+                        />
+                        <p className="mt-1 text-xs text-slate-500">
+                            Exemplo: INV-00001, FAT-00001
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            Próximo Número
+                        </label>
+                        <input
+                            type="number"
+                            value={invoiceForm.data.next_invoice_number}
+                            onChange={e => invoiceForm.setData('next_invoice_number', parseInt(e.target.value))}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            min="1"
+                        />
+                        <p className="mt-1 text-xs text-slate-500">
+                            Próxima fatura: {invoiceForm.data.invoice_prefix}-{String(invoiceForm.data.next_invoice_number).padStart(5, '0')}
+                        </p>
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            Prazo de Pagamento Padrão (dias)
+                        </label>
+                        <input
+                            type="number"
+                            value={invoiceForm.data.default_payment_terms}
+                            onChange={e => invoiceForm.setData('default_payment_terms', parseInt(e.target.value))}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            min="1"
+                            placeholder="30"
+                        />
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            Margem de Lucro Padrão (%)
+                        </label>
+                        <input
+                            type="number"
+                            value={invoiceForm.data.default_margin_percentage}
+                            onChange={e => invoiceForm.setData('default_margin_percentage', parseFloat(e.target.value))}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            min="0"
+                            max="100"
+                            step="0.1"
+                            placeholder="15"
+                        />
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            Dados Bancários
+                        </label>
+                        <textarea
+                            value={invoiceForm.data.bank_details}
+                            onChange={e => invoiceForm.setData('bank_details', e.target.value)}
+                            rows={3}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            placeholder="Banco: BCI&#10;Conta: 12345678&#10;NIB: 000100001234567890123"
+                        />
+                    </div>
+
+                    <div className="md:col-span-2">
+                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                            Notas da Fatura (rodapé)
+                        </label>
+                        <textarea
+                            value={invoiceForm.data.invoice_notes}
+                            onChange={e => invoiceForm.setData('invoice_notes', e.target.value)}
+                            rows={2}
+                            className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                            placeholder="Texto que aparecerá no rodapé das faturas"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex justify-end pt-4">
+                    <motion.button
+                        type="submit"
+                        disabled={invoiceForm.processing}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
+                        className="flex items-center gap-2 px-6 py-2.5 bg-slate-900 text-white rounded-lg font-medium hover:bg-slate-800 transition-colors disabled:opacity-50"
+                    >
+                        <Save className="w-4 h-4" />
+                        {invoiceForm.processing ? 'Salvando...' : 'Salvar Faturação'}
+                    </motion.button>
+                </div>
+            </form>
+        </div>
+
+        {/* Seção 3: Configurações Avançadas */}
+        <div className="p-6 border rounded-lg border-slate-200 bg-slate-50">
+            <h3 className="mb-4 text-lg font-semibold text-slate-900">
+                <Shield className="inline-block w-5 h-5 mr-2" />
+                Configurações Avançadas
+            </h3>
+
+            <div className="space-y-4">
+                <label className="flex items-center justify-between p-4 transition-all border rounded-lg cursor-pointer border-slate-200 hover:bg-white">
+                    <div className="flex items-center gap-3">
+                        <AlertCircle className="w-5 h-5 text-slate-600" />
+                        <div>
+                            <span className="font-medium text-slate-900">Modo de Manutenção</span>
+                            <p className="text-sm text-slate-600">Bloquear acesso ao sistema temporariamente</p>
+                        </div>
+                    </div>
+                    <input
+                        type="checkbox"
+                        checked={advancedForm.data.maintenance_mode}
+                        onChange={e => {
+                            advancedForm.setData('maintenance_mode', e.target.checked);
+                            router.put(route('settings.company.update'), {
+                                maintenance_mode: e.target.checked
+                            }, {
+                                preserveScroll: true,
+                            });
+                        }}
+                        className="w-5 h-5 rounded text-slate-900 focus:ring-slate-900"
+                    />
+                </label>
+
+                <label className="flex items-center justify-between p-4 transition-all border rounded-lg cursor-pointer border-slate-200 hover:bg-white">
+                    <div className="flex items-center gap-3">
+                        <Lock className="w-5 h-5 text-slate-600" />
+                        <div>
+                            <span className="font-medium text-slate-900">Autenticação de Dois Fatores</span>
+                            <p className="text-sm text-slate-600">Exigir 2FA para todos os usuários</p>
+                        </div>
+                    </div>
+                    <input
+                        type="checkbox"
+                        checked={advancedForm.data.two_factor_enabled}
+                        onChange={e => {
+                            advancedForm.setData('two_factor_enabled', e.target.checked);
+                            router.put(route('settings.company.update'), {
+                                two_factor_enabled: e.target.checked
+                            }, {
+                                preserveScroll: true,
+                            });
+                        }}
+                        className="w-5 h-5 rounded text-slate-900 focus:ring-slate-900"
+                    />
+                </label>
+
+                <div className="p-4 border rounded-lg border-slate-200">
+                    <label className="block mb-2 text-sm font-medium text-slate-700">
+                        <Clock className="inline-block w-4 h-4 mr-2" />
+                        Timeout de Sessão (minutos)
+                    </label>
+                    <input
+                        type="number"
+                        value={advancedForm.data.session_timeout}
+                        onChange={e => advancedForm.setData('session_timeout', parseInt(e.target.value))}
+                        onBlur={() => {
+                            router.put(route('settings.company.update'), {
+                                session_timeout: advancedForm.data.session_timeout
+                            }, {
+                                preserveScroll: true,
+                            });
+                        }}
+                        className="w-full px-4 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-slate-900 focus:border-transparent transition-all"
+                        min="5"
+                        max="1440"
+                        placeholder="120"
+                    />
+                    <p className="mt-1 text-xs text-slate-500">
+                        Tempo até desconectar usuário inativo (5-1440 minutos)
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        {/* Alerta Informativo */}
+        <div className="p-4 rounded-lg bg-amber-50">
+            <div className="flex gap-3">
+                <AlertCircle className="flex-shrink-0 w-5 h-5 text-amber-600" />
+                <div className="text-sm text-amber-900">
+                    <p className="font-medium">Importante:</p>
+                    <p className="mt-1">
+                        Estas configurações afetam todo o sistema. Alterações nas configurações de faturação
+                        serão aplicadas apenas para novas faturas geradas.
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+)}
                                     {/* TAB: API */}
                                     {activeTab === 'api' && auth.user.role === 'admin' && (
                                         <div className="space-y-6">
