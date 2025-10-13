@@ -110,6 +110,8 @@ class ClientController extends Controller
      */
     public function show(Client $client)
     {
+
+
         $client->load([
             'assignedUser:id,name,email',
             'shipments' => function($query) {
@@ -122,10 +124,11 @@ class ClientController extends Controller
             }
         ]);
 
+        // dd($client);
         $stats = $client->getStats();
 
         return Inertia::render('Clients/Show', [
-            'client' => new ClientResource($client),
+            'client' => $client,
             'stats' => $stats,
         ]);
     }
@@ -136,7 +139,7 @@ class ClientController extends Controller
     public function edit(Client $client)
     {
         return Inertia::render('Clients/Form', [
-            'client' => new ClientResource($client),
+            'client' => $client,
             'types' => Client::getAvailableTypes(),
             'priorities' => Client::getAvailablePriorities(),
             'paymentTerms' => Client::getAvailablePaymentTerms(),
@@ -193,6 +196,7 @@ class ClientController extends Controller
      */
     public function block(Request $request, Client $client)
     {
+        dd($client);
         $request->validate([
             'reason' => 'required|string|max:500'
         ]);
