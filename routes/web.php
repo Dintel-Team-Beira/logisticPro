@@ -73,6 +73,31 @@ Route::middleware(['auth'])->group(function () {
         ->name('documents.download');
 });
 
+
+   // 🆕 ROTAS DE CLIENTES 🆕
+    Route::prefix('clients')->name('clients.')->group(function () {
+        // CRUD Routes
+        Route::get('/', [ClientController::class, 'index'])->name('index');
+        Route::get('/create', [ClientController::class, 'create'])->name('create');
+        Route::post('/', [ClientController::class, 'store'])->name('store');
+        Route::get('/{client}', [ClientController::class, 'show'])->name('show');
+        Route::get('/{client}/edit', [ClientController::class, 'edit'])->name('edit');
+        Route::put('/{client}', [ClientController::class, 'update'])->name('update');
+        Route::delete('/{client}', [ClientController::class, 'destroy'])->name('destroy');
+
+        // Action Routes
+        Route::post('/{client}/toggle-active', [ClientController::class, 'toggleActive'])->name('toggle-active');
+        Route::post('/{client}/block', [ClientController::class, 'block'])->name('block');
+        Route::post('/{client}/unblock', [ClientController::class, 'unblock'])->name('unblock');
+
+        // Export Route
+        Route::get('/export', [ClientController::class, 'export'])->name('export');
+
+        // AJAX Routes
+        Route::get('/{client}/shipments', [ClientController::class, 'getShipments'])->name('shipments');
+        Route::get('/{client}/stats', [ClientController::class, 'getStats'])->name('stats');
+    });
+
 // ============================================================================
 // OPERAÇÕES - 7 FASES DO PROCESSO DE IMPORTAÇÃO
 // ============================================================================
