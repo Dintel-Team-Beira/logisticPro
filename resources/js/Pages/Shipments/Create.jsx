@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import React from 'react';
-import { Head, Link, useForm, usePage } from '@inertiajs/react';
+import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import Input from '@/Components/Forms/Input';
 import Select from '@/Components/Forms/Select';
@@ -55,6 +55,9 @@ export default function Create() {
         cargo_value: '',
     });
 
+    // const showNewClientForm(){
+
+    // }
     const containerTypes = [
         { value: '20DC', label: "20' Dry Container" },
         { value: '40DC', label: "40' Dry Container" },
@@ -64,6 +67,24 @@ export default function Create() {
         { value: '20OT', label: "20' Open Top" },
         { value: '40OT', label: "40' Open Top" },
     ];
+
+     // Lista de portos de origem (países exportadores)
+  const originPorts = [
+    { value: 'QINGDAO, CHINA', label: 'QINGDAO, CHINA' },
+    { value: 'SHANGHAI, CHINA', label: 'SHANGHAI, CHINA' },
+    { value: 'MUMBAI, INDIA', label: 'MUMBAI, INDIA' },
+    { value: 'HAMBURG, GERMANY', label: 'HAMBURG, GERMANY' },
+    { value: 'LOS ANGELES, USA', label: 'LOS ANGELES, USA' },
+  ];
+
+  // Lista de portos de destino (países importadores)
+  const destinationPorts = [
+    { value: 'BEIRA, MOZAMBIQUE', label: 'BEIRA, MOZAMBIQUE' },
+    { value: 'MAPUTO, MOZAMBIQUE', label: 'MAPUTO, MOZAMBIQUE' },
+    { value: 'NACALA, MOZAMBIQUE', label: 'NACALA, MOZAMBIQUE' },
+    { value: 'DURBAN, SOUTH AFRICA', label: 'DURBAN, SOUTH AFRICA' },
+    { value: 'DAR ES SALAAM, TANZANIA', label: 'DAR ES SALAAM, TANZANIA' },
+  ];
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -98,6 +119,10 @@ export default function Create() {
         return data.shipping_line_id && data.bl_number && data.bl_file;
     };
 
+    const novoCklinte = ()=>{
+        console.log("Clincado"),
+        router.get('clients/create')
+    }
     const steps = [
         { number: 1, title: 'Cliente', icon: User },
         { number: 2, title: 'Documentação', icon: FileText },
@@ -209,19 +234,24 @@ export default function Create() {
                                 >
                                     Cliente Existente
                                 </button>
-                                <button
+
+
+                            {/* <Link href='/clients/create'> */}
+                                 <button
                                     type="button"
-                                    onClick={() => setShowNewClientForm(true)}
+                                    onClick={() => router.get('/clients/create/')  }
                                     className={`
                                         flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all
                                         ${showNewClientForm
-                                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
-                                            : 'bg-slate-50 text-slate-600 border border-slate-200'
+                                        ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
+                                        : 'bg-slate-50 text-slate-600 border border-slate-200'
                                         }
-                                    `}
-                                >
+                                        `}
+                                        >
                                     Novo Cliente
                                 </button>
+                           {/* </Link> */}
+
                             </div>
 
                             {!showNewClientForm ? (
@@ -487,7 +517,40 @@ export default function Create() {
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <Input
+
+                                    <Select
+                                    label="Porto de Origem"
+                                     options={originPorts}
+                                     onChange={(e) => setData('origin_port', e.target.value)}
+                                    error={errors.origin_port}
+                                    required
+                                >
+                                    <option value="" >Selecione um ou mais portos de origem</option>
+
+                                    {originPorts?.map((line) => (
+                                        <option key={line.id} value={line.value}>
+                                            {line.value}
+                                        </option>
+                                    ))}
+                                </Select>
+
+                                    <Select
+                                       label="Porto de Destino *"
+                                        icon={MapPin}
+                                        value={data.destination_port}
+                                        onChange={(e) => setData('destination_port', e.target.value)}
+                                        error={errors.destination_port}
+                                    required
+                                >
+                                    <option value="" disabled>Selecione um ou mais portos de origem</option>
+
+                                    {destinationPorts?.map((line) => (
+                                        <option key={line.id} value={line.value}>
+                                            {line.value}
+                                        </option>
+                                    ))}
+                                </Select>
+                                    {/* <Input
                                         label="Porto de Origem"
                                         icon={MapPin}
                                         value={data.origin_port}
@@ -495,6 +558,7 @@ export default function Create() {
                                         error={errors.origin_port}
                                         placeholder="Ex: QINGDAO, CHINA"
                                     />
+
 
                                     <Input
                                         label="Porto de Destino *"
@@ -504,7 +568,7 @@ export default function Create() {
                                         error={errors.destination_port}
                                         placeholder="Ex: BEIRA, MOZAMBIQUE"
                                         required
-                                    />
+                                    /> */}
                                 </div>
                             </div>
 
