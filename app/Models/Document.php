@@ -28,11 +28,11 @@ class Document extends Model
     ];
 
     /**
-     * Relacionamento com Shipment
+     * ⚠️ CRÍTICO: Shipment ao qual o documento pertence
      */
     public function shipment()
     {
-        return $this->belongsTo(Shipment::class);
+        return $this->belongsTo(Shipment::class, 'shipment_id');
     }
 
     /**
