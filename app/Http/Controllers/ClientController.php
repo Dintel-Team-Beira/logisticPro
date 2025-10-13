@@ -14,10 +14,13 @@ class ClientController extends Controller
     /**
      * Display a listing of clients.
      */
+    /**
+     * Display a listing of clients.
+     */
     public function index(Request $request)
     {
         $query = Client::query()
-            ->with(['assignedUser:id,name', 'activeShipments'])
+            ->with(['assignedUser:id,name'])
             ->withCount(['shipments', 'activeShipments']);
 
         // Search
@@ -54,6 +57,7 @@ class ClientController extends Controller
         $sortDirection = $request->input('sort_direction', 'desc');
         $query->orderBy($sortField, $sortDirection);
 
+        // Paginate - using standard Laravel pagination for Inertia
         $clients = $query->paginate($request->input('per_page', 15))
                         ->withQueryString();
 
@@ -67,7 +71,7 @@ class ClientController extends Controller
         ];
 
         return Inertia::render('Clients/Index', [
-            'clients' => ClientResource::collection($clients),
+            'clients' => $clients,
             'filters' => $request->only(['search', 'type', 'priority', 'active', 'blocked', 'assigned_to']),
             'stats' => $stats,
             'types' => Client::getAvailableTypes(),
