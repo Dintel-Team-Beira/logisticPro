@@ -260,8 +260,13 @@ Route::middleware(['auth'])->group(function () {
     // Dashboard Financeiro
     Route::get('/financial-dashboard', [InvoiceController::class, 'dashboard'])
         ->name('invoices.dashboard');
+
+
+    // ->middleware('role:admin');
 });
 
+    Route::put('/invoices', [SettingsController::class, 'updateInvoiceSettings'])
+    ->name('settings.invoices.update');
 // ============================================================================
 // RELATÓRIOS - RF-028, RF-029, RF-030
 // ============================================================================
@@ -515,13 +520,13 @@ Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(functi
 
     // RF-033.6: Dados da Empresa
     Route::put('/company', [SettingsController::class, 'updateCompany'])
-        ->name('company.update')
-        ->middleware('role:admin');
+        ->name('company.update');
+        // ->middleware('role:admin');
 
     // RF-033.7: Configurações de Faturação
     Route::put('/invoices', [SettingsController::class, 'updateInvoiceSettings'])
-        ->name('invoices.update')
-        ->middleware('role:admin');
+        ->name('invoices.update');
+        // ->middleware('role:admin');
 
     // ========================================
     // API E INTEGRAÇÕES
@@ -533,8 +538,8 @@ Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(functi
 
     // RF-033.9: Configurar Webhooks
     Route::put('/webhooks', [SettingsController::class, 'updateWebhooks'])
-        ->name('webhooks.update')
-        ->middleware('role:admin');
+        ->name('webhooks.update');
+        // ->middleware('role:admin');
 });
 
 // ============================================================================
@@ -555,7 +560,7 @@ Route::middleware(['auth:sanctum'])->prefix('api/v1')->group(function () {
         return response()->json(
             \App\Models\CompanySetting::getInstance()
         );
-    })->middleware('role:admin');
+    });
 });
 // ============================================================================
 // AUTENTICAÇÃO
