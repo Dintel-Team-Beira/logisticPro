@@ -1,7 +1,4 @@
-// ========================================
-// resources/js/Pages/Shipments/Show.jsx
-// VERSÃO COMPLETA E FUNCIONAL
-// ========================================
+
 
 import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
