@@ -79,10 +79,15 @@ class Shipment extends Model
         return $this->belongsTo(ShippingLine::class);
     }
 
+     /**
+     * ⚠️ CRÍTICO: Documentos do shipment
+     * Este é o relacionamento que você precisa!
+     */
     public function documents()
     {
-        return $this->hasMany(Document::class);
+        return $this->hasMany(Document::class, 'shipment_id');
     }
+
 
     public function stages()
     {
