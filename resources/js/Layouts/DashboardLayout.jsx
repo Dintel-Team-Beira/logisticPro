@@ -96,10 +96,9 @@ export default function DashboardLayout({ children }) {
             badge: null
         },
         {
-              key: 'clients',
-    name: 'Clientes',
-    icon: Users,
-    href: '/clients',
+            name: 'Clientes',
+            icon: Users,
+            href: '/clients',
             roles: ['admin'],
             badge: null
         },
