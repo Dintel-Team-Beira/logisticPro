@@ -35,6 +35,8 @@ export default function ClientShow({ client, stats }) {
   const [activeTab, setActiveTab] = useState('overview');
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [showBlockModal, setShowBlockModal] = useState(false);
+  const [blockReason, setBlockReason] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const handleDelete = () => {
     if (confirm('Tem certeza que deseja excluir este cliente? Esta ação não pode ser desfeita.')) {
@@ -43,14 +45,38 @@ export default function ClientShow({ client, stats }) {
   };
 
   const handleToggleBlock = () => {
-    console.log(client);
     if (client.blocked) {
+      // Desbloquear diretamente
       router.post(`/clients/${client.id}/unblock`);
     } else {
-      if (confirm('Tem certeza que deseja bloquear este cliente?')) {
-        router.post(`/clients/${client.id}/block`);
-      }
+      // Abrir modal para inserir motivo
+      setShowBlockModal(true);
     }
+  };
+
+  const handleBlockSubmit = (e) => {
+    e.preventDefault();
+
+    if (!blockReason.trim()) {
+      alert('Por favor, informe o motivo do bloqueio.');
+      return;
+    }
+
+    setIsSubmitting(true);
+
+    router.post(`/clients/${client.id}/block`,
+      { reason: blockReason },
+      {
+        onSuccess: () => {
+          setShowBlockModal(false);
+          setBlockReason('');
+          setIsSubmitting(false);
+        },
+        onError: () => {
+          setIsSubmitting(false);
+        }
+      }
+    );
   };
 
   const handleToggleActive = () => {
@@ -124,7 +150,7 @@ export default function ClientShow({ client, stats }) {
 
   return (
     <DashboardLayout>
-      <Head title={client.display_name} />
+      <Head title={client.name} />
 
       <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
         {/* Header Section */}
@@ -148,7 +174,7 @@ export default function ClientShow({ client, stats }) {
               <div>
                 <div className="flex items-center gap-3 mb-2">
                   <h1 className="text-2xl font-bold text-slate-900">
-                    {client.display_name}
+                    {client.name}
                   </h1>
                   <PriorityBadge priority={client.priority} />
                   {client.active ? (
@@ -190,7 +216,7 @@ export default function ClientShow({ client, stats }) {
                       className="flex items-center gap-1 transition-colors hover:text-blue-600"
                     >
                       <Globe className="w-4 h-4" />
-                      <span>Website</span>
+                      <span>{client.website}</span>
                     </a>
                   )}
                 </div>
@@ -610,6 +636,103 @@ export default function ClientShow({ client, stats }) {
           )}
         </div>
       </div>
+
+      {/* Block Modal */}
+      {showBlockModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm">
+          <div className="w-full max-w-md p-6 duration-200 bg-white shadow-2xl rounded-xl animate-in fade-in zoom-in">
+            {/* Modal Header */}
+            <div className="flex items-start justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="flex items-center justify-center w-12 h-12 bg-orange-100 rounded-full">
+                  <Lock className="w-6 h-6 text-orange-600" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-900">
+                    Bloquear Cliente
+                  </h3>
+                  <p className="text-sm text-slate-600">
+                    {client.display_name}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setShowBlockModal(false);
+                  setBlockReason('');
+                }}
+                className="p-1 transition-colors rounded-lg hover:bg-slate-100"
+              >
+                <XCircle className="w-5 h-5 text-slate-400" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleBlockSubmit}>
+              <div className="mb-6">
+                <label className="block mb-2 text-sm font-medium text-slate-700">
+                  Motivo do Bloqueio *
+                </label>
+                <textarea
+                  value={blockReason}
+                  onChange={(e) => setBlockReason(e.target.value)}
+                  rows="4"
+                  className="w-full px-4 py-3 border rounded-lg resize-none border-slate-300 focus:ring-2 focus:ring-orange-500 focus:border-transparent"
+                  placeholder="Ex: Cliente com pagamentos em atraso, inadimplência recorrente, documentos irregulares..."
+                  required
+                  autoFocus
+                />
+                <p className="mt-2 text-xs text-slate-500">
+                  Informe o motivo do bloqueio para referência futura.
+                </p>
+              </div>
+
+              {/* Alert Box */}
+              <div className="flex gap-3 p-4 mb-6 rounded-lg bg-orange-50">
+                <AlertCircle className="w-5 h-5 mt-0.5 text-orange-600 flex-shrink-0" />
+                <div className="text-sm text-orange-800">
+                  <p className="font-medium">Atenção!</p>
+                  <p className="mt-1">
+                    O cliente bloqueado não poderá realizar novas operações até ser desbloqueado.
+                  </p>
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowBlockModal(false);
+                    setBlockReason('');
+                  }}
+                  className="flex-1 px-4 py-3 text-sm font-medium transition-colors bg-white border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
+                  disabled={isSubmitting}
+                >
+                  Cancelar
+                </button>
+                <button
+                  type="submit"
+                  disabled={isSubmitting}
+                  className="flex items-center justify-center flex-1 gap-2 px-4 py-3 text-sm font-medium text-white transition-colors bg-orange-600 rounded-lg hover:bg-orange-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isSubmitting ? (
+                    <>
+                      <div className="w-4 h-4 border-2 border-white rounded-full border-t-transparent animate-spin" />
+                      <span>Bloqueando...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Lock className="w-4 h-4" />
+                      <span>Bloquear Cliente</span>
+                    </>
+                  )}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </DashboardLayout>
   );
 }
