@@ -89,7 +89,7 @@ export default function ClientForm({ client, types, priorities, paymentTerms, us
         { label: isEditing ? 'Editar' : 'Novo' }
       ]}
     >
-      <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
+      <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
 
         {/* Header */}
         <div className="mb-8">
