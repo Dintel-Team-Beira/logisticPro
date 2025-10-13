@@ -1,12 +1,11 @@
 import { useState } from 'react';
-import { Link, router } from '@inertiajs/react';
-import AppLayout from '@/Layouts/AppLayout';
+import { Head, Link, router } from '@inertiajs/react';
+import DashboardLayout from '@/Layouts/DashboardLayout';
 import {
-  Building2, UserCircle, Shield, Heart, Search, Filter,
-  Plus, Download, MoreVertical, Edit, Trash2, Eye,
-  Lock, Unlock, CheckCircle, XCircle, Package
+  Users, Building2, UserCircle, Shield, Heart, Search,
+  Plus, Download, Eye, Edit, Trash2, Lock, Unlock,
+  CheckCircle, XCircle, Package, Filter, X, ChevronRight
 } from 'lucide-react';
-import { motion, AnimatePresence } from 'framer-motion';
 
 export default function ClientsIndex({ clients, filters, stats, types, priorities, users }) {
   const [searchTerm, setSearchTerm] = useState(filters.search || '');
@@ -33,81 +32,128 @@ export default function ClientsIndex({ clients, filters, stats, types, prioritie
     router.get('/clients');
   };
 
-  return (
-    <AppLayout title="Clientes" breadcrumbs={[
-      { label: 'Dashboard', href: '/dashboard' },
-      { label: 'Clientes' }
-    ]}>
-      <div className="px-4 py-8 mx-auto max-w-7xl sm:px-6 lg:px-8">
+  const getTypeIcon = (type) => {
+    const icons = {
+      company: Building2,
+      individual: UserCircle,
+      government: Shield,
+      ngo: Heart,
+    };
+    const Icon = icons[type] || Building2;
+    return <Icon className="w-5 h-5" />;
+  };
 
-        {/* Header with Stats */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between mb-6">
-            <div>
-              <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
-                Clientes
-              </h1>
-              <p className="mt-1 text-sm text-gray-600 dark:text-gray-400">
-                Gerencie todos os seus clientes e suas informações
-              </p>
+  const getPriorityColor = (priority) => {
+    const colors = {
+      low: 'bg-slate-100 text-slate-700',
+      medium: 'bg-blue-100 text-blue-700',
+      high: 'bg-amber-100 text-amber-700',
+      vip: 'bg-purple-100 text-purple-700',
+    };
+    return colors[priority] || colors.low;
+  };
+
+  return (
+    <DashboardLayout>
+      <Head title="Clientes" />
+
+      <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
+        {/* Header */}
+        <div className="mb-6">
+          <h1 className="text-2xl font-semibold text-slate-900">
+            Clientes
+          </h1>
+          <p className="mt-1 text-sm text-slate-500">
+            Gerencie todos os seus clientes e suas informações
+          </p>
+        </div>
+
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="p-4 bg-white border rounded-lg shadow-sm border-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase text-slate-500">Total</p>
+                <p className="mt-1 text-2xl font-bold text-slate-900">
+                  {stats?.total || 0}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-blue-50">
+                <Building2 className="w-6 h-6 text-blue-600" />
+              </div>
             </div>
-            <Link
-              href="/clients/create"
-              className="inline-flex items-center px-4 py-2 space-x-2 text-white transition-all bg-blue-600 rounded-lg hover:bg-blue-700 hover:shadow-lg"
-            >
-              <Plus className="w-5 h-5" />
-              <span>Novo Cliente</span>
-            </Link>
           </div>
 
-          {/* Stats Cards */}
-          <div className="grid grid-cols-1 gap-4 mb-6 sm:grid-cols-2 lg:grid-cols-5">
-            <StatCard
-              title="Total"
-              value={stats.total}
-              icon={Building2}
-              color="blue"
-            />
-            <StatCard
-              title="Ativos"
-              value={stats.active}
-              icon={CheckCircle}
-              color="green"
-            />
-            <StatCard
-              title="Bloqueados"
-              value={stats.blocked}
-              icon={Lock}
-              color="red"
-            />
-            <StatCard
-              title="VIP"
-              value={stats.vip}
-              icon={Shield}
-              color="purple"
-            />
-            <StatCard
-              title="Com Cargas Ativas"
-              value={stats.with_active_shipments}
-              icon={Package}
-              color="orange"
-            />
+          <div className="p-4 bg-white border rounded-lg shadow-sm border-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase text-slate-500">Ativos</p>
+                <p className="mt-1 text-2xl font-bold text-emerald-600">
+                  {stats?.active || 0}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-emerald-50">
+                <CheckCircle className="w-6 h-6 text-emerald-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-white border rounded-lg shadow-sm border-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase text-slate-500">Bloqueados</p>
+                <p className="mt-1 text-2xl font-bold text-red-600">
+                  {stats?.blocked || 0}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-red-50">
+                <Lock className="w-6 h-6 text-red-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-white border rounded-lg shadow-sm border-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase text-slate-500">VIP</p>
+                <p className="mt-1 text-2xl font-bold text-purple-600">
+                  {stats?.vip || 0}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-purple-50">
+                <Shield className="w-6 h-6 text-purple-600" />
+              </div>
+            </div>
+          </div>
+
+          <div className="p-4 bg-white border rounded-lg shadow-sm border-slate-200">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs font-medium uppercase text-slate-500">Com Cargas</p>
+                <p className="mt-1 text-2xl font-bold text-amber-600">
+                  {stats?.with_active_shipments || 0}
+                </p>
+              </div>
+              <div className="p-3 rounded-lg bg-amber-50">
+                <Package className="w-6 h-6 text-amber-600" />
+              </div>
+            </div>
           </div>
         </div>
 
-        {/* Filters Section */}
-        <div className="p-6 mb-6 bg-white rounded-xl dark:bg-gray-800">
+        {/* Filters */}
+        <div className="p-6 bg-white border rounded-xl border-slate-200">
           <form onSubmit={handleSearch} className="space-y-4">
-            <div className="flex flex-col gap-4 lg:flex-row lg:items-center">
-              {/* Search Input */}
+            <div className="flex items-center gap-3">
+              {/* Search */}
               <div className="relative flex-1">
-                <Search className="absolute w-5 h-5 text-gray-400 transform -translate-y-1/2 left-3 top-1/2" />
+                <Search className="absolute w-4 h-4 text-slate-400 left-3 top-3" />
                 <input
                   type="text"
-                  placeholder="Buscar por nome, email, telefone, NIF..."
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
-                  className="w-full py-2 pl-10 pr-4 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                  placeholder="Buscar por nome, email, telefone, NIF..."
+                  className="w-full py-2.5 pl-10 pr-4 text-sm border rounded-lg border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
                 />
               </div>
 
@@ -115,326 +161,255 @@ export default function ClientsIndex({ clients, filters, stats, types, prioritie
               <button
                 type="button"
                 onClick={() => setShowFilters(!showFilters)}
-                className="inline-flex items-center px-4 py-2 space-x-2 text-gray-700 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
               >
-                <Filter className="w-5 h-5" />
-                <span>Filtros</span>
+                <Filter className="w-4 h-4" />
+                Filtros
               </button>
 
               {/* Search Button */}
               <button
                 type="submit"
-                className="inline-flex items-center px-6 py-2 space-x-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
               >
-                <Search className="w-5 h-5" />
-                <span>Buscar</span>
+                <Search className="w-4 h-4" />
+                Buscar
               </button>
 
               {/* Export Button */}
               <Link
                 href="/clients/export"
-                className="inline-flex items-center px-4 py-2 space-x-2 text-gray-700 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
               >
-                <Download className="w-5 h-5" />
-                <span>Exportar</span>
+                <Download className="w-4 h-4" />
+                Exportar
+              </Link>
+
+              {/* New Client Button */}
+              <Link
+                href="/clients/create"
+                className="inline-flex items-center gap-2 px-4 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+              >
+                <Plus className="w-4 h-4" />
+                Novo Cliente
               </Link>
             </div>
 
             {/* Expandable Filters */}
-            <AnimatePresence>
-              {showFilters && (
-                <motion.div
-                  initial={{ height: 0, opacity: 0 }}
-                  animate={{ height: 'auto', opacity: 1 }}
-                  exit={{ height: 0, opacity: 0 }}
-                  className="grid grid-cols-1 gap-4 pt-4 border-t md:grid-cols-3 dark:border-gray-700"
-                >
-                  <div>
-                    <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Tipo de Cliente
-                    </label>
-                    <select
-                      value={selectedType}
-                      onChange={(e) => setSelectedType(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    >
-                      <option value="">Todos os tipos</option>
-                      {Object.entries(types).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  </div>
+            {showFilters && (
+              <div className="grid grid-cols-1 gap-4 pt-4 border-t md:grid-cols-3 border-slate-200">
+                <div>
+                  <label className="block mb-2 text-xs font-medium uppercase text-slate-600">
+                    Tipo de Cliente
+                  </label>
+                  <select
+                    value={selectedType}
+                    onChange={(e) => setSelectedType(e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border rounded-lg border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    <option value="">Todos os tipos</option>
+                    {types && Object.entries(types).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
 
-                  <div>
-                    <label className="block mb-2 text-sm font-medium text-gray-700 dark:text-gray-300">
-                      Prioridade
-                    </label>
-                    <select
-                      value={selectedPriority}
-                      onChange={(e) => setSelectedPriority(e.target.value)}
-                      className="w-full px-4 py-2 border border-gray-300 rounded-lg dark:bg-gray-700 dark:border-gray-600 dark:text-white"
-                    >
-                      <option value="">Todas as prioridades</option>
-                      {Object.entries(priorities).map(([value, label]) => (
-                        <option key={value} value={value}>{label}</option>
-                      ))}
-                    </select>
-                  </div>
+                <div>
+                  <label className="block mb-2 text-xs font-medium uppercase text-slate-600">
+                    Prioridade
+                  </label>
+                  <select
+                    value={selectedPriority}
+                    onChange={(e) => setSelectedPriority(e.target.value)}
+                    className="w-full px-3 py-2.5 text-sm border rounded-lg border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600"
+                  >
+                    <option value="">Todas as prioridades</option>
+                    {priorities && Object.entries(priorities).map(([value, label]) => (
+                      <option key={value} value={value}>{label}</option>
+                    ))}
+                  </select>
+                </div>
 
-                  <div className="flex items-end">
-                    <button
-                      type="button"
-                      onClick={clearFilters}
-                      className="w-full px-4 py-2 text-gray-700 bg-gray-100 rounded-lg dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600"
-                    >
-                      Limpar Filtros
-                    </button>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
+                <div className="flex items-end">
+                  <button
+                    type="button"
+                    onClick={clearFilters}
+                    className="w-full px-4 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
+                  >
+                    Limpar Filtros
+                  </button>
+                </div>
+              </div>
+            )}
           </form>
         </div>
 
-        {/* Clients Table */}
-        <div className="overflow-hidden bg-white shadow-sm rounded-xl dark:bg-gray-800">
+        {/* Table */}
+        <div className="overflow-hidden bg-white border shadow-sm rounded-xl border-slate-200">
           <div className="overflow-x-auto">
             <table className="w-full">
-              <thead className="bg-gray-50 dark:bg-gray-900/50">
+              <thead className="bg-slate-50">
                 <tr>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
                     Cliente
                   </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
                     Contato
                   </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
                     Tipo
                   </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left text-gray-500 uppercase dark:text-gray-400">
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
                     Prioridade
                   </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase dark:text-gray-400">
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-center uppercase text-slate-500">
                     Cargas
                   </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-center text-gray-500 uppercase dark:text-gray-400">
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-center uppercase text-slate-500">
                     Status
                   </th>
-                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-right text-gray-500 uppercase dark:text-gray-400">
+                  <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">
                     Ações
                   </th>
                 </tr>
               </thead>
-              <tbody className="bg-white divide-y divide-gray-200 dark:bg-gray-800 dark:divide-gray-700">
-                {clients.data.map((client) => (
-                  <ClientRow key={client.id} client={client} />
-                ))}
+              <tbody className="divide-y divide-slate-200">
+                {clients.data && clients.data.length > 0 ? (
+                  clients.data.map((client) => (
+                    <tr key={client.id} className="transition-colors hover:bg-slate-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="flex items-center gap-3">
+                          <div className="flex items-center justify-center w-10 h-10 text-white bg-blue-600 rounded-lg">
+                            {getTypeIcon(client.client_type)}
+                          </div>
+                          <div>
+                            <div className="text-sm font-semibold text-slate-900">
+                              {client.display_name}
+                            </div>
+                            {client.tax_id && (
+                              <div className="text-xs text-slate-500">
+                                NIF: {client.tax_id}
+                              </div>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <div className="text-sm text-slate-900">{client.email}</div>
+                        {client.phone && (
+                          <div className="text-xs text-slate-500">{client.phone}</div>
+                        )}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className="text-sm text-slate-700">
+                          {client.type_label}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex px-2.5 py-1 text-xs font-semibold rounded-full ${getPriorityColor(client.priority)}`}>
+                          {client.priority?.toUpperCase()}
+                        </span>
+                      </td>
+                      <td className="px-6 py-4 text-center whitespace-nowrap">
+                        <div className="text-sm font-semibold text-slate-900">
+                          {client.active_shipments_count || 0}
+                        </div>
+                        <div className="text-xs text-slate-500">
+                          de {client.shipments_count || 0}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-center whitespace-nowrap">
+                        <div className="flex items-center justify-center gap-2">
+                          {client.active ? (
+                            <CheckCircle className="w-5 h-5 text-emerald-500" />
+                          ) : (
+                            <XCircle className="w-5 h-5 text-red-500" />
+                          )}
+                          {client.blocked && (
+                            <Lock className="w-5 h-5 text-red-500" />
+                          )}
+                        </div>
+                      </td>
+                      <td className="px-6 py-4 text-right whitespace-nowrap">
+                        <div className="flex items-center justify-end gap-1">
+                          <Link
+                            href={`/clients/${client.id}`}
+                            className="p-2 transition-colors rounded-lg hover:bg-slate-100"
+                            title="Ver Detalhes"
+                          >
+                            <Eye className="w-4 h-4 text-slate-600" />
+                          </Link>
+                          <Link
+                            href={`/clients/${client.id}/edit`}
+                            className="p-2 transition-colors rounded-lg hover:bg-slate-100"
+                            title="Editar"
+                          >
+                            <Edit className="w-4 h-4 text-slate-600" />
+                          </Link>
+                          <button
+                            onClick={() => {
+                              if (confirm('Tem certeza que deseja excluir este cliente?')) {
+                                router.delete(`/clients/${client.id}`);
+                              }
+                            }}
+                            className="p-2 transition-colors rounded-lg hover:bg-red-50"
+                            title="Excluir"
+                          >
+                            <Trash2 className="w-4 h-4 text-red-600" />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  ))
+                ) : (
+                  <tr>
+                    <td colSpan="7" className="px-6 py-12 text-center">
+                      <div className="flex flex-col items-center justify-center">
+                        <Users className="w-12 h-12 mb-3 text-slate-300" />
+                        <h3 className="mb-1 text-sm font-semibold text-slate-900">
+                          Nenhum cliente encontrado
+                        </h3>
+                        <p className="text-sm text-slate-500">
+                          Tente ajustar os filtros ou criar um novo cliente
+                        </p>
+                      </div>
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
           </div>
 
           {/* Pagination */}
           {clients.links && (
-            <div className="px-6 py-4 border-t dark:border-gray-700">
-              <div className="flex items-center justify-between">
-                <div className="text-sm text-gray-600 dark:text-gray-400">
-                  Mostrando {clients.from} até {clients.to} de {clients.total} clientes
-                </div>
-                <div className="flex space-x-2">
-                  {clients.links.map((link, index) => (
-                    <Link
-                      key={index}
-                      href={link.url}
-                      preserveState
-                      className={`px-3 py-1 rounded ${
-                        link.active
-                          ? 'bg-blue-600 text-white'
-                          : 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300 hover:bg-gray-200 dark:hover:bg-gray-600'
-                      } ${!link.url && 'opacity-50 cursor-not-allowed'}`}
-                      dangerouslySetInnerHTML={{ __html: link.label }}
-                    />
-                  ))}
-                </div>
+            <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200 bg-slate-50">
+              <p className="text-sm text-slate-600">
+                Mostrando <span className="font-semibold">{clients.from || 0}</span> a <span className="font-semibold">{clients.to || 0}</span> de <span className="font-semibold">{clients.total || 0}</span> clientes
+              </p>
+              <div className="flex gap-1">
+                {clients.links.map((link, index) => (
+                  <Link
+                    key={index}
+                    href={link.url || '#'}
+                    className={`
+                      px-3 py-1.5 text-sm rounded-lg transition-colors
+                      ${link.active
+                        ? 'bg-blue-600 text-white font-semibold'
+                        : 'bg-white text-slate-700 border border-slate-300 hover:bg-slate-100'
+                      }
+                      ${!link.url && 'opacity-50 cursor-not-allowed'}
+                    `}
+                    preserveState
+                    disabled={!link.url}
+                  >
+                    <span dangerouslySetInnerHTML={{ __html: link.label }} />
+                  </Link>
+                ))}
               </div>
             </div>
           )}
         </div>
       </div>
-    </AppLayout>
-  );
-}
-
-// Stat Card Component
-function StatCard({ title, value, icon: Icon, color }) {
-  const colorClasses = {
-    blue: 'from-blue-500 to-blue-600',
-    green: 'from-green-500 to-green-600',
-    red: 'from-red-500 to-red-600',
-    purple: 'from-purple-500 to-purple-600',
-    orange: 'from-orange-500 to-orange-600',
-  };
-
-  return (
-    <div className="p-6 bg-white shadow-sm rounded-xl dark:bg-gray-800">
-      <div className="flex items-center justify-between">
-        <div>
-          <p className="text-sm font-medium text-gray-600 dark:text-gray-400">
-            {title}
-          </p>
-          <p className="mt-2 text-3xl font-bold text-gray-900 dark:text-white">
-            {value}
-          </p>
-        </div>
-        <div className={`p-3 rounded-lg bg-gradient-to-br ${colorClasses[color]}`}>
-          <Icon className="w-6 h-6 text-white" />
-        </div>
-      </div>
-    </div>
-  );
-}
-
-// Helper functions (moved outside component for reusability)
-const getTypeIconComponent = (type) => {
-  const icons = {
-    company: Building2,
-    individual: UserCircle,
-    government: Shield,
-    ngo: Heart,
-  };
-  return icons[type] || Building2;
-};
-
-const getPriorityColorClass = (priority) => {
-  const colors = {
-    low: 'bg-gray-100 text-gray-800 dark:bg-gray-800 dark:text-gray-300',
-    medium: 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300',
-    high: 'bg-orange-100 text-orange-800 dark:bg-orange-900/30 dark:text-orange-300',
-    vip: 'bg-purple-100 text-purple-800 dark:bg-purple-900/30 dark:text-purple-300',
-  };
-  return colors[priority] || colors.low;
-};
-
-// Client Row Component
-function ClientRow({ client }) {
-  const [showMenu, setShowMenu] = useState(false);
-  const TypeIcon = getTypeIconComponent(client.client_type);
-
-  return (
-    <tr className="transition-colors hover:bg-gray-50 dark:hover:bg-gray-700/50">
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="flex items-center">
-          <div className="flex-shrink-0 w-10 h-10">
-            <div className="flex items-center justify-center w-10 h-10 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600">
-              <TypeIcon className="w-5 h-5 text-white" />
-            </div>
-          </div>
-          <div className="ml-4">
-            <div className="text-sm font-medium text-gray-900 dark:text-white">
-              {client.display_name}
-            </div>
-            {client.tax_id && (
-              <div className="text-sm text-gray-500 dark:text-gray-400">
-                NIF: {client.tax_id}
-              </div>
-            )}
-          </div>
-        </div>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <div className="text-sm text-gray-900 dark:text-white">
-          {client.email}
-        </div>
-        {client.phone && (
-          <div className="text-sm text-gray-500 dark:text-gray-400">
-            {client.phone}
-          </div>
-        )}
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <span className="text-sm text-gray-900 dark:text-white">
-          {client.type_label}
-        </span>
-      </td>
-      <td className="px-6 py-4 whitespace-nowrap">
-        <span className={`px-2 py-1 text-xs font-semibold rounded-full ${getPriorityColorClass(client.priority)}`}>
-          {client.priority.toUpperCase()}
-        </span>
-      </td>
-      <td className="px-6 py-4 text-center whitespace-nowrap">
-        <div className="flex flex-col items-center">
-          <span className="text-sm font-bold text-gray-900 dark:text-white">
-            {client.active_shipments_count}
-          </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
-            de {client.shipments_count}
-          </span>
-        </div>
-      </td>
-      <td className="px-6 py-4 text-center whitespace-nowrap">
-        <div className="flex items-center justify-center space-x-2">
-          {client.active ? (
-            <CheckCircle className="w-5 h-5 text-green-500" />
-          ) : (
-            <XCircle className="w-5 h-5 text-red-500" />
-          )}
-          {client.blocked && (
-            <Lock className="w-5 h-5 text-red-500" />
-          )}
-        </div>
-      </td>
-      <td className="px-6 py-4 text-right whitespace-nowrap">
-        <div className="relative inline-block">
-          <button
-            onClick={() => setShowMenu(!showMenu)}
-            className="p-2 text-gray-400 transition-colors rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700 hover:text-gray-600"
-          >
-            <MoreVertical className="w-5 h-5" />
-          </button>
-
-          {showMenu && (
-            <>
-              <div
-                className="fixed inset-0 z-10"
-                onClick={() => setShowMenu(false)}
-              />
-              <div className="absolute right-0 z-20 w-48 py-1 mt-2 bg-white rounded-lg shadow-lg dark:bg-gray-800">
-                <Link
-                  href={`/clients/${client.id}`}
-                  className="flex items-center px-4 py-2 space-x-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span>Ver Detalhes</span>
-                </Link>
-                <Link
-                  href={`/clients/${client.id}/edit`}
-                  className="flex items-center px-4 py-2 space-x-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span>Editar</span>
-                </Link>
-                <button
-                  onClick={() => router.post(`/clients/${client.id}/toggle-active`)}
-                  className="flex items-center w-full px-4 py-2 space-x-2 text-sm text-gray-700 hover:bg-gray-100 dark:text-gray-300 dark:hover:bg-gray-700"
-                >
-                  {client.active ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
-                  <span>{client.active ? 'Desativar' : 'Ativar'}</span>
-                </button>
-                <button
-                  onClick={() => {
-                    if (confirm('Tem certeza que deseja excluir este cliente?')) {
-                      router.delete(`/clients/${client.id}`);
-                    }
-                  }}
-                  className="flex items-center w-full px-4 py-2 space-x-2 text-sm text-red-600 hover:bg-gray-100 dark:hover:bg-gray-700"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  <span>Excluir</span>
-                </button>
-              </div>
-            </>
-          )}
-        </div>
-      </td>
-    </tr>
+    </DashboardLayout>
   );
 }
