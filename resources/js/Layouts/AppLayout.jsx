@@ -101,7 +101,7 @@ function LayoutContent({
       </main>
 
       {/* Footer */}
-      <Footer isMobile={isMobile} />
+      {/* <Footer isMobile={isMobile} /> */}
     </div>
   );
 }
