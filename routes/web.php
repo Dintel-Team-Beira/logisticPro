@@ -108,6 +108,41 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/shipments/{shipment}/documents', [DocumentController::class, 'store'])
         ->name('documents.store');
 });
+
+
+
+
+// web.php
+Route::middleware(['auth'])->group(function () {
+
+    // FINANÇAS
+    Route::prefix('finance')->name('finance.')->group(function () {
+        Route::get('/', [PaymentRequestController::class, 'financeDashboard'])
+            ->name('dashboard');
+        Route::get('/pending', [PaymentRequestController::class, 'pendingRequests'])
+            ->name('pending');
+        Route::get('/payments', [PaymentRequestController::class, 'paymentsHistory'])
+            ->name('payments');
+    });
+
+    // SOLICITAÇÕES
+    Route::prefix('payment-requests')->name('payment-requests.')->group(function () {
+        Route::post('/{shipment}', [PaymentRequestController::class, 'store'])
+            ->name('store');
+        Route::post('/{paymentRequest}/approve', [PaymentRequestController::class, 'approve'])
+            ->name('approve');
+        Route::post('/{paymentRequest}/reject', [PaymentRequestController::class, 'reject'])
+            ->name('reject');
+        Route::post('/{paymentRequest}/start-payment', [PaymentRequestController::class, 'startPayment'])
+            ->name('start-payment');
+        Route::post('/{paymentRequest}/confirm-payment', [PaymentRequestController::class, 'confirmPayment'])
+            ->name('confirm-payment');
+        Route::post('/{paymentRequest}/attach-receipt', [PaymentRequestController::class, 'attachReceipt'])
+            ->name('attach-receipt');
+    });
+});
+
+
    // 🆕 ROTAS DE CLIENTES 🆕
     Route::prefix('clients')->name('clients.')->group(function () {
         // CRUD Routes
