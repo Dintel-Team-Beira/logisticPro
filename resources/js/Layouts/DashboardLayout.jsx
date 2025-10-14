@@ -22,11 +22,14 @@ import {
     AlertCircle,
     CheckCircle,
     Info,
-    XCircle
+    XCircle,
+    TrendingUp,
+    Clock
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
-    const { auth, flash, notifications } = usePage().props;
+    const { auth, flash, notifications,stats } = usePage().props;
+    console.log("stats",stats);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -42,23 +45,61 @@ export default function DashboardLayout({ children }) {
             roles: ['admin', 'manager', 'operator', 'viewer'],
             badge: null
         },
-        {
-            name: 'Shipments',
+        // {
+        //     name: 'Shipments',
+        //     icon: Package,
+        //     href: '/shipments',
+        //     roles: ['admin', 'manager', 'operator'],
+        //     badge: '12'
+        // },
+       {
+            name: 'Processos',
             icon: Package,
             href: '/shipments',
-            roles: ['admin', 'manager', 'operator'],
-            badge: '12'
+            roles: ['admin', 'manager', 'operations', 'finance'],
+            badge: stats?.activeShipments || null,
         },
         {
-            name: 'Operações',
-            icon: Layers,
-            roles: ['admin', 'manager', 'operator'],
+            name: 'Finanças',
+            icon: DollarSign,
+            roles: ['admin', 'manager', 'finance'],
+            badge: stats?.pending_payments || null,
+            badgeColor: 'blue',
             submenu: [
-                { name: 'Coleta de Dispersa', href: '/operations/coleta', roles: ['admin', 'manager', 'operator'] },
-                { name: 'Legalização', href: '/operations/legalizacao', roles: ['admin', 'manager', 'operator'] },
-                { name: 'Alfândegas', href: '/operations/alfandegas', roles: ['admin', 'manager', 'operator'] },
-                { name: 'Cornelder', href: '/operations/cornelder', roles: ['admin', 'manager', 'operator'] },
+                {
+                    name: 'Dashboard',
+                    href: '/finance',
+                    icon: TrendingUp,
+                    roles: ['admin', 'manager', 'finance'],
+                },
+                {
+                    name: 'Pendentes',
+                    href: '/finance/pending',
+                    icon: Clock,
+                    roles: ['admin', 'finance'],
+                    badge: stats?.pending_payments || null,
+                },
+                {
+                    name: 'Histórico',
+                    href: '/finance/payments',
+                    icon: CheckCircle,
+                    roles: ['admin', 'manager', 'finance'],
+                },
+                {
+                    name: 'Relatórios',
+                    href: '/finance/reports',
+                    icon: BarChart3,
+                    roles: ['admin', 'manager'],
+                },
             ]
+        },
+        {
+            name: 'Aprovações',
+            icon: CheckCircle,
+            href: '/approvals',
+            roles: ['admin', 'manager'],
+            badge: stats?.pending_approvals || null,
+            badgeColor: 'red',
         },
         {
             name: 'Documentos',

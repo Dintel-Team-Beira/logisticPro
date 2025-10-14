@@ -15,6 +15,7 @@ use App\Http\Controllers\ShipmentController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\OperationsController;
 use App\Http\Controllers\NotificationController;
+use App\Http\Controllers\PaymentRequestController;
 use App\Http\Controllers\ShippingLineController;
 use App\Http\Controllers\ShipmentPhaseController;
 
@@ -47,6 +48,185 @@ Route::middleware('auth')->group(function () {
     Route::get('/profile', [ProfileController::class, 'edit'])->name('profile.edit');
     Route::patch('/profile', [ProfileController::class, 'update'])->name('profile.update');
     Route::delete('/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
+});
+
+
+// ============================================================================
+// SOLICITAÇÕES DE PAGAMENTO - AÇÕES
+// ============================================================================
+Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.')->group(function () {
+
+    // ========================================
+    // OPERAÇÕES - CRIAR E GERENCIAR
+    // ========================================
+
+    /**
+     * Criar Nova Solicitação
+     * Usado por: Operações
+     * Requer: Anexar cotação
+     */
+    Route::post('/{shipment}', [PaymentRequestController::class, 'store'])
+        ->name('store')
+        ->middleware('can:create_payment_request');
+
+    /**
+     * Cancelar Solicitação (apenas quem criou)
+     * Status deve estar 'pending'
+     */
+    Route::post('/{paymentRequest}/cancel', [PaymentRequestController::class, 'cancel'])
+        ->name('cancel');
+
+    /**
+     * Anexar Recibo do Fornecedor
+     * Usado por: Operações (após pagamento confirmado)
+     */
+    Route::post('/{paymentRequest}/attach-receipt', [PaymentRequestController::class, 'attachReceipt'])
+        ->name('attach-receipt')
+        ->middleware('can:attach_receipt');
+
+    // ========================================
+    // GESTORES - APROVAÇÃO
+    // ========================================
+
+    /**
+     * Aprovar Solicitação
+     * Usado por: Gestores/Admin
+     * Ação: pending → approved
+     */
+    Route::post('/{paymentRequest}/approve', [PaymentRequestController::class, 'approve'])
+        ->name('approve')
+        ->middleware('can:approve_payment_request');
+
+    /**
+     * Rejeitar Solicitação
+     * Usado por: Gestores/Admin
+     * Ação: pending → rejected
+     * Requer: Motivo da rejeição
+     */
+    Route::post('/{paymentRequest}/reject', [PaymentRequestController::class, 'reject'])
+        ->name('reject')
+        ->middleware('can:approve_payment_request');
+
+    // ========================================
+    // FINANÇAS - PROCESSAMENTO
+    // ========================================
+
+    /**
+     * Iniciar Processamento de Pagamento
+     * Usado por: Finanças
+     * Ação: approved → in_payment
+     */
+    Route::post('/{paymentRequest}/start-payment', [PaymentRequestController::class, 'startPayment'])
+        ->name('start-payment')
+        ->middleware('can:process_payment');
+
+    /**
+     * Confirmar Pagamento com Comprovativo
+     * Usado por: Finanças
+     * Ação: in_payment → paid
+     * Requer: Upload de comprovativo
+     */
+    Route::post('/{paymentRequest}/confirm-payment', [PaymentRequestController::class, 'confirmPayment'])
+        ->name('confirm-payment')
+        ->middleware('can:process_payment');
+
+    // ========================================
+    // VISUALIZAÇÃO E DETALHES
+    // ========================================
+
+    /**
+     * Ver Detalhes da Solicitação
+     * Todos os departamentos podem ver
+     */
+    Route::get('/{paymentRequest}', [PaymentRequestController::class, 'show'])
+        ->name('show');
+
+    /**
+     * Lista de Solicitações (para o usuário logado)
+     */
+    Route::get('/', [PaymentRequestController::class, 'index'])
+        ->name('index');
+
+    /**
+     * Download de Documentos da Solicitação
+     */
+    Route::get('/{paymentRequest}/documents/{type}', [PaymentRequestController::class, 'downloadDocument'])
+        ->name('download-document')
+        ->where('type', 'quotation|payment_proof|receipt');
+});
+
+// ============================================================================
+// GESTÃO - APROVAÇÕES PENDENTES (Para Gestores)
+// ============================================================================
+Route::middleware(['auth', 'can:approve_payment_request'])
+    ->prefix('approvals')
+    ->name('approvals.')
+    ->group(function () {
+
+        /**
+         * Dashboard de Aprovações
+         * Lista todas solicitações pendentes
+         */
+        Route::get('/', [PaymentRequestController::class, 'approvalsDashboard'])
+            ->name('dashboard');
+
+        /**
+         * Aprovação em Lote
+         * Aprovar múltiplas solicitações de uma vez
+         */
+        Route::post('/batch-approve', [PaymentRequestController::class, 'batchApprove'])
+            ->name('batch-approve');
+    });
+
+// ============================================================================
+// NOTIFICAÇÕES - Sistema de Notificações
+// ============================================================================
+Route::middleware(['auth'])->prefix('notifications')->name('notifications.')->group(function () {
+
+    /**
+     * Marcar notificação como lida
+     */
+    Route::post('/{notification}/read', [NotificationController::class, 'markAsRead'])
+        ->name('mark-read');
+
+    /**
+     * Marcar todas como lidas
+     */
+    Route::post('/read-all', [NotificationController::class, 'markAllAsRead'])
+        ->name('mark-all-read');
+});
+
+// ============================================================================
+// WEBHOOKS - Para integrações externas (opcional)
+// ============================================================================
+Route::post('/webhooks/payment-confirmation', [PaymentRequestController::class, 'webhookPaymentConfirmation'])
+    ->name('webhooks.payment-confirmation');
+
+
+// ============================================================================
+// FINANÇAS - DEPARTAMENTO FINANCEIRO
+// ============================================================================
+Route::middleware(['auth'])->prefix('finance')->name('finance.')->group(function () {
+
+    // Dashboard Financeiro
+    Route::get('/', [PaymentRequestController::class, 'financeDashboard'])
+        ->name('dashboard')
+        ->middleware('can:view_finance_dashboard');
+
+    // Solicitações Pendentes (Para Processar)
+    Route::get('/pending', [PaymentRequestController::class, 'pendingRequests'])
+        ->name('pending')
+        ->middleware('can:process_payment');
+
+    // Histórico de Pagamentos
+    Route::get('/payments', [PaymentRequestController::class, 'paymentsHistory'])
+        ->name('payments')
+        ->middleware('can:view_payments');
+
+    // Relatórios Financeiros
+    Route::get('/reports', [PaymentRequestController::class, 'financialReports'])
+        ->name('reports')
+        ->middleware('can:view_finance_reports');
 });
 
 // ============================================================================
