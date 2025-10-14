@@ -493,9 +493,18 @@ function UploadModal({ shipment, docType, phase, onClose }) {
         formData.append('phase', phase);
         formData.append('notes', notes);
 
-        router.post(`/shipments/${shipment.id}/upload-document`, formData, {
+         // ✅ ROTA CORRIGIDA
+        router.post(`/shipments/${shipment.id}/documents`, formData, {
             preserveScroll: true,
-            onSuccess: () => onClose(),
+            forceFormData: true,
+            onSuccess: () => {
+                onClose();
+                setUploading(false);
+            },
+            onError: (errors) => {
+                console.error('Erro no upload:', errors);
+                setUploading(false);
+            },
             onFinish: () => setUploading(false),
         });
     };
