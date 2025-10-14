@@ -54,26 +54,60 @@ Route::middleware('auth')->group(function () {
 // ============================================================================
 Route::middleware(['auth'])->group(function () {
     // CRUD
+   // ============================================================================
+// SHIPMENTS - ADICIONAR ESTAS ROTAS AQUI 👇👇👇
+// ============================================================================
     Route::resource('shipments', ShipmentController::class);
 
-    // Advance
-    Route::post('/shipments/{shipment}/advance', [ShipmentController::class, 'advance'])
-        ->name('shipments.advance');
+    // ========================================
+    // SHIPMENTS - GESTÃO DE FASES (NOVAS ROTAS)
+    // ========================================
+    Route::prefix('shipments/{shipment}')->group(function () {
 
-    // APIs
+        // Avançar/Iniciar Fase
+        Route::post('/advance', [ShipmentController::class, 'advance'])
+            ->name('shipments.advance');
+
+        // Completar Fase
+        Route::post('/complete-phase', [ShipmentController::class, 'completePhase'])
+            ->name('shipments.complete-phase');
+
+        // Pausar Fase
+        Route::post('/pause-phase', [ShipmentController::class, 'pausePhase'])
+            ->name('shipments.pause-phase');
+
+        // API: Validação de Fase
+        Route::get('/phase/{phase}/validation', [ShipmentController::class, 'getPhaseValidation'])
+            ->name('shipments.phase-validation');
+
+        // Upload de Documentos
+        Route::post('/documents', [DocumentController::class, 'store'])
+            ->name('documents.store');
+    });
+
+     // APIs
     Route::get('/shipments/{shipment}/progress', [ShipmentController::class, 'getProgress'])
         ->name('shipments.progress');
+
     Route::get('/shipments/{shipment}/checklist', [ShipmentController::class, 'getChecklist'])
         ->name('shipments.checklist');
 
-    // Documents
-    Route::post('/shipments/{shipment}/documents', [DocumentController::class, 'store'])
-        ->name('documents.store');
+            // Advance
+    Route::post('/shipments/{shipment}/advance', [ShipmentController::class, 'advance'])
+        ->name('shipments.advance');
+    // ========================================
+    // DOCUMENTS - Outras Ações
+    // ========================================
     Route::get('/documents/{document}/download', [DocumentController::class, 'download'])
         ->name('documents.download');
+
+    Route::delete('/documents/{document}', [DocumentController::class, 'destroy'])
+        ->name('documents.destroy');
+
+          // Documents
+    Route::post('/shipments/{shipment}/documents', [DocumentController::class, 'store'])
+        ->name('documents.store');
 });
-
-
    // 🆕 ROTAS DE CLIENTES 🆕
     Route::prefix('clients')->name('clients.')->group(function () {
         // CRUD Routes
