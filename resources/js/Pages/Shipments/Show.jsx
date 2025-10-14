@@ -1,236 +1,383 @@
-
-
 import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import {
-    ArrowLeft, Ship, Package, FileText, DollarSign,
-    CheckCircle2, Clock, AlertCircle, Upload, Download,
-    Eye, Send, Truck, Edit2, Trash2
+    ArrowLeft, Ship, FileText, CheckCircle2, Clock, Upload,
+    X, Check, AlertCircle, Eye, Download, Trash2, Play,
+    Pause, AlertTriangle, Info, ChevronDown, ChevronUp
 } from 'lucide-react';
 
-// ========================================
-// HELPER: Mapear fase para stage
-// ========================================
-const getStageFromPhase = (phaseId) => {
-    const stageMap = {
-        1: 'coleta_dispersa',
-        2: 'legalizacao',
-        3: 'alfandegas',
-        4: 'cornelder',
-        5: 'taxacao',
-        6: 'financas',
-        7: 'pod',
-    };
-    return stageMap[phaseId] || 'coleta_dispersa';
-};
-
-// ========================================
-// COMPONENTE PRINCIPAL
-// ========================================
-export default function Show({ shipment, progress, checklist, canAdvance }) {
-    const [activePhase, setActivePhase] = useState(progress.current_phase || 1);
+export default function Show({ shipment, phaseProgress, activePhases, overallProgress, canForceAdvance }) {
+    const [selectedPhase, setSelectedPhase] = useState(activePhases[0] || 1);
     const [uploadModalOpen, setUploadModalOpen] = useState(false);
     const [selectedDocType, setSelectedDocType] = useState(null);
-    const [currentStage, setCurrentStage] = useState(
-        getStageFromPhase(progress.current_phase)
-    );
+    const [forceModalOpen, setForceModalOpen] = useState(false);
+    const [expandedWarnings, setExpandedWarnings] = useState({});
 
-    // Configuração das 7 Fases
     const phases = [
-        { id: 1, key: 'coleta', title: 'Coleta Dispersa', icon: Send, color: 'blue' },
-        { id: 2, key: 'legalizacao', title: 'Legalização', icon: FileText, color: 'purple' },
-        { id: 3, key: 'alfandegas', title: 'Alfândegas', icon: CheckCircle2, color: 'amber' },
-        { id: 4, key: 'cornelder', title: 'Cornelder', icon: Ship, color: 'cyan' },
-        { id: 5, key: 'taxacao', title: 'Taxação', icon: FileText, color: 'indigo' },
-        { id: 6, key: 'faturacao', title: 'Faturação', icon: DollarSign, color: 'green' },
-        { id: 7, key: 'pod', title: 'POD', icon: Truck, color: 'emerald' },
+        { id: 1, title: 'Coleta Dispersa', icon: Ship, color: 'blue' },
+        { id: 2, title: 'Legalização', icon: FileText, color: 'purple' },
+        { id: 3, title: 'Alfândegas', icon: CheckCircle2, color: 'amber' },
+        { id: 4, title: 'Cornelder', icon: Ship, color: 'cyan' },
+        { id: 5, title: 'Taxação', icon: FileText, color: 'indigo' },
+        { id: 6, title: 'Faturação', icon: FileText, color: 'green' },
+        { id: 7, title: 'POD', icon: Ship, color: 'emerald' },
     ];
 
-    const getPhaseStatus = (phaseId) => {
-        if (phaseId < progress.current_phase) return 'completed';
-        if (phaseId === progress.current_phase) return 'in_progress';
-        return 'pending';
+    const currentPhaseData = phaseProgress[selectedPhase];
+    const activePhasesList = activePhases.length > 0 ? activePhases : [selectedPhase];
+
+    const handleStartPhase = (phase, force = false, reason = null) => {
+        router.post(`/shipments/${shipment.id}/advance`, {
+            phase: phase,
+            force: force,
+            reason: reason,
+        }, {
+            preserveScroll: true,
+            onSuccess: () => setForceModalOpen(false),
+        });
     };
 
-    const getStatusIcon = (status) => {
-        switch (status) {
-            case 'completed':
-                return <CheckCircle2 className="w-6 h-6 text-emerald-600" />;
-            case 'in_progress':
-                return <Clock className="w-6 h-6 text-blue-600 animate-pulse" />;
-            default:
-                return <Clock className="w-6 h-6 text-slate-300" />;
+    const handleCompletePhase = (phase) => {
+        if (confirm(`Tem certeza que deseja completar a Fase ${phase}?`)) {
+            router.post(`/shipments/${shipment.id}/complete-phase`, {
+                phase: phase,
+            }, {
+                preserveScroll: true,
+            });
         }
     };
 
-    const handleDocumentUpload = (docType) => {
-        setSelectedDocType(docType);
-        setUploadModalOpen(true);
-    };
-
-    const handleAdvance = () => {
-        if (confirm('Deseja avançar para a próxima fase?')) {
-            router.post(`/shipments/${shipment.id}/advance`, {}, {
+    const handlePausePhase = (phase) => {
+        const reason = prompt('Por que está pausando esta fase?');
+        if (reason) {
+            router.post(`/shipments/${shipment.id}/pause-phase`, {
+                phase: phase,
+                reason: reason,
+            }, {
                 preserveScroll: true,
-                onSuccess: () => {
-                    alert('Fase avançada com sucesso!');
-                },
-                onError: (errors) => {
-                    alert(errors.error || 'Erro ao avançar fase');
-                }
             });
         }
     };
 
     return (
         <DashboardLayout>
-            <Head title={`Shipment ${shipment.reference_number}`} />
+            <Head title={`Processo ${shipment.process_number}`} />
 
-            <div className="p-6 ml-5 -mt-3 space-y-6">
+            <div className="p-6 space-y-6">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div className="flex items-center gap-4">
                         <Link
                             href="/shipments"
-                            className="p-2 transition-colors rounded-lg hover:bg-slate-100"
+                            className="flex items-center gap-2 text-sm transition-colors text-slate-600 hover:text-slate-900"
                         >
-                            <ArrowLeft className="w-5 h-5 text-slate-600" />
+                            <ArrowLeft className="w-4 h-4" />
+                            Voltar
                         </Link>
                         <div>
                             <h1 className="text-2xl font-bold text-slate-900">
-                                {shipment.reference_number}
+                                Processo #{shipment.reference_number}
                             </h1>
-                            <p className="text-sm text-slate-500">
-                                BL: {shipment.bl_number} • Container: {shipment.container_number}
+                            <p className="text-sm text-slate-600">
+                                BL: {shipment.bl_number} | Cliente: {shipment.client?.name}
                             </p>
                         </div>
                     </div>
-                    <div className="flex gap-2">
-                        <Link
-                            href={`/shipments/${shipment.id}/edit`}
-                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
-                        >
-                            <Edit2 className="w-4 h-4" />
-                            Editar
-                        </Link>
-                    </div>
                 </div>
 
-                {/* Progress Bar */}
-                <div className="p-6 bg-white border rounded-xl border-slate-200">
+                {/* Progress Global */}
+                <div className="p-6 bg-white border rounded-lg border-slate-200">
                     <div className="flex items-center justify-between mb-4">
                         <h2 className="text-lg font-semibold text-slate-900">
-                            Progresso do Processo
+                            Progresso Geral do Processo
                         </h2>
-                        <span className="text-2xl font-bold text-blue-600">
-                            {progress.progress}%
-                        </span>
+                        <div className="flex items-center gap-4">
+                            <span className="text-2xl font-bold text-slate-900">
+                                {Math.round(overallProgress)}%
+                            </span>
+                            {activePhases.length > 1 && (
+                                <span className="px-3 py-1 text-xs font-medium text-blue-700 bg-blue-100 rounded-full">
+                                    {activePhases.length} fases simultâneas
+                                </span>
+                            )}
+                        </div>
                     </div>
+
                     <div className="w-full h-3 mb-6 overflow-hidden rounded-full bg-slate-200">
                         <div
                             className="h-full transition-all duration-500 bg-blue-600 rounded-full"
-                            style={{ width: `${progress.progress}%` }}
+                            style={{ width: `${overallProgress}%` }}
                         />
                     </div>
 
-                    {/* Fases */}
+                    {/* Timeline de Fases */}
                     <div className="grid grid-cols-7 gap-2">
                         {phases.map((phase) => {
-                            const status = getPhaseStatus(phase.id);
+                            const phaseData = phaseProgress[phase.id];
+                            const isActive = activePhases.includes(phase.id);
+                            const isSelected = selectedPhase === phase.id;
                             const Icon = phase.icon;
-                            const isActive = phase.id === progress.current_phase;
 
                             return (
                                 <button
                                     key={phase.id}
-                                    onClick={() => setActivePhase(phase.id)}
+                                    onClick={() => setSelectedPhase(phase.id)}
                                     className={`
-                                        p-4 rounded-lg border-2 transition-all
-                                        ${isActive ? `border-${phase.color}-500 bg-${phase.color}-50` : 'border-slate-200 bg-white'}
-                                        ${status === 'completed' ? 'opacity-75' : ''}
-                                        hover:shadow-md
+                                        p-4 rounded-lg border-2 transition-all text-center relative
+                                        ${isSelected
+                                            ? 'border-blue-500 bg-blue-50 shadow-md'
+                                            : phaseData.status === 'completed'
+                                            ? 'border-emerald-500 bg-emerald-50'
+                                            : isActive
+                                            ? 'border-blue-400 bg-blue-50'
+                                            : 'border-slate-200 bg-white hover:border-slate-300'
+                                        }
                                     `}
                                 >
-                                    <div className="flex flex-col items-center gap-2">
-                                        {getStatusIcon(status)}
-                                        <span className="text-xs font-medium text-center text-slate-700">
-                                            {phase.title}
-                                        </span>
-                                        <span className="text-xs text-slate-500">
-                                            Fase {phase.id}
-                                        </span>
+                                    {/* Badge de ativo */}
+                                    {isActive && (
+                                        <span className="absolute w-4 h-4 bg-blue-600 border-2 border-white rounded-full -top-2 -right-2 animate-pulse" />
+                                    )}
+
+                                    <div className={`
+                                        mx-auto mb-2 w-10 h-10 rounded-full flex items-center justify-center
+                                        ${phaseData.status === 'completed' ? 'bg-emerald-600' :
+                                          isActive ? 'bg-blue-600' :
+                                          phaseData.status === 'paused' ? 'bg-amber-600' :
+                                          'bg-slate-300'}
+                                    `}>
+                                        {phaseData.status === 'completed' ? (
+                                            <CheckCircle2 className="w-6 h-6 text-white" />
+                                        ) : isActive ? (
+                                            <Clock className="w-5 h-5 text-white animate-pulse" />
+                                        ) : phaseData.status === 'paused' ? (
+                                            <Pause className="w-5 h-5 text-white" />
+                                        ) : (
+                                            <Icon className="w-5 h-5 text-white opacity-50" />
+                                        )}
                                     </div>
+
+                                    <p className="mb-1 text-xs font-medium text-slate-900">
+                                        {phase.title}
+                                    </p>
+
+                                    <p className="text-xs text-slate-600">
+                                        {Math.round(phaseData.progress)}%
+                                    </p>
                                 </button>
                             );
                         })}
                     </div>
                 </div>
 
-                {/* Grid Principal */}
-                <div className="grid grid-cols-3 gap-6">
-                    {/* Informações do Shipment */}
-                    <div className="col-span-2 space-y-6">
-                        {/* Card Info */}
-                        <div className="p-6 bg-white border rounded-xl border-slate-200">
-                            <h3 className="mb-4 text-lg font-semibold text-slate-900">
-                                Informações do Shipment
-                            </h3>
-                            <div className="grid grid-cols-2 gap-4">
-                                <InfoItem label="Cliente" value={shipment.client?.name} />
-                                <InfoItem label="Linha de Navegação" value={shipment.shipping_line?.name} />
-                                <InfoItem label="BL Number" value={shipment.bl_number} />
-                                <InfoItem label="Container" value={shipment.container_number} />
-                                <InfoItem label="Tipo Container" value={shipment.container_type} />
-                                <InfoItem label="Navio" value={shipment.vessel_name} />
-                                <InfoItem label="Porto Origem" value={shipment.origin_port} />
-                                <InfoItem label="Porto Destino" value={shipment.destination_port} />
-                                <InfoItem label="Data Chegada" value={shipment.arrival_date} />
-                                <InfoItem label="Descrição Carga" value={shipment.cargo_description} />
+                {/* Conteúdo da Fase Selecionada */}
+                <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+                    {/* Detalhes da Fase */}
+                    <div className="space-y-6 lg:col-span-2">
+                        {/* Card Principal */}
+                        <div className="p-6 bg-white border rounded-lg border-slate-200">
+                            <div className="flex items-start justify-between mb-6">
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-900">
+                                        {phases.find(p => p.id === selectedPhase)?.title}
+                                    </h3>
+                                    <p className="mt-1 text-sm text-slate-600">
+                                        Status: <span className="font-medium capitalize">{currentPhaseData.status}</span>
+                                    </p>
+                                </div>
+                                <div className="text-right">
+                                    <div className="text-3xl font-bold text-blue-600">
+                                        {Math.round(currentPhaseData.progress)}%
+                                    </div>
+                                    <div className="text-xs text-slate-500">Progresso</div>
+                                </div>
+                            </div>
+
+                            {/* Barra de Progresso */}
+                            <div className="h-2 mb-6 overflow-hidden rounded-full bg-slate-200">
+                                <div
+                                    className="h-full transition-all duration-500 bg-blue-600"
+                                    style={{ width: `${currentPhaseData.progress}%` }}
+                                />
+                            </div>
+
+                            {/* Avisos e Riscos */}
+                            {(currentPhaseData.warnings.length > 0 || currentPhaseData.risks.length > 0) && (
+                                <div className="mb-6 space-y-3">
+                                    {currentPhaseData.warnings.length > 0 && (
+                                        <div className="p-4 border rounded-lg bg-amber-50 border-amber-200">
+                                            <div className="flex items-start gap-3">
+                                                <AlertTriangle className="w-5 h-5 text-amber-600 flex-shrink-0 mt-0.5" />
+                                                <div className="flex-1">
+                                                    <p className="mb-2 text-sm font-medium text-amber-900">
+                                                        Avisos Importantes
+                                                    </p>
+                                                    <ul className="space-y-1">
+                                                        {currentPhaseData.warnings.map((warning, idx) => (
+                                                            <li key={idx} className="text-xs text-amber-800">
+                                                                • {warning}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {currentPhaseData.risks.length > 0 && (
+                                        <div className="p-4 border border-red-200 rounded-lg bg-red-50">
+                                            <div className="flex items-start gap-3">
+                                                <AlertCircle className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                                                <div className="flex-1">
+                                                    <p className="mb-2 text-sm font-medium text-red-900">
+                                                        Riscos Identificados
+                                                    </p>
+                                                    <ul className="space-y-1">
+                                                        {currentPhaseData.risks.map((risk, idx) => (
+                                                            <li key={idx} className="text-xs text-red-800 capitalize">
+                                                                • {risk.replace('_', ' ')}
+                                                            </li>
+                                                        ))}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* Ações da Fase */}
+                            <div className="flex gap-3">
+                                {currentPhaseData.status === 'pending' && (
+                                    <>
+                                        {currentPhaseData.can_start ? (
+                                            <button
+                                                onClick={() => handleStartPhase(selectedPhase)}
+                                                className="flex items-center gap-2 px-4 py-2 font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+                                            >
+                                                <Play className="w-4 h-4" />
+                                                Iniciar Fase
+                                            </button>
+                                        ) : (
+                                            <>
+                                                <button
+                                                    disabled
+                                                    className="flex items-center gap-2 px-4 py-2 font-medium rounded-lg cursor-not-allowed bg-slate-300 text-slate-600"
+                                                >
+                                                    <AlertCircle className="w-4 h-4" />
+                                                    Aguardando Requisitos
+                                                </button>
+                                                {canForceAdvance && (
+                                                    <button
+                                                        onClick={() => setForceModalOpen(true)}
+                                                        className="flex items-center gap-2 px-4 py-2 font-medium transition-colors border rounded-lg border-amber-500 text-amber-700 hover:bg-amber-50"
+                                                    >
+                                                        <AlertTriangle className="w-4 h-4" />
+                                                        Forçar Início
+                                                    </button>
+                                                )}
+                                            </>
+                                        )}
+                                    </>
+                                )}
+
+                                {currentPhaseData.status === 'in_progress' && (
+                                    <>
+                                        <button
+                                            onClick={() => handleCompletePhase(selectedPhase)}
+                                            className="flex items-center gap-2 px-4 py-2 font-medium text-white transition-colors rounded-lg bg-emerald-600 hover:bg-emerald-700"
+                                        >
+                                            <Check className="w-4 h-4" />
+                                            Completar Fase
+                                        </button>
+                                        <button
+                                            onClick={() => handlePausePhase(selectedPhase)}
+                                            className="flex items-center gap-2 px-4 py-2 font-medium transition-colors border rounded-lg border-slate-300 text-slate-700 hover:bg-slate-50"
+                                        >
+                                            <Pause className="w-4 h-4" />
+                                            Pausar
+                                        </button>
+                                    </>
+                                )}
+
+                                {currentPhaseData.status === 'paused' && (
+                                    <button
+                                        onClick={() => handleStartPhase(selectedPhase, true, 'Retomando fase pausada')}
+                                        className="flex items-center gap-2 px-4 py-2 font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+                                    >
+                                        <Play className="w-4 h-4" />
+                                        Retomar
+                                    </button>
+                                )}
+
+                                {currentPhaseData.status === 'completed' && (
+                                    <div className="flex items-center gap-2 px-4 py-2 font-medium rounded-lg bg-emerald-100 text-emerald-700">
+                                        <CheckCircle2 className="w-4 h-4" />
+                                        Fase Concluída
+                                    </div>
+                                )}
                             </div>
                         </div>
 
-                        {/* Checklist de Documentos */}
-                        <div className="p-6 bg-white border rounded-xl border-slate-200">
+                        {/* Informações do Processo */}
+                        <div className="p-6 bg-white border rounded-lg border-slate-200">
                             <h3 className="mb-4 text-lg font-semibold text-slate-900">
-                                Documentos - Fase {progress.current_phase}
+                                Informações do Processo
+                            </h3>
+                            <div className="grid grid-cols-2 gap-4">
+                                <InfoItem label="Número do BL" value={shipment.bl_number} />
+                                <InfoItem label="Container" value={shipment.container_number} />
+                                <InfoItem label="Cliente" value={shipment.client?.name} />
+                                <InfoItem label="Linha de Navegação" value={shipment.shipping_line?.name} />
+                                <InfoItem label="Tipo de Carga" value={shipment.cargo_type || 'Normal'} />
+                                <InfoItem label="Data de Chegada" value={shipment.arrival_date} />
+                                {shipment.has_tax_exemption && (
+                                    <div className="col-span-2 p-3 border border-green-200 rounded-lg bg-green-50">
+                                        <p className="text-sm font-medium text-green-800">
+                                            ✓ Isenção Fiscal Aplicável
+                                        </p>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Sidebar - Checklist */}
+                    <div className="space-y-6">
+                        {/* Checklist de Documentos */}
+                        <div className="p-6 bg-white border rounded-lg border-slate-200">
+                            <h3 className="mb-4 text-lg font-semibold text-slate-900">
+                                Documentos Necessários
                             </h3>
 
-                            {checklist && checklist.length > 0 ? (
+                            {currentPhaseData.checklist && currentPhaseData.checklist.length > 0 ? (
                                 <div className="space-y-3">
-                                    {checklist.map((item, index) => (
+                                    {currentPhaseData.checklist.map((item, idx) => (
                                         <div
-                                            key={index}
-                                            className="flex items-center justify-between p-4 border rounded-lg border-slate-200 hover:bg-slate-50"
+                                            key={idx}
+                                            className="flex items-center justify-between p-3 border rounded-lg border-slate-200"
                                         >
                                             <div className="flex items-center gap-3">
                                                 {item.attached ? (
-                                                    <CheckCircle2 className="w-5 h-5 text-emerald-600" />
+                                                    <CheckCircle2 className="flex-shrink-0 w-5 h-5 text-emerald-600" />
                                                 ) : (
-                                                    <Clock className="w-5 h-5 text-slate-400" />
+                                                    <Clock className="flex-shrink-0 w-5 h-5 text-amber-600" />
                                                 )}
-                                                <div>
-                                                    <p className="font-medium text-slate-900">
-                                                        {item.label}
-                                                    </p>
-                                                    {item.required && (
-                                                        <span className="text-xs text-red-600">Obrigatório</span>
-                                                    )}
-                                                </div>
+                                                <span className="text-sm font-medium text-slate-700">
+                                                    {item.label}
+                                                </span>
                                             </div>
-
-                                            {!item.attached ? (
+                                            {!item.attached && (
                                                 <button
-                                                    onClick={() => handleDocumentUpload(item.type)}
-                                                    className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+                                                    onClick={() => {
+                                                        setSelectedDocType(item.type);
+                                                        setUploadModalOpen(true);
+                                                    }}
+                                                    className="flex items-center gap-1 px-3 py-1 text-xs font-medium text-white transition-colors bg-blue-600 rounded hover:bg-blue-700"
                                                 >
-                                                    <Upload className="w-4 h-4" />
+                                                    <Upload className="w-3 h-3" />
                                                     Upload
-                                                </button>
-                                            ) : (
-                                                <button className="flex items-center gap-2 px-3 py-1.5 text-sm font-medium transition-colors bg-emerald-100 text-emerald-700 rounded-lg hover:bg-emerald-200">
-                                                    <Eye className="w-4 h-4" />
-                                                    Ver
                                                 </button>
                                             )}
                                         </div>
@@ -238,123 +385,74 @@ export default function Show({ shipment, progress, checklist, canAdvance }) {
                                 </div>
                             ) : (
                                 <div className="py-8 text-center">
-                                    <Package className="w-12 h-12 mx-auto mb-3 text-slate-300" />
+                                    <CheckCircle2 className="w-12 h-12 mx-auto mb-3 text-emerald-500" />
                                     <p className="text-sm text-slate-500">
-                                        Nenhum documento pendente nesta fase
+                                        Todos os documentos anexados!
                                     </p>
                                 </div>
                             )}
                         </div>
 
-                        {/* Botão Avançar */}
-                        <div className="p-6 bg-white border rounded-xl border-slate-200">
-                            <h3 className="mb-4 text-lg font-semibold text-slate-900">
-                                Ações Disponíveis
-                            </h3>
-
-                            {canAdvance ? (
-                                <button
-                                    onClick={handleAdvance}
-                                    className="w-full px-4 py-3 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
-                                >
-                                    Avançar para Fase {progress.current_phase + 1}
-                                </button>
-                            ) : (
-                                <div className="p-4 border rounded-lg bg-amber-50 border-amber-200">
-                                    <div className="flex gap-3">
-                                        <AlertCircle className="flex-shrink-0 w-5 h-5 text-amber-600" />
-                                        <div>
-                                            <p className="text-sm font-medium text-amber-900">
-                                                Documentos Pendentes
-                                            </p>
-                                            <p className="mt-1 text-xs text-amber-700">
-                                                Complete o checklist para avançar.
-                                            </p>
-                                        </div>
-                                    </div>
+                        {/* Fases Ativas */}
+                        {activePhasesList.length > 1 && (
+                            <div className="p-6 border border-blue-200 rounded-lg bg-blue-50">
+                                <div className="flex items-center gap-2 mb-3">
+                                    <Info className="w-5 h-5 text-blue-600" />
+                                    <h3 className="text-sm font-semibold text-blue-900">
+                                        Fases em Paralelo
+                                    </h3>
                                 </div>
-                            )}
-                        </div>
-                    </div>
-
-                    {/* Sidebar */}
-                    <div className="space-y-6">
-                        {/* Atividades Recentes */}
-                        <div className="p-6 bg-white border rounded-xl border-slate-200">
-                            <h3 className="mb-4 text-lg font-semibold text-slate-900">
-                                Atividades Recentes
-                            </h3>
-                            <div className="space-y-3">
-                                {shipment.activities && shipment.activities.length > 0 ? (
-                                    shipment.activities.map((activity) => (
-                                        <div key={activity.id} className="flex gap-3">
-                                            <div className="flex-shrink-0 w-2 h-2 mt-2 bg-blue-600 rounded-full" />
-                                            <div>
-                                                <p className="text-sm text-slate-900">
-                                                    {activity.description}
-                                                </p>
-                                                <p className="text-xs text-slate-500">
-                                                    {activity.created_at}
-                                                </p>
-                                            </div>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-center text-slate-500">
-                                        Nenhuma atividade registrada
-                                    </p>
-                                )}
-                            </div>
-                        </div>
-
-                        {/* Documentos Anexados */}
-                        <div className="p-6 bg-white border rounded-xl border-slate-200">
-                            <h3 className="mb-4 text-lg font-semibold text-slate-900">
-                                Documentos Anexados
-                            </h3>
-                            <div className="space-y-2">
-                                {shipment.documents && shipment.documents.length > 0 ? (
-                                    shipment.documents.map((doc) => (
-                                        <div
-                                            key={doc.id}
-                                            className="flex items-center justify-between p-3 border rounded-lg border-slate-200"
+                                <div className="space-y-2">
+                                    {activePhasesList.map(phaseId => (
+                                        <button
+                                            key={phaseId}
+                                            onClick={() => setSelectedPhase(phaseId)}
+                                            className={`
+                                                w-full p-3 rounded-lg text-left transition-colors
+                                                ${selectedPhase === phaseId
+                                                    ? 'bg-blue-600 text-white'
+                                                    : 'bg-white text-slate-900 hover:bg-blue-100'
+                                                }
+                                            `}
                                         >
-                                            <div className="flex items-center gap-2">
-                                                <FileText className="w-4 h-4 text-slate-500" />
-                                                <span className="text-sm truncate text-slate-700">
-                                                    {doc.name}
+                                            <div className="flex items-center justify-between">
+                                                <span className="text-sm font-medium">
+                                                    Fase {phaseId}: {phases.find(p => p.id === phaseId)?.title}
+                                                </span>
+                                                <span className="text-xs">
+                                                    {Math.round(phaseProgress[phaseId].progress)}%
                                                 </span>
                                             </div>
-                                            <a
-                                                href={`/documents/${doc.id}/download`}
-                                                className="p-1 transition-colors rounded hover:bg-slate-100"
-                                            >
-                                                <Download className="w-4 h-4 text-slate-600" />
-                                            </a>
-                                        </div>
-                                    ))
-                                ) : (
-                                    <p className="text-sm text-center text-slate-500">
-                                        Nenhum documento anexado
-                                    </p>
-                                )}
+                                        </button>
+                                    ))}
+                                </div>
                             </div>
-                        </div>
+                        )}
                     </div>
                 </div>
             </div>
 
-            {/* Upload Modal */}
-            {uploadModalOpen && selectedDocType && (
+            {/* Modal de Upload */}
+            {uploadModalOpen && (
                 <UploadModal
                     shipment={shipment}
                     docType={selectedDocType}
-                    currentStage={currentStage}
+                    phase={selectedPhase}
                     onClose={() => {
                         setUploadModalOpen(false);
                         setSelectedDocType(null);
-                        router.reload({ only: ['shipment', 'checklist'] });
                     }}
+                />
+            )}
+
+            {/* Modal de Força */}
+            {forceModalOpen && (
+                <ForceAdvanceModal
+                    phase={selectedPhase}
+                    phaseName={phases.find(p => p.id === selectedPhase)?.title}
+                    warnings={currentPhaseData.warnings}
+                    onConfirm={(reason) => handleStartPhase(selectedPhase, true, reason)}
+                    onClose={() => setForceModalOpen(false)}
                 />
             )}
         </DashboardLayout>
@@ -374,108 +472,169 @@ function InfoItem({ label, value }) {
 }
 
 // ========================================
-// COMPONENTE: UploadModal
+// COMPONENTE: Upload Modal
 // ========================================
-function UploadModal({ shipment, docType, currentStage, onClose }) {
+function UploadModal({ shipment, docType, phase, onClose }) {
     const [file, setFile] = useState(null);
     const [notes, setNotes] = useState('');
-    const [processing, setProcessing] = useState(false);
-    const [errors, setErrors] = useState({});
+    const [uploading, setUploading] = useState(false);
 
-    const handleSubmit = (e) => {
-        e.preventDefault();
-
+    const handleSubmit = () => {
         if (!file) {
             alert('Selecione um arquivo');
             return;
         }
 
-        setProcessing(true);
-        setErrors({});
+        setUploading(true);
 
         const formData = new FormData();
         formData.append('file', file);
         formData.append('type', docType);
-        formData.append('stage', currentStage);
+        formData.append('phase', phase);
         formData.append('notes', notes);
 
-        router.post(`/shipments/${shipment.id}/documents`, formData, {
-            forceFormData: true,
+        router.post(`/shipments/${shipment.id}/upload-document`, formData, {
             preserveScroll: true,
-            onSuccess: () => {
-                setProcessing(false);
-                onClose();
-            },
-            onError: (errors) => {
-                setErrors(errors);
-                setProcessing(false);
-            }
+            onSuccess: () => onClose(),
+            onFinish: () => setUploading(false),
         });
     };
 
     return (
         <div
-            className="fixed inset-0 z-50 flex items-center justify-center bg-black/50"
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
             onClick={onClose}
         >
             <div
-                className="w-full max-w-md p-6 bg-white rounded-lg shadow-xl"
+                className="w-full max-w-lg bg-white rounded-lg shadow-2xl"
                 onClick={(e) => e.stopPropagation()}
             >
-                <div className="flex items-center justify-between mb-4">
-                    <h3 className="text-lg font-semibold text-slate-900">
-                        Upload de Documento
-                    </h3>
-                    <button onClick={onClose} className="text-slate-400 hover:text-slate-600">
-                        ✕
+                <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                    <div>
+                        <h2 className="text-xl font-bold text-slate-900">Upload de Documento</h2>
+                        <p className="mt-1 text-sm text-slate-600">Tipo: {docType}</p>
+                    </div>
+                    <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
+                        <X className="w-5 h-5" />
                     </button>
                 </div>
 
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <div className="p-6 space-y-4">
                     <div>
-                        <label className="block mb-2 text-sm font-medium text-slate-700">
-                            Arquivo *
+                        <label className="block mb-2 text-sm font-medium text-slate-900">
+                            Selecionar Arquivo
                         </label>
                         <input
                             type="file"
                             onChange={(e) => setFile(e.target.files[0])}
-                            className="w-full px-3 py-2 text-sm border rounded-lg"
-                            accept=".pdf,.jpg,.jpeg,.png"
-                            required
+                            className="w-full px-4 py-2 border rounded-lg border-slate-300"
+                            accept=".pdf,.jpg,.jpeg,.png,.doc,.docx"
                         />
-                        {errors.file && <p className="mt-1 text-xs text-red-600">{errors.file}</p>}
                     </div>
 
                     <div>
-                        <label className="block mb-2 text-sm font-medium text-slate-700">
+                        <label className="block mb-2 text-sm font-medium text-slate-900">
                             Observações
                         </label>
                         <textarea
                             value={notes}
                             onChange={(e) => setNotes(e.target.value)}
-                            className="w-full px-3 py-2 text-sm border rounded-lg"
-                            rows="3"
+                            rows={3}
+                            className="w-full px-4 py-2 border rounded-lg border-slate-300"
+                            placeholder="Adicione observações..."
                         />
                     </div>
+                </div>
 
-                    <div className="flex gap-3">
-                        <button
-                            type="button"
-                            onClick={onClose}
-                            disabled={processing}
-                            className="flex-1 px-4 py-2 text-sm font-medium border rounded-lg text-slate-700"
-                        >
-                            Cancelar
-                        </button>
-                        <button
-                            type="submit"
-                            disabled={processing || !file}
-                            className="flex-1 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
-                        >
-                            {processing ? 'Enviando...' : 'Upload'}
-                        </button>
+                <div className="flex gap-3 p-6 border-t border-slate-200">
+                    <button
+                        onClick={onClose}
+                        disabled={uploading}
+                        className="flex-1 px-4 py-2 border rounded-lg border-slate-300 text-slate-700 hover:bg-slate-50"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={!file || uploading}
+                        className="flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50"
+                    >
+                        {uploading ? 'Enviando...' : 'Enviar'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+// ========================================
+// COMPONENTE: Force Advance Modal
+// ========================================
+function ForceAdvanceModal({ phase, phaseName, warnings, onConfirm, onClose }) {
+    const [reason, setReason] = useState('');
+
+    return (
+        <div
+            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm"
+            onClick={onClose}
+        >
+            <div
+                className="w-full max-w-lg bg-white rounded-lg shadow-2xl"
+                onClick={(e) => e.stopPropagation()}
+            >
+                <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                    <div className="flex items-center gap-3">
+                        <AlertTriangle className="w-6 h-6 text-amber-600" />
+                        <h2 className="text-xl font-bold text-slate-900">Forçar Início de Fase</h2>
                     </div>
-                </form>
+                    <button onClick={onClose} className="p-2 rounded-lg hover:bg-slate-100">
+                        <X className="w-5 h-5" />
+                    </button>
+                </div>
+
+                <div className="p-6 space-y-4">
+                    <div className="p-4 border rounded-lg bg-amber-50 border-amber-200">
+                        <p className="mb-2 text-sm font-medium text-amber-900">
+                            Avisos que serão ignorados:
+                        </p>
+                        <ul className="space-y-1">
+                            {warnings.map((warning, idx) => (
+                                <li key={idx} className="text-xs text-amber-800">
+                                    • {warning}
+                                </li>
+                            ))}
+                        </ul>
+                    </div>
+
+                    <div>
+                        <label className="block mb-2 text-sm font-medium text-slate-900">
+                            Justificativa (obrigatória)
+                        </label>
+                        <textarea
+                            value={reason}
+                            onChange={(e) => setReason(e.target.value)}
+                            rows={4}
+                            className="w-full px-4 py-2 border rounded-lg border-slate-300"
+                            placeholder="Por que você está forçando o avanço desta fase?"
+                        />
+                    </div>
+                </div>
+
+                <div className="flex gap-3 p-6 border-t border-slate-200">
+                    <button
+                        onClick={onClose}
+                        className="flex-1 px-4 py-2 border rounded-lg border-slate-300 text-slate-700 hover:bg-slate-50"
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={() => onConfirm(reason)}
+                        disabled={!reason.trim()}
+                        className="flex-1 px-4 py-2 text-white rounded-lg bg-amber-600 hover:bg-amber-700 disabled:opacity-50"
+                    >
+                        Confirmar e Iniciar
+                    </button>
+                </div>
             </div>
         </div>
     );
