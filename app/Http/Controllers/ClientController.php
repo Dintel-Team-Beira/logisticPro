@@ -14,9 +14,6 @@ class ClientController extends Controller
     /**
      * Display a listing of clients.
      */
-    /**
-     * Display a listing of clients.
-     */
     public function index(Request $request)
     {
         $query = Client::query()
