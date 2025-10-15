@@ -18,6 +18,39 @@ use Illuminate\Support\Facades\Log;
  */
 class PaymentRequestController extends Controller
 {
+    public function approvalsDashboard()
+{
+    $pendingRequests = PaymentRequest::with([
+        'shipment',
+        'requested_by_user',
+        'quotation_document'
+    ])
+    ->where('status', 'pending')
+    ->latest()
+    ->get();
+
+    $stats = [
+        'pending_count' => $pendingRequests->count(),
+        'total_pending_amount' => $pendingRequests->sum('amount'),
+        'approved_today' => PaymentRequest::where('status', 'approved')
+            ->whereDate('approved_at', today())
+            ->count(),
+        'average_amount' => $pendingRequests->avg('amount') ?? 0,
+        'urgent_count' => $pendingRequests->filter(function($req) {
+            return $req->created_at->diffInDays(now()) > 2;
+        })->count(),
+    ];
+
+    // Adicionar days_pending em cada request
+    $pendingRequests->each(function($request) {
+        $request->days_pending = $request->created_at->diffInDays(now());
+    });
+
+    return inertia('Approvals/Dashboard', [
+        'pendingRequests' => $pendingRequests,
+        'stats' => $stats,
+    ]);
+}
     // ========================================
     // VISUALIZAÇÕES
     // ========================================
