@@ -517,7 +517,15 @@ export default function Create() {
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-
+{/*
+<Input
+                                        label="Porto de Origem"
+                                        icon={MapPin}
+                                        value={data.origin_port}
+                                        onChange={(e) => setData('origin_port', e.target.value)}
+                                        error={errors.origin_port}
+                                        placeholder="Ex: QINGDAO, CHINA"
+                                    /> */}
                                     <Select
                                     label="Porto de Origem"
                                      options={originPorts}
