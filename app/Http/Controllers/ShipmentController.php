@@ -65,21 +65,22 @@ class ShipmentController extends Controller
      */
     public function store(Request $request)
     {
+
         Log::info('ShipmentController@store - Iniciando', [
             'data' => $request->except('bl_file')
-        ]);
+            ]);
 
-        DB::beginTransaction();
+            DB::beginTransaction();
 
-        try {
-            // 1. Validação
-            $validated = $request->validate([
-                'client_id' => 'required|exists:clients,id',
-                'shipping_line_id' => 'required|exists:shipping_lines,id',
-                'bl_number' => 'required|string|unique:shipments',
-                'bl_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-                'container_number' => 'required|string',
-                'container_type' => 'nullable|string',
+            try {
+                // 1. Validação
+                $validated = $request->validate([
+                    'client_id' => 'required|exists:clients,id',
+                    'shipping_line_id' => 'required|exists:shipping_lines,id',
+                    'bl_number' => 'required|string|unique:shipments',
+                    'bl_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+                    'container_number' => 'required|string',
+                    'container_type' => 'nullable|string',
                 'vessel_name' => 'nullable|string',
                 'arrival_date' => 'nullable|date',
                 'origin_port' => 'nullable|string',
@@ -90,22 +91,23 @@ class ShipmentController extends Controller
                 'cargo_value' => 'nullable|numeric',
                 'has_tax_exemption' => 'boolean',
                 'is_reexport' => 'boolean',
-            ]);
+                ]);
 
-            Log::info('Validação passou');
+                Log::info('Validação passou');
 
-            // 2. Gerar número de referência
-            $referenceNumber = 'ALEK-' . date('Y') . '-' . str_pad(
-                Shipment::whereYear('created_at', date('Y'))->count() + 1,
-                4,
-                '0',
-                STR_PAD_LEFT
-            );
+                // 2. Gerar número de referência
+                $referenceNumber = 'ALEK-' . date('Y') . '-' . str_pad(
+                    Shipment::whereYear('created_at', date('Y'))->count() + 1,
+                    4,
+                    '0',
+                    STR_PAD_LEFT
+                );
 
-            Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
+                Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
 
-            // 3. Criar shipment
-            $shipment = Shipment::create([
+                dd($validated);
+                // 3. Criar shipment
+                $shipment = Shipment::create([
                 'reference_number' => $referenceNumber,
                 'client_id' => $validated['client_id'],
                 'shipping_line_id' => $validated['shipping_line_id'],
@@ -124,10 +126,10 @@ class ShipmentController extends Controller
                 'is_reexport' => $validated['is_reexport'] ?? false,
                 'status' => 'active',
                 'created_by' => auth()->id(),
-            ]);
+                ]);
 
-            Log::info('Shipment criado', ['id' => $shipment->id]);
-
+                Log::info('Shipment criado', ['id' => $shipment->id]);
+//    dd("sfklbsfkj");
             // 4. Upload BL
             $blFile = $request->file('bl_file');
             $blPath = $blFile->store("documents/shipments/{$shipment->id}/bl", 'public');
