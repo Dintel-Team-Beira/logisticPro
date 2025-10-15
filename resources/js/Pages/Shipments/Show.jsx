@@ -4,8 +4,9 @@ import DashboardLayout from '@/Layouts/DashboardLayout';
 import {
     ArrowLeft, Ship, FileText, CheckCircle2, Clock, Upload,
     X, Check, AlertCircle, Eye, Download, Trash2, Play,
-    Pause, AlertTriangle, Info, ChevronDown, ChevronUp
+    Pause, AlertTriangle, Info, ChevronDown, ChevronUp,DollarSign
 } from 'lucide-react';
+import { PaymentRequestModal } from './PaymentRequestModal';
 
 export default function Show({ shipment, phaseProgress, activePhases, overallProgress, canForceAdvance }) {
     const [selectedPhase, setSelectedPhase] = useState(activePhases[0] || 1);
@@ -13,6 +14,8 @@ export default function Show({ shipment, phaseProgress, activePhases, overallPro
     const [selectedDocType, setSelectedDocType] = useState(null);
     const [forceModalOpen, setForceModalOpen] = useState(false);
     const [expandedWarnings, setExpandedWarnings] = useState({});
+
+    const [paymentRequestModalOpen, setPaymentRequestModalOpen] = useState(false);
 
     const phases = [
         { id: 1, title: 'Coleta Dispersa', icon: Ship, color: 'blue' },
@@ -249,6 +252,22 @@ export default function Show({ shipment, phaseProgress, activePhases, overallPro
 
                             {/* Ações da Fase */}
                             <div className="flex gap-3">
+
+
+
+        {(currentPhaseData.status === 'pending' || currentPhaseData.status === 'active') && (
+            <button
+                onClick={() => setPaymentRequestModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 font-medium text-blue-700 transition-colors bg-blue-100 rounded-lg hover:bg-blue-200"
+            >
+                <DollarSign className="w-4 h-4" />
+                Solicitar Orçamento
+            </button>
+        )}
+
+
+
+
                                 {currentPhaseData.status === 'pending' && (
                                     <>
                                         {currentPhaseData.can_start ? (
@@ -278,9 +297,14 @@ export default function Show({ shipment, phaseProgress, activePhases, overallPro
                                                     </button>
                                                 )}
                                             </>
-                                        )}
+                                        )
+
+                                        }
                                     </>
                                 )}
+
+
+
 
                                 {currentPhaseData.status === 'in_progress' && (
                                     <>
@@ -455,6 +479,16 @@ export default function Show({ shipment, phaseProgress, activePhases, overallPro
                     onClose={() => setForceModalOpen(false)}
                 />
             )}
+
+            {/* MODAL DE SOLICITAÇÃO DE ORÇAMENTO */}
+{paymentRequestModalOpen && (
+    <PaymentRequestModal
+        shipment={shipment}
+        phase={selectedPhase}
+        phaseName={phases.find(p => p.id === selectedPhase)?.title}
+        onClose={() => setPaymentRequestModalOpen(false)}
+    />
+)}
         </DashboardLayout>
     );
 }
