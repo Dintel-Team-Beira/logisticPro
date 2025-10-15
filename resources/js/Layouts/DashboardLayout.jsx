@@ -29,7 +29,7 @@ import {
 
 export default function DashboardLayout({ children }) {
     const { auth, flash, notifications,stats } = usePage().props;
-    console.log("stats",stats);
+    // console.log("stats",stats);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -108,13 +108,13 @@ export default function DashboardLayout({ children }) {
             roles: ['admin', 'manager', 'operator', 'viewer'],
             badge: null
         },
-        {
-            name: 'Finanças',
-            icon: DollarSign,
-            href: '/invoices',
-            roles: ['admin', 'manager'],
-            badge: '3'
-        },
+        // {
+        //     name: 'Finanças',
+        //     icon: DollarSign,
+        //     href: '/invoices',
+        //     roles: ['admin', 'manager'],
+        //     badge: '3'
+        // },
         {
             name: 'Relatórios',
             icon: BarChart3,
@@ -683,7 +683,7 @@ function ProfileDropdown({ auth, onClose }) {
                 </div>
             </div>
             <div className="p-2">
-                <Link href="/profile">
+                <Link href="/settings">
                     <motion.button
                         whileHover={{ x: 4 }}
                         className="w-full flex items-center gap-3 px-4 py-2.5 rounded-lg hover:bg-gray-50 transition-colors text-left"
