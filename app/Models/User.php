@@ -200,6 +200,13 @@ class User extends Authenticatable
 
         return $departments[$this->department] ?? $this->department ?? 'N/A';
     }
+ /**
+     * Verifica se o usuário é administrador.
+     */
+    public function HasRole(): bool
+    {
+        return $this->role === 'admin';
+    }
 
     /**
      * Obter nome da role formatado
