@@ -158,25 +158,32 @@ Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.
 // ============================================================================
 // GESTÃO - APROVAÇÕES PENDENTES (Para Gestores)
 // ============================================================================
-Route::middleware(['auth', 'can:approve_payment_request'])
-    ->prefix('approvals')
-    ->name('approvals.')
-    ->group(function () {
 
-        /**
-         * Dashboard de Aprovações
-         * Lista todas solicitações pendentes
-         */
-        Route::get('/', [PaymentRequestController::class, 'approvalsDashboard'])
-            ->name('dashboard');
+Route::middleware(['auth'])->group(function () {
 
-        /**
+    // Solicitações de Pagamento
+    Route::prefix('payment-requests')->name('payment-requests.')->group(function () {
+        Route::post('/{shipment}', [PaymentRequestController::class, 'store'])
+            ->name('store');
+        Route::post('/{paymentRequest}/approve', [PaymentRequestController::class, 'approve'])
+            ->name('approve');
+        Route::post('/{paymentRequest}/reject', [PaymentRequestController::class, 'reject'])
+            ->name('reject');
+    });
+
+    // Aprovações (para gestores)
+    Route::get('/approvals', [PaymentRequestController::class, 'approvalsDashboard'])
+        ->name('approvals.dashboard');
+        // ->middleware('can:approve_payment_request'); // ou verificação de role
+
+                /**
          * Aprovação em Lote
          * Aprovar múltiplas solicitações de uma vez
          */
         Route::post('/batch-approve', [PaymentRequestController::class, 'batchApprove'])
             ->name('batch-approve');
-    });
+});
+
 
 // ============================================================================
 // NOTIFICAÇÕES - Sistema de Notificações
