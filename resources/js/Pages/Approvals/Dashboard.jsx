@@ -227,7 +227,7 @@ function RequestCard({ request, onApprove, onReject, formatCurrency, formatDate 
                 <InfoItem
                     icon={User}
                     label="Solicitado por"
-                    value={request.requested_by_user.name}
+                    value={request.requester.name}
                 />
                 <InfoItem
                     icon={Calendar}
