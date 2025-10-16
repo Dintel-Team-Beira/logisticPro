@@ -29,7 +29,7 @@ import {
 
 export default function DashboardLayout({ children }) {
     const { auth, flash, notifications,stats } = usePage().props;
-    // console.log("stats",stats);
+    console.log("stats",stats);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
