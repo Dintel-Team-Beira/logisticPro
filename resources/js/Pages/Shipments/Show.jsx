@@ -14,7 +14,7 @@ export default function Show({ shipment, phaseProgress, activePhases, overallPro
     const [selectedDocType, setSelectedDocType] = useState(null);
     const [forceModalOpen, setForceModalOpen] = useState(false);
     const [expandedWarnings, setExpandedWarnings] = useState({});
-
+    const phasesRequiringPayment = [1, 2, 3, 4, 5];
     const [paymentRequestModalOpen, setPaymentRequestModalOpen] = useState(false);
 
     const phases = [
@@ -253,7 +253,7 @@ export default function Show({ shipment, phaseProgress, activePhases, overallPro
                             {/* Ações da Fase */}
                             <div className="flex gap-3">
 
-
+{/*
 
         {(currentPhaseData.status === 'pending' || currentPhaseData.status === 'active') && (
             <button
@@ -263,8 +263,20 @@ export default function Show({ shipment, phaseProgress, activePhases, overallPro
                 <DollarSign className="w-4 h-4" />
                 Solicitar Orçamento
             </button>
-        )}
+        )} */}
 
+
+
+{(currentPhaseData.status === 'pending' || currentPhaseData.status === 'active') &&
+ phasesRequiringPayment.includes(selectedPhase) && (
+ <button
+                onClick={() => setPaymentRequestModalOpen(true)}
+                className="flex items-center gap-2 px-4 py-2 font-medium text-blue-700 transition-colors bg-blue-100 rounded-lg hover:bg-blue-200"
+            >
+        <DollarSign className="w-4 h-4" />
+        Solicitar Orçamento
+    </button>
+)}
 
 
 
