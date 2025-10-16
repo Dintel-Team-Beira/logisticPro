@@ -19,38 +19,38 @@ use Illuminate\Support\Facades\Log;
 class PaymentRequestController extends Controller
 {
     public function approvalsDashboard()
-{
-    $pendingRequests = PaymentRequest::with([
-        'shipment',
-        'requested_by_user',
-        'quotation_document'
-    ])
-    ->where('status', 'pending')
-    ->latest()
-    ->get();
+    {
+        $pendingRequests = PaymentRequest::with([
+            'shipment',
+            'requester',
+            'quotationDocument'
+        ])
+            ->where('status', 'pending')
+            ->latest()
+            ->get();
 
-    $stats = [
-        'pending_count' => $pendingRequests->count(),
-        'total_pending_amount' => $pendingRequests->sum('amount'),
-        'approved_today' => PaymentRequest::where('status', 'approved')
-            ->whereDate('approved_at', today())
-            ->count(),
-        'average_amount' => $pendingRequests->avg('amount') ?? 0,
-        'urgent_count' => $pendingRequests->filter(function($req) {
-            return $req->created_at->diffInDays(now()) > 2;
-        })->count(),
-    ];
+        $stats = [
+            'pending_count' => $pendingRequests->count(),
+            'total_pending_amount' => $pendingRequests->sum('amount'),
+            'approved_today' => PaymentRequest::where('status', 'approved')
+                ->whereDate('approved_at', today())
+                ->count(),
+            'average_amount' => $pendingRequests->avg('amount') ?? 0,
+            'urgent_count' => $pendingRequests->filter(function ($req) {
+                return $req->created_at->diffInDays(now()) > 2;
+            })->count(),
+        ];
 
-    // Adicionar days_pending em cada request
-    $pendingRequests->each(function($request) {
-        $request->days_pending = $request->created_at->diffInDays(now());
-    });
+        // Adicionar days_pending em cada request
+        $pendingRequests->each(function ($request) {
+            $request->days_pending = $request->created_at->diffInDays(now());
+        });
 
-    return inertia('Approvals/Dashboard', [
-        'pendingRequests' => $pendingRequests,
-        'stats' => $stats,
-    ]);
-}
+        return inertia::render('Approvals/Dashboard', [
+            'pendingRequests' => $pendingRequests,
+            'stats' => $stats,
+        ]);
+    }
     // ========================================
     // VISUALIZAÇÕES
     // ========================================
@@ -76,10 +76,10 @@ class PaymentRequestController extends Controller
             'requester',
             'quotationDocument'
         ])
-        ->awaitingFinance()
-        ->latest()
-        ->take(10)
-        ->get();
+            ->awaitingFinance()
+            ->latest()
+            ->take(10)
+            ->get();
 
         return Inertia::render('Finance/Dashboard', [
             'stats' => $stats,
@@ -98,7 +98,7 @@ class PaymentRequestController extends Controller
             'requester',
             'quotationDocument'
         ])
-        ->whereIn('status', ['approved', 'in_payment']);
+            ->whereIn('status', ['approved', 'in_payment']);
 
         // Filtros
         if ($request->has('phase')) {
@@ -106,9 +106,9 @@ class PaymentRequestController extends Controller
         }
 
         if ($request->has('search')) {
-            $query->whereHas('shipment', function($q) use ($request) {
+            $query->whereHas('shipment', function ($q) use ($request) {
                 $q->where('reference_number', 'like', "%{$request->search}%")
-                  ->orWhere('bl_number', 'like', "%{$request->search}%");
+                    ->orWhere('bl_number', 'like', "%{$request->search}%");
             });
         }
 
@@ -132,7 +132,7 @@ class PaymentRequestController extends Controller
             'paymentProof',
             'receiptDocument'
         ])
-        ->paid();
+            ->paid();
 
         if ($request->has('date_from')) {
             $query->whereDate('paid_at', '>=', $request->date_from);
@@ -208,7 +208,6 @@ class PaymentRequestController extends Controller
             // TODO: Implementar notificação
 
             return back()->with('success', 'Solicitação de pagamento enviada para aprovação!');
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao criar solicitação de pagamento', [
@@ -324,10 +323,13 @@ class PaymentRequestController extends Controller
             // 2. Confirmar pagamento
             $paymentRequest->confirmPayment($proofDoc->id);
 
+
+            // 🆕 3. ATUALIZAR O SHIPMENT (NOVO!)
+            $this->updateShipmentAfterPayment($paymentRequest);
+
             DB::commit();
 
             return back()->with('success', 'Pagamento confirmado! Operações foi notificado.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors([
@@ -336,6 +338,33 @@ class PaymentRequestController extends Controller
         }
     }
 
+
+    /**
+ * 🆕 Atualizar shipment após confirmação de pagamento
+ */
+protected function updateShipmentAfterPayment(PaymentRequest $paymentRequest)
+{
+    $shipment = $paymentRequest->shipment;
+    $phase = $paymentRequest->phase;
+
+    // Mapear fase → status do shipment
+    $statusMap = [
+        1 => 'shipping_paid',           // Coleta Dispersa
+        2 => 'legalization_paid',       // Legalização
+        3 => 'customs_paid',            // Alfândegas
+        4 => 'cornelder_paid',          // Cornelder
+        5 => 'taxation_paid',           // Taxação
+    ];
+
+    if (isset($statusMap[$phase])) {
+        $shipment->update([
+            'status' => $statusMap[$phase],
+        ]);
+
+        // Opcionalmente, completar a fase automaticamente
+        // $this->completePhaseIfReady($shipment, $phase);
+    }
+}
     /**
      * Anexar recibo do fornecedor (Operações)
      */
@@ -370,7 +399,6 @@ class PaymentRequestController extends Controller
             DB::commit();
 
             return back()->with('success', 'Recibo anexado! Ciclo de pagamento completo.');
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors([
