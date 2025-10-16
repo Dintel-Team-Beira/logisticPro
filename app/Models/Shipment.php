@@ -157,16 +157,24 @@ class Shipment extends Model
     // MÉTODOS DE PROGRESSO POR FASE (PÚBLICOS)
     // ========================================
 
-    public function getPhase1Progress(): float
-    {
-        $steps = [
-            $this->quotation_status === 'requested' ? 25 : 0,
-            $this->quotation_status === 'received' ? 25 : 0,
-            $this->payment_status === 'paid' ? 25 : 0,
-            $this->documents()->where('type', 'receipt')->exists() ? 25 : 0,
-        ];
-        return array_sum($steps);
-    }
+   public function getPhase1Progress(): float
+{
+    $steps = [
+        // BL já anexado na criação
+        $this->documents()->where('type', 'bl')->exists() ? 25 : 0,
+
+        // Cotação solicitada
+        $this->quotation_status === 'requested' ? 25 : 0,
+
+        // Pagamento efetuado
+        $this->payment_status === 'paid' ? 25 : 0,
+
+        // Recibo anexado
+        $this->documents()->where('type', 'receipt')->exists() ? 25 : 0,
+    ];
+
+    return array_sum($steps);
+}
 
     public function getPhase2Progress(): float
     {
