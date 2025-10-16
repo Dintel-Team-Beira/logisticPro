@@ -105,7 +105,7 @@ class ShipmentController extends Controller
 
                 Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
 
-                dd($validated);
+                // dd($validated);
                 // 3. Criar shipment
                 $shipment = Shipment::create([
                 'reference_number' => $referenceNumber,
@@ -333,7 +333,7 @@ class ShipmentController extends Controller
 
             // Se é forçado, verificar permissão
             if ($force) {
-                $isAdmin = auth()->user()->hasRole('admin') ?? auth()->user()->role === 'admin' ?? false;
+                $isAdmin = auth()->user()->hasRole('admin') || auth()->user()->role === 'admin';
                 if (!$isAdmin) {
                     DB::rollBack();
                     return back()->withErrors([
