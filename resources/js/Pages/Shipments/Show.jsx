@@ -20,11 +20,13 @@ import {
     Info,
     ChevronDown,
     ChevronUp,
-    DollarSign
+    DollarSign,
+    XCircle
 } from 'lucide-react'
 import { PaymentRequestModal } from './PaymentRequestModal'
 
 export default function Show ({
+    paymentRequests = [] ,
     shipment,
     phaseProgress,
     activePhases,
@@ -37,9 +39,24 @@ export default function Show ({
     const [forceModalOpen, setForceModalOpen] = useState(false)
     const [expandedWarnings, setExpandedWarnings] = useState({})
     const phasesRequiringPayment = [1, 2, 3, 4, 5]
-    const [paymentRequestModalOpen, setPaymentRequestModalOpen] =
-        useState(false)
+    const [paymentRequestModalOpen, setPaymentRequestModalOpen] = useState(false)
 
+    const currentPhaseRequest = paymentRequests?.find(
+    pr => pr.phase === getPhaseKey(selectedPhase)
+)
+
+function getPhaseKey(phaseNumber) {
+    const phases = {
+        1: 'coleta_dispersa',
+        2: 'legalizacao',
+        3: 'alfandegas',
+        4: 'cornelder',
+        5: 'taxacao',
+        6: 'faturacao',
+        7: 'pod'
+    }
+    return phases[phaseNumber]
+}
     const phases = [
         { id: 1, title: 'Coleta Dispersa', icon: Ship, color: 'blue' },
         { id: 2, title: 'Legalização', icon: FileText, color: 'purple' },
@@ -430,7 +447,9 @@ export default function Show ({
                                     </div>
                                 )}
                             </div>
+
                         </div>
+
 
                         {/* Informações do Processo */}
                         <div className='p-6 bg-white border rounded-lg border-slate-200'>
@@ -481,54 +500,75 @@ export default function Show ({
                                 Documentos Necessários
                             </h3>
 
-                            {currentPhaseData.checklist &&
-                            currentPhaseData.checklist.length > 0 ? (
-                                <div className='space-y-3'>
-                                    {currentPhaseData.checklist.map(
-                                        (item, idx) => (
-                                            <div
-                                                key={idx}
-                                                className='flex items-center justify-between p-3 border rounded-lg border-slate-200'
-                                            >
-                                                <div className='flex items-center gap-3'>
-                                                    {item.attached ? (
-                                                        <CheckCircle2 className='flex-shrink-0 w-5 h-5 text-emerald-600' />
-                                                    ) : (
-                                                        <Clock className='flex-shrink-0 w-5 h-5 text-amber-600' />
-                                                    )}
-                                                    <span className='text-sm font-medium text-slate-700'>
-                                                        {item.label}
-                                                    </span>
-                                                </div>
-                                                {!item.attached && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedDocType(
-                                                                item.type
-                                                            )
-                                                            setUploadModalOpen(
-                                                                true
-                                                            )
-                                                        }}
-                                                        className='flex items-center gap-1 px-3 py-1 text-xs font-medium text-white transition-colors bg-blue-600 rounded hover:bg-blue-700'
-                                                    >
-                                                        <Upload className='w-3 h-3' />
-                                                        Upload
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )
-                                    )}
-                                </div>
+                            {currentPhaseRequest?.status === 'approved' || currentPhaseRequest?.status === 'paid' ? (
+        <div className='space-y-3'>
+            {/* Comprovativo de Pagamento */}
+            <DocumentItem
+                label="Comprovativo Pagamento"
+                document={currentPhaseRequest.payment_proof}
+                requestId={currentPhaseRequest.id}
+                type="payment_proof"
+            />
+
+            {/* Recibo */}
+            <DocumentItem
+                label="Recibo"
+                document={currentPhaseRequest.receipt_document}
+                requestId={currentPhaseRequest.id}
+                type="receipt"
+            />
+        </div>
+    ) : currentPhaseRequest?.status === 'rejected' ? (
+        <div className='p-4 mt-4 border border-red-200 rounded-lg bg-red-50'>
+            <p className='mb-2 text-sm font-medium text-red-900'>
+                Motivo da Rejeição:
+            </p>
+            <p className='text-sm text-red-700'>
+                {currentPhaseRequest.rejection_reason}
+            </p>
+        </div>
+    ) : currentPhaseRequest?.status === 'pending' ? (
+        <div className='mt-4 text-sm text-gray-600'>
+            Aguardando aprovação da solicitação
+        </div>
+    ) : (
+        // Checklist original quando NÃO tem payment request
+        currentPhaseData.checklist && currentPhaseData.checklist.length > 0 ? (
+            <div className='space-y-3'>
+                {currentPhaseData.checklist.map((item, idx) => (
+                    <div key={idx} className='flex items-center justify-between p-3 border rounded-lg border-slate-200'>
+                        <div className='flex items-center gap-3'>
+                            {item.attached ? (
+                                <CheckCircle2 className='w-5 h-5 text-emerald-500' />
                             ) : (
-                                <div className='py-8 text-center'>
-                                    <CheckCircle2 className='w-12 h-12 mx-auto mb-3 text-emerald-500' />
-                                    <p className='text-sm text-slate-500'>
-                                        Todos os documentos anexados!
-                                    </p>
-                                </div>
+                                <Clock className='w-5 h-5 text-amber-500' />
                             )}
+                            <span className='text-sm font-medium text-slate-700'>
+                                {item.label}
+                            </span>
                         </div>
+                        {!item.attached && (
+                            <button
+                                onClick={() => {
+                                    setSelectedDocType(item.type)
+                                    setUploadModalOpen(true)
+                                }}
+                                className='flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-blue-600 transition-colors bg-blue-50 rounded-lg hover:bg-blue-100'
+                            >
+                                <Upload className='w-4 h-4' />
+                                Anexar
+                            </button>
+                        )}
+                    </div>
+                ))}
+            </div>
+        ) : (
+            <p className='text-sm text-slate-500'>
+                Nenhum documento necessário para esta fase
+            </p>
+        )
+    )}
+</div>
 
                         {/* Fases Ativas */}
                         {activePhasesList.length > 1 && (
@@ -617,6 +657,9 @@ export default function Show ({
                     onClose={() => setPaymentRequestModalOpen(false)}
                 />
             )}
+
+
+
         </DashboardLayout>
     )
 }
@@ -824,6 +867,91 @@ function ForceAdvanceModal ({ phase, phaseName, warnings, onConfirm, onClose }) 
                     </button>
                 </div>
             </div>
+        </div>
+
+
+
+
+    )
+}
+
+
+// ========================================
+// COMPONENTE: StatusBadge
+// ========================================
+function StatusBadge({ status }) {
+    const config = {
+        pending: { label: 'Aguardando Aprovação', color: 'amber', icon: Clock },
+        approved: { label: 'Aprovado', color: 'emerald', icon: CheckCircle2 },
+        rejected: { label: 'Rejeitado', color: 'red', icon: XCircle },
+        paid: { label: 'Pago', color: 'blue', icon: CheckCircle2 },
+    }
+
+    const { label, color, icon: Icon } = config[status] || config.pending
+
+    return (
+        <div className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg bg-${color}-50 border border-${color}-200`}>
+            <Icon className={`w-4 h-4 text-${color}-600`} />
+            <span className={`text-sm font-medium text-${color}-700`}>{label}</span>
+        </div>
+    )
+}
+
+// ========================================
+// COMPONENTE: DocumentItem
+// ========================================
+function DocumentItem({ label, document, requestId, type }) {
+    const [uploading, setUploading] = useState(false)
+
+    const handleUpload = (e) => {
+        const file = e.target.files[0]
+        if (!file) return
+
+        setUploading(true)
+
+        const formData = new FormData()
+        formData.append(type, file)
+
+        router.post(`/payment-requests/${requestId}/upload-${type.replace('_', '-')}`, formData, {
+            preserveScroll: true,
+            onFinish: () => setUploading(false),
+        })
+    }
+
+    if (document) {
+        return (
+            <div className='flex items-center justify-between p-3 border rounded-lg bg-emerald-50 border-emerald-200'>
+                <div className='flex items-center gap-2'>
+                    <CheckCircle2 className='w-5 h-5 text-emerald-600' />
+                    <span className='text-sm font-medium text-emerald-900'>{label}</span>
+                </div>
+                <a
+                    href={`/payment-requests/${requestId}/download/${type}`}
+                    className='flex items-center gap-1 px-3 py-1 text-sm transition-colors bg-white border rounded-lg border-emerald-300 hover:bg-emerald-50'
+                >
+                    <Download className='w-4 h-4' />
+                    Baixar
+                </a>
+            </div>
+        )
+    }
+
+    return (
+        <div className='flex items-center justify-between p-3 border border-gray-200 rounded-lg bg-gray-50'>
+            <span className='text-sm text-gray-700'>{label}</span>
+            <label className={`flex items-center gap-2 px-3 py-1.5 text-sm text-white transition-colors bg-blue-600 rounded-lg cursor-pointer hover:bg-blue-700 ${
+                uploading ? 'opacity-50 cursor-not-allowed' : ''
+            }`}>
+                <Upload className='w-4 h-4' />
+                {uploading ? 'Enviando...' : 'Anexar'}
+                <input
+                    type='file'
+                    className='hidden'
+                    accept='.pdf,.jpg,.jpeg,.png'
+                    onChange={handleUpload}
+                    disabled={uploading}
+                />
+            </label>
         </div>
     )
 }
