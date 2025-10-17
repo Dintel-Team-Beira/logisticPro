@@ -236,6 +236,7 @@ function RequestCard({ request, onApprove, onReject, formatCurrency, formatDate 
                 />
             </div>
 
+
             {/* Documentos */}
             <div className="mb-4">
                 <h4 className="mb-2 text-sm font-semibold text-slate-700">Documentos Anexados:</h4>
@@ -252,6 +253,29 @@ function RequestCard({ request, onApprove, onReject, formatCurrency, formatDate 
                     )}
                 </div>
             </div>
+
+            {/* 🆕 SEÇÃO DE UPLOAD (quando aprovado) */}
+{request.status === 'approved' && (
+    <div className='p-4 mt-4 space-y-3 border-t border-slate-200'>
+        <h4 className='text-sm font-semibold text-slate-900'>
+            Anexar Documentos
+        </h4>
+
+        <DocumentUploadItemFinance
+            label='Comprovativo de Pagamento'
+            document={request.payment_proof}
+            requestId={request.id}
+            type='payment_proof'
+        />
+
+        <DocumentUploadItemFinance
+            label='Recibo'
+            document={request.receipt_document}
+            requestId={request.id}
+            type='receipt'
+        />
+    </div>
+)}
 
             {/* Ações */}
             <div className="flex gap-3">
@@ -276,6 +300,8 @@ function RequestCard({ request, onApprove, onReject, formatCurrency, formatDate 
                     Ver Processo
                 </Link>
             </div>
+
+
         </div>
     );
 }
@@ -406,9 +432,9 @@ function RejectModal({ request, onClose, formatCurrency }) {
         }
 
         setProcessing(true);
-
+// console.log("equest.id",request.id,"reason",reason);
         router.post(`/payment-requests/${request.id}/reject`, {
-            reason: reason,
+            rejection_reason: reason,
         }, {
             preserveScroll: true,
             onSuccess: () => onClose(),
