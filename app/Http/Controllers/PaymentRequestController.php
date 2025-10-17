@@ -238,6 +238,12 @@ class PaymentRequestController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
+        $paymentRequest->update([
+        'status' => 'approved',
+        'approved_by' => auth()->id(),
+        'approved_at' => now(),
+    ]);
+
         if ($paymentRequest->approve(auth()->id(), $validated['notes'] ?? null)) {
             return back()->with('success', 'Solicitação aprovada! Finanças foi notificado.');
         }
