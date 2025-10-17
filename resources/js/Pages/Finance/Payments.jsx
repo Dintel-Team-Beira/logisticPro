@@ -25,15 +25,16 @@ export default function Payments({ payments, stats, filters }) {
     const [searchTerm, setSearchTerm] = useState(filters?.search || '');
     const [statusFilter, setStatusFilter] = useState(filters?.status || 'all');
     const [dateFilter, setDateFilter] = useState(filters?.date || 'all');
-    const [sortBy, setSortBy] = useState(filters?.sort || 'date_desc');
+    // const [sortBy, setSortBy] = useState(filters?.sort || 'desc');
 
+    // console.log("hello word",filters);
     // Aplicar filtros
     const handleFilter = () => {
         router.get('/finance/payments', {
             search: searchTerm,
             status: statusFilter,
             date: dateFilter,
-            sort: sortBy,
+            // sort: sortBy,
         }, {
             preserveState: true,
             preserveScroll: true,
@@ -45,7 +46,7 @@ export default function Payments({ payments, stats, filters }) {
         setSearchTerm('');
         setStatusFilter('all');
         setDateFilter('all');
-        setSortBy('date_desc');
+        // setSortBy('date_desc');
         router.get('/finance/payments', {}, { preserveState: true });
     };
 
@@ -119,7 +120,7 @@ export default function Payments({ payments, stats, filters }) {
         <DashboardLayout>
             <Head title="Histórico de Pagamentos - Finanças" />
 
-            <div className="p-6 space-y-6">
+    <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
@@ -131,7 +132,7 @@ export default function Payments({ payments, stats, filters }) {
                         </p>
                     </div>
                     <button
-                        onClick={handleExport}
+                        // onClick={handleExport}
                         className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors bg-green-600 rounded-lg hover:bg-green-700"
                     >
                         <Download className="w-4 h-4" />
@@ -143,7 +144,7 @@ export default function Payments({ payments, stats, filters }) {
                 <div className="grid grid-cols-1 gap-6 md:grid-cols-4">
                     <StatCard
                         title="Total Pago"
-                        value={formatCurrency(stats.total_paid)}
+                        value={formatCurrency(stats?.total_paid)}
                         icon={DollarSign}
                         trend="+12.5%"
                         trendUp={true}
@@ -151,7 +152,7 @@ export default function Payments({ payments, stats, filters }) {
                     />
                     <StatCard
                         title="Este Mês"
-                        value={formatCurrency(stats.this_month)}
+                        value={formatCurrency(stats?.this_month)}
                         icon={Calendar}
                         trend="+8.2%"
                         trendUp={true}
@@ -159,14 +160,14 @@ export default function Payments({ payments, stats, filters }) {
                     />
                     <StatCard
                         title="Pagamentos"
-                        value={stats.total_payments}
+                        value={stats?.total_payments}
                         icon={CheckCircle2}
                         subtitle="transações"
                         color="purple"
                     />
                     <StatCard
                         title="Média/Pagamento"
-                        value={formatCurrency(stats.average_payment)}
+                        value={formatCurrency(stats?.average_payment)}
                         icon={TrendingUp}
                         color="amber"
                     />
@@ -174,8 +175,8 @@ export default function Payments({ payments, stats, filters }) {
 
                 {/* Filtros */}
                 <div className="p-6 bg-white border rounded-xl border-slate-200">
-                    <div className="grid grid-cols-1 gap-4 md:grid-cols-5">
-                        {/* Busca */}
+                    <div className="grid grid-cols-1 gap-1 md:grid-cols-4">
+
                         <div className="md:col-span-2">
                             <label className="block mb-2 text-sm font-medium text-slate-700">
                                 Buscar
@@ -192,7 +193,7 @@ export default function Payments({ payments, stats, filters }) {
                             </div>
                         </div>
 
-                        {/* Status */}
+
                         <div>
                             <label className="block mb-2 text-sm font-medium text-slate-700">
                                 Status
@@ -210,7 +211,7 @@ export default function Payments({ payments, stats, filters }) {
                             </select>
                         </div>
 
-                        {/* Período */}
+
                         <div>
                             <label className="block mb-2 text-sm font-medium text-slate-700">
                                 Período
@@ -229,25 +230,9 @@ export default function Payments({ payments, stats, filters }) {
                             </select>
                         </div>
 
-                        {/* Ordenar */}
-                        <div>
-                            <label className="block mb-2 text-sm font-medium text-slate-700">
-                                Ordenar
-                            </label>
-                            <select
-                                value={sortBy}
-                                onChange={(e) => setSortBy(e.target.value)}
-                                className="w-full px-4 py-2 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500"
-                            >
-                                <option value="date_desc">Data (Mais Recente)</option>
-                                <option value="date_asc">Data (Mais Antigo)</option>
-                                <option value="amount_desc">Valor (Maior)</option>
-                                <option value="amount_asc">Valor (Menor)</option>
-                            </select>
-                        </div>
                     </div>
 
-                    {/* Botões de ação */}
+
                     <div className="flex gap-3 mt-4">
                         <button
                             onClick={handleFilter}
@@ -369,7 +354,7 @@ export default function Payments({ payments, stats, filters }) {
                         </table>
                     </div>
 
-                    {/* Paginação */}
+
                     {payments.last_page > 1 && (
                         <div className="flex items-center justify-between px-6 py-4 border-t border-slate-200">
                             <div className="text-sm text-slate-600">
