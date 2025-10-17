@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, usePage, router } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo  from '@/Components/Logo';
+import GlobalSearch from '@/Components/GlobalSearch';
 import {
     Home,
     Package,
@@ -29,12 +30,26 @@ import {
 
 export default function DashboardLayout({ children }) {
     const { auth, flash, notifications,stats } = usePage().props;
-    console.log("stats",stats);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
-    const [searchQuery, setSearchQuery] = useState('');
+     const [searchQuery, setSearchQuery] = useState('');
+      const [searchOpen, setSearchOpen] = useState(false);
+
+
+     // Global Search Shortcut (Ctrl+K / Cmd+K)
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                setSearchQuery(true);
+            }
+        };
+
+        document.addEventListener('keydown', handleKeyDown);
+        return () => document.removeEventListener('keydown', handleKeyDown);
+    }, []);
 
     // Menu items com permissões
     const menuItems = [
@@ -205,6 +220,8 @@ export default function DashboardLayout({ children }) {
                 menuItems={filteredMenu}
                 userRole={auth.user?.role}
             />
+
+
 
             {/* Main Content */}
             <main
