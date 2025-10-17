@@ -74,6 +74,7 @@ export default function PendingRequests({ requests, filters }) {
   return (
     <DashboardLayout>
       <Head title="Solicitações Pendentes - Finanças" />
+   <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
 
       {/* Header */}
       <div className="mb-6">
@@ -307,7 +308,7 @@ export default function PendingRequests({ requests, filters }) {
       {/* Paginação */}
       {requests.links && (
         <div className="flex justify-center gap-2 mt-6">
-          {requests.links.map((link, idx) => (
+          {/* {requests.links.map((link, idx) => (
             <Link
               key={idx}
               href={link.url}
@@ -318,10 +319,10 @@ export default function PendingRequests({ requests, filters }) {
               }`}
               dangerouslySetInnerHTML={{ __html: link.label }}
             />
-          ))}
+          ))} */}
         </div>
       )}
-
+   </div>
       {/* Modal de Confirmação de Pagamento */}
       {showConfirmModal && selectedRequest && (
         <PaymentConfirmModal
@@ -332,6 +333,8 @@ export default function PendingRequests({ requests, filters }) {
           }}
         />
       )}
+
+
     </DashboardLayout>
   );
 }
@@ -361,7 +364,7 @@ function PaymentConfirmModal({ request, onClose }) {
     formData.append('payment_date', paymentDate);
     formData.append('reference', paymentReference);
 
-    router.post(`/finance/payment-requests/${request.id}/confirm-payment`, formData, {
+    router.post(`/payment-requests/${request.id}/confirm-payment`, formData, {
       preserveScroll: true,
       onSuccess: () => {
         onClose();
