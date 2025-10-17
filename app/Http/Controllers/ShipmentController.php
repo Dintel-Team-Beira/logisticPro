@@ -193,9 +193,17 @@ class ShipmentController extends Controller
             'stages' => function($q) {
                 $q->orderBy('id', 'desc');
             },
+
               'paymentRequests' => function($q) {
-            $q->with(['requester', 'approver', 'payer'])
-              ->latest();
+            $q->with([
+                'requester:id,name',
+                'approver:id,name',
+                'payer:id,name',
+                'quotationDocument',      // 🆕 ADICIONAR
+                'paymentProof',            // 🆕 ADICIONAR
+                'receiptDocument'          // 🆕 ADICIONAR
+            ])->latest();
+
         }
         ]);
 
@@ -242,14 +250,30 @@ class ShipmentController extends Controller
                 return $phaseMap[$stage->stage] ?? 1;
             });
 
+        // return Inertia::render('Shipments/Show', [
+        //     'shipment' => $shipment,
+        //     'phaseProgress' => $phaseProgress,
+        //     'activePhases' => $activePhases,
+        //     'overallProgress' => $shipment->real_progress,
+        //     'canForceAdvance' => auth()->user()->role=='admin' ?? false,
+        //      'paymentRequests' => $shipment->paymentRequests,
+        // ]);
+
+
         return Inertia::render('Shipments/Show', [
-            'shipment' => $shipment,
-            'phaseProgress' => $phaseProgress,
+        'shipment' => $shipment->load([
+            'client',
+            'shippingLine',
+            'documents',
+            'stages',
+        ]),
+        'phaseProgress' => $phaseProgress, // se você tiver
             'activePhases' => $activePhases,
             'overallProgress' => $shipment->real_progress,
             'canForceAdvance' => auth()->user()->role=='admin' ?? false,
              'paymentRequests' => $shipment->paymentRequests,
-        ]);
+
+    ]);
     }
 
     /**
