@@ -176,6 +176,17 @@ class Shipment extends Model
     return array_sum($steps);
 }
 
+
+    /**
+     * 🆕 RELACIONAMENTO COM PAYMENT REQUESTS
+     * Todas as solicitações de pagamento deste shipment
+     */
+    public function paymentRequests()
+    {
+        return $this->hasMany(PaymentRequest::class);
+    }
+
+
     public function getPhase2Progress(): float
     {
         $steps = [
