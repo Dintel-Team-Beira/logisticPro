@@ -221,6 +221,7 @@ class PaymentRequest extends Model
         $this->completeShipmentChecklist();
     }
 
+
     // ========================================
     // HELPERS
     // ========================================
