@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Activity;
 use App\Models\PaymentRequest;
 use App\Models\Shipment;
 use App\Models\Document;
@@ -558,4 +559,113 @@ class PaymentRequestController extends Controller
             'description' => "Pagamento confirmado na Fase {$phase}: {$requestType}",
         ]);
     }
+
+
+    public function storeBulk(Request $request, Shipment $shipment)
+{
+    // Validação
+    $validated = $request->validate([
+        'phase' => 'required|integer|between:1,7',
+        'requests' => 'required|array|min:1',
+        'requests.*.expense_type' => 'required|string',
+        'requests.*.payee' => 'required|string',
+        'requests.*.amount' => 'required|numeric|min:0',
+        'requests.*.currency' => 'required|in:MZN,USD,EUR',
+        'requests.*.description' => 'nullable|string',
+        'requests.*.quotation_document' => 'required|file|mimes:pdf,jpg,jpeg,png|max:5120',
+    ]);
+
+    DB::beginTransaction();
+
+    try {
+        $createdRequests = [];
+
+        foreach ($validated['requests'] as $index => $requestData) {
+            // Upload do documento
+            $documentPath = null;
+            if ($request->hasFile("requests.{$index}.quotation_document")) {
+                $file = $request->file("requests.{$index}.quotation_document");
+                $documentPath = $file->store('payment-requests/' . $shipment->id, 'public');
+            }
+
+            // Criar a solicitação de pagamento
+            $paymentRequest = PaymentRequest::create([
+                'shipment_id' => $shipment->id,
+                'phase' => $validated['phase'],
+                'request_type' => $requestData['expense_type'],
+                'payee' => $requestData['payee'],
+                'amount' => $requestData['amount'],
+                'currency' => $requestData['currency'],
+                'description' => $requestData['description'] ?? null,
+                'quotation_document' => $documentPath,
+                'requested_by' => auth()->id(),
+                'status' => 'pending', // Aguardando aprovação
+                'created_at' => now(),
+            ]);
+
+            $createdRequests[] = $paymentRequest;
+
+            // Registrar atividade
+            Activity::create([
+                'shipment_id' => $shipment->id,
+                'user_id' => auth()->id(),
+                'action' => 'payment_request_created',
+                'description' => "Solicitação de pagamento criada: {$requestData['expense_type']} - {$requestData['payee']} ({$requestData['amount']} {$requestData['currency']})",
+            ]);
+        }
+
+        DB::commit();
+
+        // Notificar gestores financeiros
+        $this->notifyFinanceManagers($shipment, $createdRequests);
+
+        return redirect()
+            ->back()
+            ->with('success', count($createdRequests) . ' solicitação(ões) de pagamento enviada(s) para aprovação!');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+
+        Log::error('Erro ao criar solicitações múltiplas de pagamento', [
+            'shipment_id' => $shipment->id,
+            'error' => $e->getMessage(),
+            'trace' => $e->getTraceAsString()
+        ]);
+
+        return redirect()
+            ->back()
+            ->withErrors(['error' => 'Erro ao criar solicitações. Por favor, tente novamente.']);
+    }
+}
+
+/**
+ * Notificar gestores financeiros sobre novas solicitações
+ *
+ * @param Shipment $shipment
+ * @param array $requests
+ * @return void
+ */
+private function notifyFinanceManagers(Shipment $shipment, array $requests)
+{
+    // Buscar usuários com papel de gestor financeiro
+    $financeManagers = User::role('finance_manager')->get();
+
+    $totalAmount = collect($requests)->sum('amount');
+    $requestCount = count($requests);
+
+    foreach ($financeManagers as $manager) {
+        Notification::create([
+            'user_id' => $manager->id,
+            'type' => 'payment_request',
+            'title' => "Nova(s) Solicitação(ões) de Pagamento",
+            'message' => "{$requestCount} solicitação(ões) de pagamento para o processo {$shipment->reference_number} aguardam aprovação.",
+            'data' => json_encode([
+                'shipment_id' => $shipment->id,
+                'request_count' => $requestCount,
+                'total_amount' => $totalAmount,
+            ]),
+        ]);
+    }
+}
+
 }
