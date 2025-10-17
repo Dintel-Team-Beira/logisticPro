@@ -30,6 +30,8 @@ import {
 
 export default function DashboardLayout({ children }) {
     const { auth, flash, notifications,stats } = usePage().props;
+
+    console.log(stats);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
@@ -113,7 +115,7 @@ export default function DashboardLayout({ children }) {
             icon: CheckCircle,
             href: '/approvals',
             roles: ['admin', 'manager'],
-            badge: stats?.pending_approvals || null,
+            badge: stats?.peddingPayment || null,
             badgeColor: 'red',
         },
         {
