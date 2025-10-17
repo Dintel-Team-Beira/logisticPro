@@ -24,7 +24,7 @@ import {
     XCircle
 } from 'lucide-react'
 import { PaymentRequestModal } from './PaymentRequestModal'
-
+import { BulkPaymentRequestModal } from './BulkPaymentRequestModal';
 export default function Show ({
     paymentRequests = [] ,
     shipment,
@@ -40,6 +40,9 @@ export default function Show ({
     const [expandedWarnings, setExpandedWarnings] = useState({})
     const phasesRequiringPayment = [1, 2, 3, 4, 5]
     const [paymentRequestModalOpen, setPaymentRequestModalOpen] = useState(false)
+
+
+    const [bulkPaymentModalOpen, setBulkPaymentModalOpen] = useState(false);
 
     const currentPhaseRequest = paymentRequests?.find(
     pr => pr.phase === getPhaseKey(selectedPhase)
@@ -341,6 +344,25 @@ function getPhaseKey(phaseNumber) {
 
                             {/* Ações da Fase */}
                             <div className='flex gap-3'>
+{selectedPhase === 1 && currentPhaseData.status === 'not_started' && (
+    <button
+        onClick={() => setBulkPaymentModalOpen(true)}
+        className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
+    >
+        <DollarSign className="w-4 h-4" />
+        Solicitar Múltiplos Orçamentos
+    </button>
+)}
+
+{currentPhaseData.show_payment_request && (
+                    <button
+                        onClick={() => setPaymentRequestModalOpen(true)}
+                        className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700"
+                    >
+                        <DollarSign className="w-4 h-4" />
+                        Solicitar Orçamento
+                    </button>
+                )}
 
                                 {(currentPhaseData.status === 'pending' ||
                                     currentPhaseData.status === 'active') &&
@@ -658,6 +680,16 @@ function getPhaseKey(phaseNumber) {
                 />
             )}
 
+
+{/* MODAL DE SOLICITAÇÃO MÚLTIPLA */}
+{bulkPaymentModalOpen && (
+    <BulkPaymentRequestModal
+        shipment={shipment}
+        phase={selectedPhase}
+        phaseName={phases.find(p => p.id === selectedPhase)?.title}
+        onClose={() => setBulkPaymentModalOpen(false)}
+    />
+)}
 
 
         </DashboardLayout>
