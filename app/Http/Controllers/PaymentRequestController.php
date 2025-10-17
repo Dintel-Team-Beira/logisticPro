@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Activity;
 use App\Models\PaymentRequest;
 use App\Models\Shipment;
 use App\Models\Document;
@@ -10,51 +9,17 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Storage;
 
 /**
  * Controller para Gestão de Solicitações de Pagamento
- * Workflow: Operações → Finanças → Operações
+ * Workflow: Operações → Gestor → Finanças → Operações
  *
  * @author Arnaldo Tomo
  */
 class PaymentRequestController extends Controller
 {
-    public function approvalsDashboard()
-    {
-        $pendingRequests = PaymentRequest::with([
-            'shipment',
-            'requester',
-            'quotationDocument'
-        ])
-            ->where('status', 'pending')
-            ->latest()
-            ->get();
-
-        $stats = [
-            'pending_count' => $pendingRequests->count(),
-            'total_pending_amount' => $pendingRequests->sum('amount'),
-            'approved_today' => PaymentRequest::where('status', 'approved')
-                ->whereDate('approved_at', today())
-                ->count(),
-            'average_amount' => $pendingRequests->avg('amount') ?? 0,
-            'urgent_count' => $pendingRequests->filter(function ($req) {
-                return $req->created_at->diffInDays(now()) > 2;
-            })->count(),
-        ];
-
-        // Adicionar days_pending em cada request
-        $pendingRequests->each(function ($request) {
-            $request->days_pending = $request->created_at->diffInDays(now());
-        });
-
-        return inertia::render('Approvals/Dashboard', [
-            'pendingRequests' => $pendingRequests,
-            'stats' => $stats,
-        ]);
-    }
     // ========================================
-    // VISUALIZAÇÕES
+    // DASHBOARDS
     // ========================================
 
     /**
@@ -90,6 +55,47 @@ class PaymentRequestController extends Controller
     }
 
     /**
+     * Dashboard de Aprovações (Para Gestores)
+     */
+    public function approvalsDashboard()
+    {
+        $pendingRequests = PaymentRequest::with([
+            'shipment',
+            'requester',
+            'quotationDocument'
+        ])
+            ->where('status', 'pending')
+            ->latest()
+            ->get();
+
+        $stats = [
+            'pending_count' => $pendingRequests->count(),
+            'total_pending_amount' => $pendingRequests->sum('amount'),
+            'approved_today' => PaymentRequest::where('status', 'approved')
+                ->whereDate('approved_at', today())
+                ->count(),
+            'average_amount' => $pendingRequests->avg('amount') ?? 0,
+            'urgent_count' => $pendingRequests->filter(function ($req) {
+                return $req->created_at->diffInDays(now()) > 2;
+            })->count(),
+        ];
+
+        // Adicionar days_pending em cada request
+        $pendingRequests->each(function ($request) {
+            $request->days_pending = $request->created_at->diffInDays(now());
+        });
+
+        return Inertia::render('Approvals/Dashboard', [
+            'pendingRequests' => $pendingRequests,
+            'stats' => $stats,
+        ]);
+    }
+
+    // ========================================
+    // LISTAGENS
+    // ========================================
+
+    /**
      * Lista de solicitações pendentes (Finanças)
      */
     public function pendingRequests(Request $request)
@@ -123,7 +129,7 @@ class PaymentRequestController extends Controller
     }
 
     /**
-     * Lista de pagamentos realizados (Histórico)
+     * Histórico de Pagamentos
      */
     public function paymentsHistory(Request $request)
     {
@@ -133,7 +139,8 @@ class PaymentRequestController extends Controller
             'payer',
             'paymentProof',
             'receiptDocument'
-        ])->paid();
+        ])
+            ->paid();
 
         if ($request->has('date_from')) {
             $query->whereDate('paid_at', '>=', $request->date_from);
@@ -146,12 +153,129 @@ class PaymentRequestController extends Controller
         $payments = $query->latest('paid_at')->paginate(20);
 
         $totalPaid = $query->sum('amount');
-// dd($totalPaid);
 
         return Inertia::render('Finance/Payments', [
             'payments' => $payments,
             'totalPaid' => $totalPaid,
             'filters' => $request->only(['date_from', 'date_to']),
+        ]);
+    }
+
+    /**
+     * Relatórios Financeiros
+     */
+    public function financialReports(Request $request)
+    {
+
+        // dd($request->all());
+        // Filtros de data
+        $startDate = $request->start_date ?? now()->startOfMonth()->toDateString();
+        $endDate = $request->end_date ?? now()->endOfMonth()->toDateString();
+
+        // Estatísticas gerais
+        $stats = [
+            'total_paid' => PaymentRequest::paid()
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->sum('amount'),
+            'total_pending' => PaymentRequest::pending()->sum('amount'),
+            'total_approved' => PaymentRequest::approved()->sum('amount'),
+            'count_pending' => PaymentRequest::pending()->count(),
+            'count_approved' => PaymentRequest::approved()->count(),
+            'count_paid' => PaymentRequest::paid()
+                ->whereBetween('paid_at', [$startDate, $endDate])
+                ->count(),
+            'avg_approval_time' => PaymentRequest::whereNotNull('approved_at')
+                ->whereBetween('created_at', [$startDate, $endDate])
+                ->get()
+                ->avg(function ($req) {
+                    return $req->created_at->diffInDays($req->approved_at);
+                }) ?? 0,
+            'avg_payment_time' => PaymentRequest::whereNotNull('paid_at')
+                ->whereBetween('approved_at', [$startDate, $endDate])
+                ->get()
+                ->avg(function ($req) {
+                    return $req->approved_at?->diffInDays($req->paid_at) ?? 0;
+                }) ?? 0,
+        ];
+
+        // Pagamentos por fase
+        $paymentsByPhase = PaymentRequest::paid()
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->selectRaw('phase, COUNT(*) as count, SUM(amount) as total')
+            ->groupBy('phase')
+            ->get()
+            ->map(function ($item) {
+                $phaseNames = [
+                    1 => 'Coleta Dispersa',
+                    2 => 'Legalização',
+                    3 => 'Alfândegas',
+                    4 => 'Cornelder',
+                    5 => 'Taxação',
+                ];
+                return [
+                    'phase' => $phaseNames[$item->phase] ?? "Fase {$item->phase}",
+                    'count' => $item->count,
+                    'total' => $item->total,
+                ];
+            });
+
+        // Pagamentos por tipo
+        $paymentsByType = PaymentRequest::paid()
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->selectRaw('request_type, COUNT(*) as count, SUM(amount) as total')
+            ->groupBy('request_type')
+            ->get()
+            ->map(function ($item) {
+                $typeLabels = [
+                    'quotation_payment' => 'Pagamento de Cotação',
+                    'customs_tax' => 'Taxas Alfandegárias',
+                    'storage_fee' => 'Taxa de Armazenamento',
+                    'cornelder_fee' => 'Despesas Cornelder',
+                    'transport_fee' => 'Frete/Transporte',
+                    'other' => 'Outros',
+                ];
+                return [
+                    'type' => $typeLabels[$item->request_type] ?? $item->request_type,
+                    'count' => $item->count,
+                    'total' => $item->total,
+                ];
+            });
+
+        // Evolução mensal
+        $monthlyData = [];
+        for ($i = 5; $i >= 0; $i--) {
+            $monthStart = now()->subMonths($i)->startOfMonth();
+            $monthEnd = now()->subMonths($i)->endOfMonth();
+
+            $monthlyData[] = [
+                'month' => $monthStart->format('M Y'),
+                'total' => PaymentRequest::paid()
+                    ->whereBetween('paid_at', [$monthStart, $monthEnd])
+                    ->sum('amount'),
+                'count' => PaymentRequest::paid()
+                    ->whereBetween('paid_at', [$monthStart, $monthEnd])
+                    ->count(),
+            ];
+        }
+
+        // Top 10 maiores pagamentos
+        $topPayments = PaymentRequest::with(['shipment.client', 'payer'])
+            ->paid()
+            ->whereBetween('paid_at', [$startDate, $endDate])
+            ->orderByDesc('amount')
+            ->take(10)
+            ->get();
+
+        return Inertia::render('Finance/Reports', [
+            'stats' => $stats,
+            'paymentsByPhase' => $paymentsByPhase,
+            'paymentsByType' => $paymentsByType,
+            'monthlyData' => $monthlyData,
+            'topPayments' => $topPayments,
+            'filters' => [
+                'start_date' => $startDate,
+                'end_date' => $endDate,
+            ],
         ]);
     }
 
@@ -165,13 +289,13 @@ class PaymentRequestController extends Controller
     public function store(Request $request, Shipment $shipment)
     {
         $validated = $request->validate([
-            'phase' => 'required|string',
+            'phase' => 'required|integer|min:1|max:7',
             'request_type' => 'required|string',
             'payee' => 'required|string',
             'amount' => 'required|numeric|min:0',
             'currency' => 'required|string|size:3',
             'description' => 'required|string',
-            'quotation_document' => 'required|file|max:10240', // Cotação obrigatória
+            'quotation_document' => 'required|file|max:10240',
         ]);
 
         try {
@@ -206,9 +330,6 @@ class PaymentRequestController extends Controller
 
             DB::commit();
 
-            // 3. Notificar gestores para aprovação
-            // TODO: Implementar notificação
-
             return back()->with('success', 'Solicitação de pagamento enviada para aprovação!');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -240,12 +361,6 @@ class PaymentRequestController extends Controller
             'notes' => 'nullable|string|max:500',
         ]);
 
-        $paymentRequest->update([
-        'status' => 'approved',
-        'approved_by' => auth()->id(),
-        'approved_at' => now(),
-    ]);
-
         if ($paymentRequest->approve(auth()->id(), $validated['notes'] ?? null)) {
             return back()->with('success', 'Solicitação aprovada! Finanças foi notificado.');
         }
@@ -256,51 +371,22 @@ class PaymentRequestController extends Controller
     /**
      * Rejeitar solicitação
      */
-  /**
- * 🔧 MODIFICAR SEU MÉTODO reject() EXISTENTE
- * Adicionar validação do rejection_reason
- */
-public function reject(Request $request, PaymentRequest $paymentRequest)
-{
-    // ADICIONAR VALIDAÇÃO:
-    // dd($request->all());
-    $validated = $request->validate([
-        'rejection_reason' => 'required|string|min:10|max:1000',
-    ]);
+    public function reject(Request $request, PaymentRequest $paymentRequest)
+    {
+        if (!auth()->user()->isGestor()) {
+            abort(403, 'Sem permissão para rejeitar');
+        }
 
-    // if (!auth()->user()->isGestor()) {
-    //     abort(403, 'Sem permissão para rejeitar');
-    // }
-
-    try {
-        DB::beginTransaction();
-
-        $paymentRequest->update([
-            'status' => 'rejected',
-            'approved_by' => auth()->id(),
-            'approved_at' => now(),
-            'rejection_reason' => $validated['rejection_reason'], // USAR VALIDADO
+        $validated = $request->validate([
+            'reason' => 'required|string|max:500',
         ]);
 
-        // Registrar atividade
-        Activity::create([
-            'shipment_id' => $paymentRequest->shipment_id,
-            'user_id' => auth()->id(),
-            'action' => 'payment_request_rejected',
-            'description' => "Solicitação rejeitada: {$validated['rejection_reason']}",
-        ]);
+        if ($paymentRequest->reject(auth()->id(), $validated['reason'])) {
+            return back()->with('success', 'Solicitação rejeitada.');
+        }
 
-        DB::commit();
-
-        // TODO: Notificar operações
-
-        return back()->with('success', 'Solicitação rejeitada.');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        return back()->withErrors(['error' => $e->getMessage()]);
+        return back()->withErrors(['error' => 'Não foi possível rejeitar']);
     }
-}
 
     // ========================================
     // FINANÇAS - PROCESSAR PAGAMENTO
@@ -311,7 +397,6 @@ public function reject(Request $request, PaymentRequest $paymentRequest)
      */
     public function startPayment(PaymentRequest $paymentRequest)
     {
-
         if (!auth()->user()->isFinance()) {
             abort(403, 'Apenas departamento financeiro');
         }
@@ -361,15 +446,12 @@ public function reject(Request $request, PaymentRequest $paymentRequest)
             // 2. Confirmar pagamento
             $paymentRequest->confirmPayment($proofDoc->id);
 
-
-            // 🆕 3. ATUALIZAR O SHIPMENT (NOVO!)
-            $this->updateShipmentAfterPayment($paymentRequest);
-
-           $this->updateShipmentPaymentStatus($paymentRequest);
+            // 3. Atualizar o Shipment baseado na fase
+            $this->updateShipmentPaymentStatus($paymentRequest);
 
             DB::commit();
 
-            return back()->with('success', 'Pagamento confirmado! Operações foi notificado.');
+            return back()->with('success', 'Pagamento confirmado! Operações foi notificado para anexar o recibo.');
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors([
@@ -378,93 +460,6 @@ public function reject(Request $request, PaymentRequest $paymentRequest)
         }
     }
 
-/**
- * ✅ Atualizar status de pagamento no Shipment baseado na fase
- */
-protected function updateShipmentPaymentStatus(PaymentRequest $paymentRequest)
-{
-    $shipment = $paymentRequest->shipment;
-    $phase = $paymentRequest->phase;
-    $requestType = $paymentRequest->request_type;
-
-    // Mapear fase + tipo → campo do shipment
-    switch ($phase) {
-        case 1: // Coleta Dispersa
-            if ($requestType === 'quotation_payment') {
-                $shipment->update([
-                    'payment_status' => 'paid',
-                    'quotation_status' => 'paid', // Cotação paga
-                ]);
-            }
-            break;
-
-        case 2: // Legalização
-            // Nesta fase geralmente não há pagamentos diretos
-            // mas pode haver taxas de legalização
-            break;
-
-        case 3: // Alfândegas
-            if (in_array($requestType, ['customs_tax', 'other'])) {
-                $shipment->update([
-                    'customs_payment_status' => 'paid',
-                    'customs_status' => 'payment_completed',
-                ]);
-            }
-            break;
-
-        case 4: // Cornelder
-            if (in_array($requestType, ['cornelder_fee', 'storage_fee'])) {
-                $shipment->update([
-                    'cornelder_payment_status' => 'paid',
-                    'cornelder_status' => 'paid',
-                ]);
-            }
-            break;
-
-        case 5: // Taxação
-            // Taxas adicionais se houver
-            if ($requestType === 'customs_tax') {
-                $shipment->update([
-                    'taxation_status' => 'payment_completed',
-                ]);
-            }
-            break;
-    }
-
-    // Log da atividade
-    $shipment->activities()->create([
-        'user_id' => auth()->id(),
-        'action' => 'payment_confirmed',
-        'description' => "Pagamento confirmado na Fase {$phase}: {$requestType}",
-    ]);
-}
-
-    /**
- * 🆕 Atualizar shipment após confirmação de pagamento
- */
-protected function updateShipmentAfterPayment(PaymentRequest $paymentRequest)
-{
-    $shipment = $paymentRequest->shipment;
-    $phase = $paymentRequest->phase;
-
-    // Mapear fase → status do shipment
-    $statusMap = [
-        1 => 'shipping_paid',           // Coleta Dispersa
-        2 => 'legalization_paid',       // Legalização
-        3 => 'customs_paid',            // Alfândegas
-        4 => 'cornelder_paid',          // Cornelder
-        5 => 'taxation_paid',           // Taxação
-    ];
-
-    if (isset($statusMap[$phase])) {
-        $shipment->update([
-            'status' => $statusMap[$phase],
-        ]);
-
-        // Opcionalmente, completar a fase automaticamente
-        // $this->completePhaseIfReady($shipment, $phase);
-    }
-}
     /**
      * Anexar recibo do fornecedor (Operações)
      */
@@ -478,7 +473,6 @@ protected function updateShipmentAfterPayment(PaymentRequest $paymentRequest)
         try {
             DB::beginTransaction();
 
-            // Upload do recibo
             $receiptPath = $request->file('receipt')
                 ->store("documents/receipts/{$paymentRequest->shipment_id}", 'public');
 
@@ -508,230 +502,60 @@ protected function updateShipmentAfterPayment(PaymentRequest $paymentRequest)
     }
 
     // ========================================
-    // CANCELAR SOLICITAÇÃO
+    // HELPERS
     // ========================================
 
     /**
-     * Cancelar solicitação (apenas quem criou)
+     * Atualizar status de pagamento no Shipment baseado na fase
      */
-    public function cancel(PaymentRequest $paymentRequest)
+    protected function updateShipmentPaymentStatus(PaymentRequest $paymentRequest)
     {
-        if ($paymentRequest->requested_by !== auth()->id()) {
-            abort(403, 'Apenas quem criou pode cancelar');
+        $shipment = $paymentRequest->shipment;
+        $phase = $paymentRequest->phase;
+        $requestType = $paymentRequest->request_type;
+
+        switch ($phase) {
+            case 1: // Coleta Dispersa
+                if ($requestType === 'quotation_payment') {
+                    $shipment->update([
+                        'payment_status' => 'paid',
+                        'quotation_status' => 'paid',
+                    ]);
+                }
+                break;
+
+            case 3: // Alfândegas
+                if (in_array($requestType, ['customs_tax', 'other'])) {
+                    $shipment->update([
+                        'customs_payment_status' => 'paid',
+                        'customs_status' => 'payment_completed',
+                    ]);
+                }
+                break;
+
+            case 4: // Cornelder
+                if (in_array($requestType, ['cornelder_fee', 'storage_fee'])) {
+                    $shipment->update([
+                        'cornelder_payment_status' => 'paid',
+                        'cornelder_status' => 'paid',
+                    ]);
+                }
+                break;
+
+            case 5: // Taxação
+                if ($requestType === 'customs_tax') {
+                    $shipment->update([
+                        'taxation_status' => 'payment_completed',
+                    ]);
+                }
+                break;
         }
 
-        if ($paymentRequest->status !== 'pending') {
-            return back()->withErrors(['error' => 'Apenas solicitações pendentes podem ser canceladas']);
-        }
-
-        $paymentRequest->update(['status' => 'cancelled']);
-
-        return back()->with('success', 'Solicitação cancelada.');
-    }
-
-
-    /**
- * 🆕 MÉTODO: Upload de Comprovativo de Pagamento
- * Adicionar este método no seu PaymentRequestController
- */
-public function uploadPaymentProof(Request $request, PaymentRequest $paymentRequest)
-{
-    // Verificar se está aprovado
-    if ($paymentRequest->status !== 'approved') {
-        return back()->withErrors(['error' => 'Solicitação precisa estar aprovada antes de anexar comprovativo.']);
-    }
-
-    $validated = $request->validate([
-        'payment_proof' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        // 1. Upload do arquivo usando SEU model Document
-        $file = $request->file('payment_proof');
-        $path = $file->store("documents/payment_proofs/{$paymentRequest->shipment_id}", 'public');
-
-        $document = Document::create([
-            'shipment_id' => $paymentRequest->shipment_id,
-            'type' => 'payment_proof',
-            'name' => $file->getClientOriginalName(),
-            'path' => $path,
-            'size' => $file->getSize(),
-            'uploaded_by' => auth()->id(),
-            'metadata' => [
-                'payment_request_id' => $paymentRequest->id,
-                'mime_type' => $file->getMimeType(),
-            ]
+        // Log da atividade
+        $shipment->activities()->create([
+            'user_id' => auth()->id(),
+            'action' => 'payment_confirmed',
+            'description' => "Pagamento confirmado na Fase {$phase}: {$requestType}",
         ]);
-
-        // 2. Atualizar PaymentRequest com o document_id
-        $paymentRequest->update([
-            'payment_proof_id' => $document->id,
-        ]);
-
-        // 3. Se também já tem recibo, marcar como pago
-        if ($paymentRequest->receipt_document_id) {
-            $paymentRequest->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-                'paid_by' => auth()->id(),
-            ]);
-
-            // Registrar atividade
-            Activity::create([
-                'shipment_id' => $paymentRequest->shipment_id,
-                'user_id' => auth()->id(),
-                'action' => 'payment_completed',
-                'description' => "Pagamento completo para fase {$paymentRequest->phase}",
-            ]);
-        }
-
-        DB::commit();
-
-        return back()->with('success', 'Comprovativo anexado com sucesso!');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Erro ao anexar comprovativo', [
-            'error' => $e->getMessage(),
-            'payment_request_id' => $paymentRequest->id,
-        ]);
-
-        return back()->withErrors(['error' => 'Erro ao anexar comprovativo: ' . $e->getMessage()]);
     }
-}
-
-/**
- * 🆕 MÉTODO: Upload de Recibo
- * Adicionar este método no seu PaymentRequestController
- */
-public function uploadReceipt(Request $request, PaymentRequest $paymentRequest)
-{
-    // Verificar se está aprovado
-    if ($paymentRequest->status !== 'approved') {
-        return back()->withErrors(['error' => 'Solicitação precisa estar aprovada antes de anexar recibo.']);
-    }
-
-    $validated = $request->validate([
-        'receipt' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-    ]);
-
-    try {
-        DB::beginTransaction();
-
-        // 1. Upload do arquivo usando SEU model Document
-        $file = $request->file('receipt');
-        $path = $file->store("documents/receipts/{$paymentRequest->shipment_id}", 'public');
-
-        $document = Document::create([
-            'shipment_id' => $paymentRequest->shipment_id,
-            'type' => 'receipt',
-            'name' => $file->getClientOriginalName(),
-            'path' => $path,
-            'size' => $file->getSize(),
-            'uploaded_by' => auth()->id(),
-            'metadata' => [
-                'payment_request_id' => $paymentRequest->id,
-                'mime_type' => $file->getMimeType(),
-            ]
-        ]);
-
-        // 2. Atualizar PaymentRequest com o document_id
-        $paymentRequest->update([
-            'receipt_document_id' => $document->id,
-        ]);
-
-        // 3. Se também já tem comprovativo, marcar como pago
-        if ($paymentRequest->payment_proof_id) {
-            $paymentRequest->update([
-                'status' => 'paid',
-                'paid_at' => now(),
-                'paid_by' => auth()->id(),
-            ]);
-
-            // Registrar atividade
-            Activity::create([
-                'shipment_id' => $paymentRequest->shipment_id,
-                'user_id' => auth()->id(),
-                'action' => 'payment_completed',
-                'description' => "Pagamento completo para fase {$paymentRequest->phase}",
-            ]);
-        }
-
-        // No método uploadReceipt() ou uploadPaymentProof()
-if ($paymentRequest->payment_proof_id && $paymentRequest->receipt_document_id) {
-    $paymentRequest->update([
-        'status' => 'paid',
-        'paid_at' => now(),
-        'paid_by' => auth()->id(),
-    ]);
-
-    // 🆕 AUTO-ADVANCE
-    $shipment = $paymentRequest->shipment;
-    if ($paymentRequest->phase === 'coleta_dispersa') {
-        // Avançar para próxima fase automaticamente
-        $shipment->advanceToNextStage();
-    }
-
-       // Registrar atividade
-            Activity::create([
-                'shipment_id' => $paymentRequest->shipment_id,
-                'user_id' => auth()->id(),
-                'action' => 'payment_completed',
-                'description' => "Pagamento completo para fase {$paymentRequest->phase}",
-            ]);
-}
-
-        DB::commit();
-
-        return back()->with('success', 'Recibo anexado com sucesso!');
-
-    } catch (\Exception $e) {
-        DB::rollBack();
-        Log::error('Erro ao anexar recibo', [
-            'error' => $e->getMessage(),
-            'payment_request_id' => $paymentRequest->id,
-        ]);
-
-        return back()->withErrors(['error' => 'Erro ao anexar recibo: ' . $e->getMessage()]);
-    }
-}
-
-/**
- * 🆕 MÉTODO: Download de Documento
- * Adicionar este método no seu PaymentRequestController
- */
-public function downloadDocument(PaymentRequest $paymentRequest, string $type)
-{
-    $documentId = match($type) {
-        'quotation' => $paymentRequest->quotation_document_id,
-        'payment_proof' => $paymentRequest->payment_proof_id,
-        'receipt' => $paymentRequest->receipt_document_id,
-        default => null,
-    };
-
-    if (!$documentId) {
-        abort(404, 'Documento não encontrado');
-    }
-
-    $document = Document::findOrFail($documentId);
-
-    if (!Storage::disk('public')->exists($document->path)) {
-        abort(404, 'Arquivo não encontrado no storage');
-    }
-
-    // Registrar atividade
-    Activity::create([
-        'shipment_id' => $paymentRequest->shipment_id,
-        'user_id' => auth()->id(),
-        'action' => 'document_downloaded',
-        'description' => "Download: {$document->name}",
-    ]);
-
-    return Storage::disk('public')->download($document->path, $document->name);
-}
-
-
-
 }
