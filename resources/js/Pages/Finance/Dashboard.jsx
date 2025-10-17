@@ -79,7 +79,7 @@ export default function FinanceDashboard({ stats, recentRequests }) {
   return (
     <DashboardLayout>
       <Head title="Dashboard Financeiro" />
-
+    <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
       {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-slate-900">
@@ -131,7 +131,7 @@ export default function FinanceDashboard({ stats, recentRequests }) {
       {/* Quick Actions */}
       <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
         <Link
-          href="/finance/pending-requests"
+          href="/finance/pending"
           className="flex items-center gap-3 p-4 transition-all bg-white border rounded-lg border-slate-200 hover:shadow-lg hover:border-blue-500"
         >
           <div className="p-2 bg-blue-100 rounded-lg">
@@ -297,6 +297,7 @@ export default function FinanceDashboard({ stats, recentRequests }) {
           </table>
         </div>
       </div>
+     </div>
     </DashboardLayout>
   );
 }
