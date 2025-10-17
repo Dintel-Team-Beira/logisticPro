@@ -189,9 +189,9 @@ class PaymentRequest extends Model
      */
     public function confirmPayment(int $documentId): bool
     {
-        if ($this->status !== 'in_payment') {
-            return false;
-        }
+        // if ($this->status !== 'in_payment') {
+        //     return false;
+        // }
 
         $this->update([
             'status' => 'paid',
@@ -219,7 +219,36 @@ class PaymentRequest extends Model
 
         // Marcar checklist do shipment como completo
         $this->completeShipmentChecklist();
+
+        // Opcional: Marcar checklist do shipment como completo
+    // $this->completeShipmentChecklist();
+
+    // Opcional: Se quiser avançar automaticamente a fase após recibo
+    $this->advanceShipmentPhaseIfComplete();
     }
+
+    /**
+ * ✅ Verificar se todos os pagamentos da fase estão completos
+ * e avançar fase se necessário
+ */
+protected function advanceShipmentPhaseIfComplete(): void
+{
+    $shipment = $this->shipment;
+    $phase = $this->phase;
+
+    // Verificar se todos os payment_requests desta fase têm recibos
+    $pendingRequests = $shipment->paymentRequests()
+        ->where('phase', $phase)
+        ->where('status', 'paid')
+        ->whereNull('receipt_document_id')
+        ->count();
+
+    // Se não há solicitações pendentes, pode avançar
+    if ($pendingRequests === 0) {
+        $this->advanceShipmentPhase();
+    }
+}
+
 
 
     // ========================================
