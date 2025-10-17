@@ -252,6 +252,10 @@ Route::middleware(['auth'])->prefix('finance')->name('finance.')->group(function
         ->name('budgets.destroy');
 });
 
+// Rota para solicitação múltipla de pagamentos
+Route::post('/payment-requests/{shipment}/bulk', [PaymentRequestController::class, 'storeBulk'])
+    ->name('payment-requests.bulk');
+
 // ============================================================================
 // GESTÃO - APROVAÇÕES (ROTAS COMPLETAS)
 // ============================================================================
