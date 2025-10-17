@@ -89,6 +89,13 @@ export default function DashboardLayout({ children }) {
                     icon: TrendingUp,
                     roles: ['admin', 'manager', 'finance'],
                 },
+                // {
+                //     name: 'Orçamento',
+                //     href: '/finance/budgets',
+                //     icon: Clock,
+                //     roles: ['admin', 'finance'],
+                //     badge: stats?.pending_payments || null,
+                // },
                 {
                     name: 'Pendentes',
                     href: '/finance/pending',
