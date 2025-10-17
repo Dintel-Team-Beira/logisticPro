@@ -94,8 +94,8 @@ Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.
      * Ação: pending → approved
      */
     Route::post('/{paymentRequest}/approve', [PaymentRequestController::class, 'approve'])
-        ->name('approve')
-        ->middleware('can:approve_payment_request');
+        ->name('approve');
+        // ->middleware('can:approve_payment_request');
 
     /**
      * Rejeitar Solicitação
@@ -104,8 +104,8 @@ Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.
      * Requer: Motivo da rejeição
      */
     Route::post('/{paymentRequest}/reject', [PaymentRequestController::class, 'reject'])
-        ->name('reject')
-        ->middleware('can:approve_payment_request');
+        ->name('reject');
+        // ->middleware('can:approve_payment_request');
 
     // ========================================
     // FINANÇAS - PROCESSAMENTO
@@ -117,8 +117,8 @@ Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.
      * Ação: approved → in_payment
      */
     Route::post('/{paymentRequest}/start-payment', [PaymentRequestController::class, 'startPayment'])
-        ->name('start-payment')
-        ->middleware('can:process_payment');
+        ->name('start-payment');
+        // ->middleware('can:process_payment');
 
     /**
      * Confirmar Pagamento com Comprovativo
@@ -127,8 +127,8 @@ Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.
      * Requer: Upload de comprovativo
      */
     Route::post('/{paymentRequest}/confirm-payment', [PaymentRequestController::class, 'confirmPayment'])
-        ->name('confirm-payment')
-        ->middleware('can:process_payment');
+        ->name('confirm-payment');
+        // ->middleware('can:process_payment');
 
     // ========================================
     // VISUALIZAÇÃO E DETALHES
@@ -213,27 +213,104 @@ Route::post('/webhooks/payment-confirmation', [PaymentRequestController::class, 
 // ============================================================================
 // FINANÇAS - DEPARTAMENTO FINANCEIRO
 // ============================================================================
+// ============================================================================
+// FINANÇAS - ROTAS COMPLETAS (ADICIONAR ESTAS)
+// ============================================================================
 Route::middleware(['auth'])->prefix('finance')->name('finance.')->group(function () {
 
     // Dashboard Financeiro
     Route::get('/', [PaymentRequestController::class, 'financeDashboard'])
-        ->name('dashboard')
-        ->middleware('can:view_finance_dashboard');
+        ->name('dashboard');
 
     // Solicitações Pendentes (Para Processar)
     Route::get('/pending', [PaymentRequestController::class, 'pendingRequests'])
-        ->name('pending')
-        ->middleware('can:process_payment');
+        ->name('pending');
 
     // Histórico de Pagamentos
     Route::get('/payments', [PaymentRequestController::class, 'paymentsHistory'])
-        ->name('payments')
-        ->middleware('can:view_payments');
+        ->name('payments');
+
+    // 🆕 EXPORTAR PAGAMENTOS
+    Route::get('/payments/export', [PaymentRequestController::class, 'exportPayments'])
+        ->name('payments.export');
 
     // Relatórios Financeiros
     Route::get('/reports', [PaymentRequestController::class, 'financialReports'])
-        ->name('reports')
-        ->middleware('can:view_finance_reports');
+        ->name('reports');
+
+    // 🆕 ORÇAMENTOS (BUDGETS)
+    Route::get('/budgets', [PaymentRequestController::class, 'budgets'])
+        ->name('budgets');
+
+    Route::post('/budgets', [PaymentRequestController::class, 'storeBudget'])
+        ->name('budgets.store');
+
+    Route::put('/budgets/{budget}', [PaymentRequestController::class, 'updateBudget'])
+        ->name('budgets.update');
+
+    Route::delete('/budgets/{budget}', [PaymentRequestController::class, 'destroyBudget'])
+        ->name('budgets.destroy');
+});
+
+// ============================================================================
+// GESTÃO - APROVAÇÕES (ROTAS COMPLETAS)
+// ============================================================================
+Route::middleware(['auth'])->prefix('approvals')->name('approvals.')->group(function () {
+
+    // Dashboard de Aprovações
+    Route::get('/', [PaymentRequestController::class, 'approvalsDashboard'])
+        ->name('dashboard');
+
+    // 🆕 APROVAÇÃO EM LOTE
+    Route::post('/batch-approve', [PaymentRequestController::class, 'batchApprove'])
+        ->name('batch-approve');
+});
+
+// ============================================================================
+// SOLICITAÇÕES DE PAGAMENTO - ROTAS COMPLETAS
+// ============================================================================
+Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.')->group(function () {
+
+    // 🆕 LISTAR SOLICITAÇÕES
+    Route::get('/', [PaymentRequestController::class, 'index'])
+        ->name('index');
+
+    // 🆕 VER DETALHES
+    Route::get('/{paymentRequest}', [PaymentRequestController::class, 'show'])
+        ->name('show');
+
+    // CRIAR NOVA SOLICITAÇÃO
+    Route::post('/{shipment}', [PaymentRequestController::class, 'store'])
+        ->name('store');
+
+    // 🆕 CANCELAR SOLICITAÇÃO
+    Route::post('/{paymentRequest}/cancel', [PaymentRequestController::class, 'cancel'])
+        ->name('cancel');
+
+    // APROVAR
+    Route::post('/{paymentRequest}/approve', [PaymentRequestController::class, 'approve'])
+        ->name('approve');
+
+    // REJEITAR
+    Route::post('/{paymentRequest}/reject', [PaymentRequestController::class, 'reject'])
+        ->name('reject');
+
+    // INICIAR PAGAMENTO
+    Route::post('/{paymentRequest}/start-payment', [PaymentRequestController::class, 'startPayment'])
+        ->name('start-payment');
+
+    // CONFIRMAR PAGAMENTO
+    Route::post('/{paymentRequest}/confirm-payment', [PaymentRequestController::class, 'confirmPayment'])
+        ->name('confirm-payment');
+
+    // ANEXAR RECIBO
+    Route::post('/{paymentRequest}/attach-receipt', [PaymentRequestController::class, 'attachReceipt'])
+        ->name('attach-receipt');
+
+    // 🆕 DOWNLOAD DE DOCUMENTOS
+    Route::get('/{paymentRequest}/documents/{type}', [PaymentRequestController::class, 'downloadDocument'])
+        ->name('download-document')
+        ->where('type', 'quotation|payment_proof|receipt');
 });
 
 // ============================================================================
