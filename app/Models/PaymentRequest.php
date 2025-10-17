@@ -335,4 +335,54 @@ protected function advanceShipmentPhaseIfComplete(): void
     {
         // Marcar item do checklist como completo
     }
+
+  // Accessors
+    public function getFormattedAmountAttribute()
+    {
+        return number_format($this->amount, 2, ',', '.') . ' ' . $this->currency;
+    }
+
+
+    public function getStatusLabelAttribute()
+    {
+        return match($this->status) {
+            'pending' => 'Pendente',
+            'approved' => 'Aprovado',
+            'rejected' => 'Rejeitado',
+            'paid' => 'Pago',
+            default => 'Desconhecido'
+        };
+    }
+
+     public function getRequestTypeLabelAttribute()
+    {
+        $labels = [
+            'shipping_line_quotation' => 'Cotação Linha de Navegação',
+            'cdm_fee' => 'Despesas CDM',
+            'customs_preliminary' => 'Taxas Alfandegárias Preliminares',
+            'legalization_advance' => 'Adiantamento Legalização',
+            'transport_fee' => 'Taxa de Transporte',
+            'other_coleta' => 'Outras Despesas Coleta',
+            'legalization_fee' => 'Taxas de Legalização',
+            'customs_tax' => 'Impostos Alfandegários',
+            'storage_fee' => 'Taxa de Armazenamento',
+            'tax_payment' => 'Pagamento de Impostos',
+            'invoice_related' => 'Custos de Faturação',
+            'delivery_fee' => 'Taxa de Entrega/Transporte',
+        ];
+
+        return $labels[$this->request_type] ?? $this->request_type;
+    }
+
+        public function getStatusColorAttribute()
+    {
+        return match($this->status) {
+            'pending' => 'yellow',
+            'approved' => 'blue',
+            'rejected' => 'red',
+            'paid' => 'green',
+            default => 'gray'
+        };
+    }
+
 }
