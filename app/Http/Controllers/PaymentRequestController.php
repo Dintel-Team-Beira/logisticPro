@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\Activity;
 use App\Models\PaymentRequest;
 use App\Models\Shipment;
 use App\Models\Document;
@@ -9,6 +10,7 @@ use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Storage;
 
 /**
  * Controller para Gestão de Solicitações de Pagamento
@@ -131,8 +133,7 @@ class PaymentRequestController extends Controller
             'payer',
             'paymentProof',
             'receiptDocument'
-        ])
-            ->paid();
+        ])->paid();
 
         if ($request->has('date_from')) {
             $query->whereDate('paid_at', '>=', $request->date_from);
@@ -145,6 +146,7 @@ class PaymentRequestController extends Controller
         $payments = $query->latest('paid_at')->paginate(20);
 
         $totalPaid = $query->sum('amount');
+// dd($totalPaid);
 
         return Inertia::render('Finance/Payments', [
             'payments' => $payments,
@@ -254,22 +256,51 @@ class PaymentRequestController extends Controller
     /**
      * Rejeitar solicitação
      */
-    public function reject(Request $request, PaymentRequest $paymentRequest)
-    {
-        if (!auth()->user()->isGestor()) {
-            abort(403, 'Sem permissão para rejeitar');
-        }
+  /**
+ * 🔧 MODIFICAR SEU MÉTODO reject() EXISTENTE
+ * Adicionar validação do rejection_reason
+ */
+public function reject(Request $request, PaymentRequest $paymentRequest)
+{
+    // ADICIONAR VALIDAÇÃO:
+    // dd($request->all());
+    $validated = $request->validate([
+        'rejection_reason' => 'required|string|min:10|max:1000',
+    ]);
 
-        $validated = $request->validate([
-            'reason' => 'required|string|max:500',
+    // if (!auth()->user()->isGestor()) {
+    //     abort(403, 'Sem permissão para rejeitar');
+    // }
+
+    try {
+        DB::beginTransaction();
+
+        $paymentRequest->update([
+            'status' => 'rejected',
+            'approved_by' => auth()->id(),
+            'approved_at' => now(),
+            'rejection_reason' => $validated['rejection_reason'], // USAR VALIDADO
         ]);
 
-        if ($paymentRequest->reject(auth()->id(), $validated['reason'])) {
-            return back()->with('success', 'Solicitação rejeitada.');
-        }
+        // Registrar atividade
+        Activity::create([
+            'shipment_id' => $paymentRequest->shipment_id,
+            'user_id' => auth()->id(),
+            'action' => 'payment_request_rejected',
+            'description' => "Solicitação rejeitada: {$validated['rejection_reason']}",
+        ]);
 
-        return back()->withErrors(['error' => 'Não foi possível rejeitar']);
+        DB::commit();
+
+        // TODO: Notificar operações
+
+        return back()->with('success', 'Solicitação rejeitada.');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        return back()->withErrors(['error' => $e->getMessage()]);
     }
+}
 
     // ========================================
     // FINANÇAS - PROCESSAR PAGAMENTO
@@ -280,6 +311,7 @@ class PaymentRequestController extends Controller
      */
     public function startPayment(PaymentRequest $paymentRequest)
     {
+
         if (!auth()->user()->isFinance()) {
             abort(403, 'Apenas departamento financeiro');
         }
@@ -333,6 +365,8 @@ class PaymentRequestController extends Controller
             // 🆕 3. ATUALIZAR O SHIPMENT (NOVO!)
             $this->updateShipmentAfterPayment($paymentRequest);
 
+           $this->updateShipmentPaymentStatus($paymentRequest);
+
             DB::commit();
 
             return back()->with('success', 'Pagamento confirmado! Operações foi notificado.');
@@ -344,6 +378,66 @@ class PaymentRequestController extends Controller
         }
     }
 
+/**
+ * ✅ Atualizar status de pagamento no Shipment baseado na fase
+ */
+protected function updateShipmentPaymentStatus(PaymentRequest $paymentRequest)
+{
+    $shipment = $paymentRequest->shipment;
+    $phase = $paymentRequest->phase;
+    $requestType = $paymentRequest->request_type;
+
+    // Mapear fase + tipo → campo do shipment
+    switch ($phase) {
+        case 1: // Coleta Dispersa
+            if ($requestType === 'quotation_payment') {
+                $shipment->update([
+                    'payment_status' => 'paid',
+                    'quotation_status' => 'paid', // Cotação paga
+                ]);
+            }
+            break;
+
+        case 2: // Legalização
+            // Nesta fase geralmente não há pagamentos diretos
+            // mas pode haver taxas de legalização
+            break;
+
+        case 3: // Alfândegas
+            if (in_array($requestType, ['customs_tax', 'other'])) {
+                $shipment->update([
+                    'customs_payment_status' => 'paid',
+                    'customs_status' => 'payment_completed',
+                ]);
+            }
+            break;
+
+        case 4: // Cornelder
+            if (in_array($requestType, ['cornelder_fee', 'storage_fee'])) {
+                $shipment->update([
+                    'cornelder_payment_status' => 'paid',
+                    'cornelder_status' => 'paid',
+                ]);
+            }
+            break;
+
+        case 5: // Taxação
+            // Taxas adicionais se houver
+            if ($requestType === 'customs_tax') {
+                $shipment->update([
+                    'taxation_status' => 'payment_completed',
+                ]);
+            }
+            break;
+    }
+
+    // Log da atividade
+    $shipment->activities()->create([
+        'user_id' => auth()->id(),
+        'action' => 'payment_confirmed',
+        'description' => "Pagamento confirmado na Fase {$phase}: {$requestType}",
+    ]);
+}
 
     /**
  * 🆕 Atualizar shipment após confirmação de pagamento
@@ -434,4 +528,210 @@ protected function updateShipmentAfterPayment(PaymentRequest $paymentRequest)
 
         return back()->with('success', 'Solicitação cancelada.');
     }
+
+
+    /**
+ * 🆕 MÉTODO: Upload de Comprovativo de Pagamento
+ * Adicionar este método no seu PaymentRequestController
+ */
+public function uploadPaymentProof(Request $request, PaymentRequest $paymentRequest)
+{
+    // Verificar se está aprovado
+    if ($paymentRequest->status !== 'approved') {
+        return back()->withErrors(['error' => 'Solicitação precisa estar aprovada antes de anexar comprovativo.']);
+    }
+
+    $validated = $request->validate([
+        'payment_proof' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        // 1. Upload do arquivo usando SEU model Document
+        $file = $request->file('payment_proof');
+        $path = $file->store("documents/payment_proofs/{$paymentRequest->shipment_id}", 'public');
+
+        $document = Document::create([
+            'shipment_id' => $paymentRequest->shipment_id,
+            'type' => 'payment_proof',
+            'name' => $file->getClientOriginalName(),
+            'path' => $path,
+            'size' => $file->getSize(),
+            'uploaded_by' => auth()->id(),
+            'metadata' => [
+                'payment_request_id' => $paymentRequest->id,
+                'mime_type' => $file->getMimeType(),
+            ]
+        ]);
+
+        // 2. Atualizar PaymentRequest com o document_id
+        $paymentRequest->update([
+            'payment_proof_id' => $document->id,
+        ]);
+
+        // 3. Se também já tem recibo, marcar como pago
+        if ($paymentRequest->receipt_document_id) {
+            $paymentRequest->update([
+                'status' => 'paid',
+                'paid_at' => now(),
+                'paid_by' => auth()->id(),
+            ]);
+
+            // Registrar atividade
+            Activity::create([
+                'shipment_id' => $paymentRequest->shipment_id,
+                'user_id' => auth()->id(),
+                'action' => 'payment_completed',
+                'description' => "Pagamento completo para fase {$paymentRequest->phase}",
+            ]);
+        }
+
+        DB::commit();
+
+        return back()->with('success', 'Comprovativo anexado com sucesso!');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Erro ao anexar comprovativo', [
+            'error' => $e->getMessage(),
+            'payment_request_id' => $paymentRequest->id,
+        ]);
+
+        return back()->withErrors(['error' => 'Erro ao anexar comprovativo: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * 🆕 MÉTODO: Upload de Recibo
+ * Adicionar este método no seu PaymentRequestController
+ */
+public function uploadReceipt(Request $request, PaymentRequest $paymentRequest)
+{
+    // Verificar se está aprovado
+    if ($paymentRequest->status !== 'approved') {
+        return back()->withErrors(['error' => 'Solicitação precisa estar aprovada antes de anexar recibo.']);
+    }
+
+    $validated = $request->validate([
+        'receipt' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+    ]);
+
+    try {
+        DB::beginTransaction();
+
+        // 1. Upload do arquivo usando SEU model Document
+        $file = $request->file('receipt');
+        $path = $file->store("documents/receipts/{$paymentRequest->shipment_id}", 'public');
+
+        $document = Document::create([
+            'shipment_id' => $paymentRequest->shipment_id,
+            'type' => 'receipt',
+            'name' => $file->getClientOriginalName(),
+            'path' => $path,
+            'size' => $file->getSize(),
+            'uploaded_by' => auth()->id(),
+            'metadata' => [
+                'payment_request_id' => $paymentRequest->id,
+                'mime_type' => $file->getMimeType(),
+            ]
+        ]);
+
+        // 2. Atualizar PaymentRequest com o document_id
+        $paymentRequest->update([
+            'receipt_document_id' => $document->id,
+        ]);
+
+        // 3. Se também já tem comprovativo, marcar como pago
+        if ($paymentRequest->payment_proof_id) {
+            $paymentRequest->update([
+                'status' => 'paid',
+                'paid_at' => now(),
+                'paid_by' => auth()->id(),
+            ]);
+
+            // Registrar atividade
+            Activity::create([
+                'shipment_id' => $paymentRequest->shipment_id,
+                'user_id' => auth()->id(),
+                'action' => 'payment_completed',
+                'description' => "Pagamento completo para fase {$paymentRequest->phase}",
+            ]);
+        }
+
+        // No método uploadReceipt() ou uploadPaymentProof()
+if ($paymentRequest->payment_proof_id && $paymentRequest->receipt_document_id) {
+    $paymentRequest->update([
+        'status' => 'paid',
+        'paid_at' => now(),
+        'paid_by' => auth()->id(),
+    ]);
+
+    // 🆕 AUTO-ADVANCE
+    $shipment = $paymentRequest->shipment;
+    if ($paymentRequest->phase === 'coleta_dispersa') {
+        // Avançar para próxima fase automaticamente
+        $shipment->advanceToNextStage();
+    }
+
+       // Registrar atividade
+            Activity::create([
+                'shipment_id' => $paymentRequest->shipment_id,
+                'user_id' => auth()->id(),
+                'action' => 'payment_completed',
+                'description' => "Pagamento completo para fase {$paymentRequest->phase}",
+            ]);
+}
+
+        DB::commit();
+
+        return back()->with('success', 'Recibo anexado com sucesso!');
+
+    } catch (\Exception $e) {
+        DB::rollBack();
+        Log::error('Erro ao anexar recibo', [
+            'error' => $e->getMessage(),
+            'payment_request_id' => $paymentRequest->id,
+        ]);
+
+        return back()->withErrors(['error' => 'Erro ao anexar recibo: ' . $e->getMessage()]);
+    }
+}
+
+/**
+ * 🆕 MÉTODO: Download de Documento
+ * Adicionar este método no seu PaymentRequestController
+ */
+public function downloadDocument(PaymentRequest $paymentRequest, string $type)
+{
+    $documentId = match($type) {
+        'quotation' => $paymentRequest->quotation_document_id,
+        'payment_proof' => $paymentRequest->payment_proof_id,
+        'receipt' => $paymentRequest->receipt_document_id,
+        default => null,
+    };
+
+    if (!$documentId) {
+        abort(404, 'Documento não encontrado');
+    }
+
+    $document = Document::findOrFail($documentId);
+
+    if (!Storage::disk('public')->exists($document->path)) {
+        abort(404, 'Arquivo não encontrado no storage');
+    }
+
+    // Registrar atividade
+    Activity::create([
+        'shipment_id' => $paymentRequest->shipment_id,
+        'user_id' => auth()->id(),
+        'action' => 'document_downloaded',
+        'description' => "Download: {$document->name}",
+    ]);
+
+    return Storage::disk('public')->download($document->path, $document->name);
+}
+
+
+
 }
