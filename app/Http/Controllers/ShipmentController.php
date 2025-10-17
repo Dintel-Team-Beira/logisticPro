@@ -193,6 +193,10 @@ class ShipmentController extends Controller
             'stages' => function($q) {
                 $q->orderBy('id', 'desc');
             },
+              'paymentRequests' => function($q) {
+            $q->with(['requester', 'approver', 'payer'])
+              ->latest();
+        }
         ]);
 
         // Tentar carregar activities se existir
@@ -244,6 +248,7 @@ class ShipmentController extends Controller
             'activePhases' => $activePhases,
             'overallProgress' => $shipment->real_progress,
             'canForceAdvance' => auth()->user()->role=='admin' ?? false,
+             'paymentRequests' => $shipment->paymentRequests,
         ]);
     }
 
@@ -420,6 +425,12 @@ class ShipmentController extends Controller
                     'error' => 'Fase não encontrada ou já completada.'
                 ]);
             }
+
+        if ($phase === 5) {
+            $shipment->update([
+                'taxation_status' => 'completed'
+            ]);
+        }
 
             // Registrar atividade
             try {
