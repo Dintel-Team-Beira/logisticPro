@@ -8,6 +8,7 @@ use App\Models\Client;
 use App\Models\ShippingLine;
 use App\Models\Document;
 use App\Models\Activity;
+use App\Models\PaymentRequest;
 use App\Models\ShipmentStage;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -88,6 +89,7 @@ class DashboardController extends Controller
         $overdueInvoices = Invoice::where('status', 'overdue')->count();
         $pendingAmount = Invoice::where('status', 'pending')->sum('amount');
 
+        $peddingPayment= PaymentRequest::where('status','approved')->count();
         // Shipments por mês (para gráfico)
         $monthlyShipments = Shipment::whereBetween('created_at', [$startDate, $endDate])
             ->select(
@@ -108,6 +110,7 @@ class DashboardController extends Controller
             'overdueInvoices' => $overdueInvoices,
             'pendingAmount' => $pendingAmount,
             'monthlyShipments' => $monthlyShipments,
+            'peddingPayment'=> $peddingPayment,
         ];
     }
 
