@@ -569,4 +569,5 @@ class Shipment extends Model
             ];
         })->toArray();
     }
+    
 }
