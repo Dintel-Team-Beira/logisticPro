@@ -1,7 +1,14 @@
 import { Head, Link } from '@inertiajs/react';
 import { Home, ArrowLeft, RefreshCw, FileQuestion } from 'lucide-react';
 
-export default function Error404() {
+export default function Error404({ status }) {
+     const title = {
+    503: '503: Service Unavailable',
+    500: '500: Server Error',
+    404: '404: Page Not Found',
+    403: '403: Forbidden',
+  }[status]
+
   return (
     <>
       <Head title="404 - Página Não Encontrada" />
@@ -14,9 +21,9 @@ export default function Error404() {
               <div className="inline-flex items-center justify-center w-24 h-24 mb-4 bg-white rounded-full shadow-lg">
                 <FileQuestion className="w-12 h-12 text-blue-600" />
               </div>
-              <h1 className="mb-2 text-6xl font-bold text-blue-600">404</h1>
+              <h1 className="mb-2 text-6xl font-bold text-blue-600">{title}</h1>
               <h2 className="text-2xl font-semibold text-slate-800">
-                Página Não Encontrada
+                Página Não Encontradadd
               </h2>
             </div>
 
