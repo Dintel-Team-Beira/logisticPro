@@ -7,6 +7,7 @@ use App\Models\PaymentRequest;
 use App\Models\Shipment;
 use App\Models\Document;
 use App\Models\User;
+use Illuminate\Container\Attributes\Auth;
 use Illuminate\Http\Request;
 use Illuminate\Notifications\Notification;
 use Inertia\Inertia;
@@ -371,27 +372,28 @@ class PaymentRequestController extends Controller
         return back()->withErrors(['error' => 'Não foi possível aprovar']);
     }
 
-    /**
-     * Rejeitar solicitação
-     */
-    public function reject(Request $request, PaymentRequest $paymentRequest)
-    {
-        // if (!auth()->user()->isGestor()) {
-        //     abort(403, 'Sem permissão para rejeitar');
-        // }
+  /**
+ * Rejeitar solicitação
+ */
+public function reject(Request $request, PaymentRequest $paymentRequest)
+{
+    // Validação
+    $validated = $request->validate([
+        'rejection_reason' => 'required|string|max:500',
+    ]);
 
+    // dd( $request->all());
+    // Atualizar a solicitação específica
+    $paymentRequest->update([
+        'status' => 'rejected',
+        'approved_by' => auth()->id(),
+        'approved_at' => now(),
+        'rejection_reason' => $request->rejection_reason,
+    ]);
 
-        // dd($paymentRequest);
-        $validated = $request->validate([
-            'reason' => 'required|string|max:500',
-        ]);
+    return back()->with('success', 'Solicitação rejeitada com sucesso.');
+}
 
-        if ($paymentRequest->reject(auth()->id(), $validated['reason'])) {
-            return back()->with('success', 'Solicitação rejeitada.');
-        }
-
-        return back()->withErrors(['error' => 'Não foi possível rejeitar']);
-    }
 
     // ========================================
     // FINANÇAS - PROCESSAR PAGAMENTO
@@ -672,6 +674,44 @@ private function notifyFinanceManagers(Shipment $shipment, array $requests)
     //         ]),
     //     ]);
     // }
+}
+
+public function getPaymentRequests(Shipment $shipment)
+{
+    // Buscar todas as solicitações de pagamento do shipment
+    $paymentRequests = PaymentRequest::where('shipment_id', $shipment->id)
+        ->with([
+            'requester',
+            'approver',
+            'payer',
+            'quotationDocument',
+            'paymentProof',
+            'receiptDocument'
+        ])
+        ->orderBy('phase')
+        ->orderBy('created_at')
+        ->get()
+        ->map(function ($request) {
+            return [
+                'id' => $request->id,
+                'shipment_id' => $request->shipment_id,
+                'phase' => $request->phase,
+                'request_type' => $request->request_type,
+                'payee' => $request->payee,
+                'amount' => $request->amount,
+                'currency' => $request->currency,
+                'status' => $request->status,
+                'description' => $request->description,
+                'created_at' => $request->created_at,
+                'updated_at' => $request->updated_at,
+                // Incluir informações adicionais conforme necessário
+                'requester' => $request->requester ? $request->requester->name : null,
+                'approver' => $request->approver ? $request->approver->name : null,
+                'payer' => $request->payer ? $request->payer->name : null,
+            ];
+        });
+
+    return response()->json($paymentRequests);
 }
 
 }
