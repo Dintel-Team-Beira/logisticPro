@@ -388,7 +388,7 @@ export function BulkPaymentRequestModal({ shipment, phase, phaseName, onClose })
                                                     <span className="text-sm font-medium text-slate-700">
                                                         {request.quotation_file
                                                             ? request.quotation_file.name
-                                                            : 'Selecionar arquivo'}
+                                                            : 'Selecionar arquivo.'}
                                                     </span>
                                                 </label>
                                             </div>
