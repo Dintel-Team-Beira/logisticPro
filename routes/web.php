@@ -408,11 +408,15 @@ Route::middleware(['auth'])->group(function () {
             ->name('start-payment');
         Route::post('/{paymentRequest}/confirm-payment', [PaymentRequestController::class, 'confirmPayment'])
             ->name('confirm-payment');
+
         Route::post('/{paymentRequest}/attach-receipt', [PaymentRequestController::class, 'attachReceipt'])
             ->name('attach-receipt');
     });
 });
 
+Route::post('/payment-requests/register-receipt',
+    [PaymentRequestController::class, 'registerReceipt'])
+    ->name('payment-requests.register-receipt');
 
    // 🆕 ROTAS DE CLIENTES 🆕
     Route::prefix('clients')->name('clients.')->group(function () {
