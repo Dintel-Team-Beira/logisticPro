@@ -21,7 +21,10 @@ import {
     ChevronDown,
     ChevronUp,
     DollarSign,
-    XCircle
+    XCircle,
+    DockIcon,
+    CheckLine,
+    File
 } from 'lucide-react'
 import { PaymentRequestModal } from './PaymentRequestModal'
 import { BulkPaymentRequestModal } from './BulkPaymentRequestModal'
@@ -530,8 +533,8 @@ export default function Show ({
                         {/* Documentos e Pagamentos */}
                         <div className='p-6 bg-white border rounded-lg border-slate-200'>
                             <div className='flex items-center justify-between mb-4'>
-                                <h3 className='text-lg font-semibold text-slate-900'>
-                                    📋 Requisitos e Pagamentos
+                                <h3 className='flex text-lg font-semibold text-slate-900'>
+                                    <FileText color='#64748b ' /> Requisitos e Pagamentos
                                 </h3>
                                 <span className='text-sm text-slate-500'>
                                     Fase {selectedPhase}
@@ -556,8 +559,8 @@ export default function Show ({
                             {currentPhaseData.checklist &&
                                 currentPhaseData.checklist.length > 0 && (
                                     <div>
-                                        <h4 className='mb-4 text-base font-semibold text-slate-900'>
-                                            📄 Outros Documentos
+                                        <h4 className='flex mb-4 text-base font-semibold text-center text-slate-900'>
+                                               <FileText color='#64748b ' /> Outros Documentos
                                         </h4>
                                         <div className='space-y-3'>
                                             {currentPhaseData.checklist.map(
