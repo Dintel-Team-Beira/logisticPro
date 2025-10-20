@@ -185,15 +185,14 @@ class ShipmentController extends Controller
     /**
      * Visualizar detalhes do shipment - MELHORADO
      */
-  public function show(Shipment $shipment)
+public function show(Shipment $shipment)
 {
     $shipment->load([
         'client',
-        'shippingline',
+        'shippingLine',
         'documents',
         'stages',
         'activities.user',
-        // 🆕 ADICIONAR ESTAS LINHAS:
         'paymentRequests' => function($query) {
             $query->with([
                 'quotationDocument',
@@ -225,7 +224,7 @@ class ShipmentController extends Controller
 
         $phaseData = [
             'status' => $stage ? $stage->status : 'pending',
-            'progress' => $shipment->getPhaseProgress($phaseId), // 🆕 Usar novo método
+            'progress' => $shipment->getPhaseProgress($phaseId),
             'can_start' => false,
             'warnings' => [],
             'missing_items' => [],
@@ -236,14 +235,8 @@ class ShipmentController extends Controller
         $validation = $shipment->canAdvanceToPhase($phaseId);
         $phaseData = array_merge($phaseData, $validation);
 
-        // 🆕 ADICIONAR: Checklist baseado em PaymentRequests
-        $phaseData['payment_requests_checklist'] = $shipment->getPaymentRequestsChecklist($phaseId);
-
-        // 🆕 ADICIONAR: Payment request atual da fase (se houver)
-        $phaseData['current_payment_request'] = $shipment->paymentRequests()
-            ->where('phase', $phaseId)
-            ->latest()
-            ->first();
+        // 🆕 ADICIONAR: Checklist de documentos tradicionais
+        $phaseData['checklist'] = $this->getDocumentChecklistForPhase($shipment, $phaseId);
 
         $phaseProgress[$phaseId] = $phaseData;
     }
@@ -272,7 +265,7 @@ class ShipmentController extends Controller
         ->values()
         ->toArray();
 
-   return Inertia::render('Shipments/Show', [
+    return Inertia::render('Shipments/Show', [
         'shipment' => $shipment,
         'phases' => $phases,
         'phaseProgress' => $phaseProgress,
@@ -281,6 +274,79 @@ class ShipmentController extends Controller
         'canForceAdvance' => auth()->user()->hasRole('manager'),
     ]);
 }
+
+/**
+ * Obter checklist de documentos necessários para uma fase
+ *
+ * @param Shipment $shipment
+ * @param int $phase
+ * @return array
+ */
+private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): array
+{
+    // Definir documentos necessários por fase
+    $requiredDocsByPhase = [
+        1 => [ // Coleta Dispersa
+            ['type' => 'bl', 'label' => 'BL Original', 'required' => true],
+            ['type' => 'carta_endosso', 'label' => 'Carta de Endosso', 'required' => false],
+        ],
+        2 => [ // Legalização
+            ['type' => 'bl_carimbado', 'label' => 'BL Carimbado', 'required' => true],
+            ['type' => 'delivery_order', 'label' => 'Delivery Order', 'required' => true],
+        ],
+        3 => [ // Alfândegas
+            ['type' => 'packing_list', 'label' => 'Packing List', 'required' => true],
+            ['type' => 'commercial_invoice', 'label' => 'Commercial Invoice', 'required' => true],
+            ['type' => 'aviso', 'label' => 'Aviso de Taxação', 'required' => false],
+            ['type' => 'autorizacao', 'label' => 'Autorização de Saída', 'required' => false],
+        ],
+        4 => [ // Cornelder
+            ['type' => 'draft', 'label' => 'Draft Cornelder', 'required' => true],
+            ['type' => 'storage', 'label' => 'Storage', 'required' => false],
+            ['type' => 'termo', 'label' => 'Termo da Linha', 'required' => true],
+        ],
+        5 => [ // Taxação
+            ['type' => 'sad', 'label' => 'SAD (Documento Trânsito)', 'required' => true],
+            ['type' => 'ido', 'label' => 'IDO', 'required' => false],
+        ],
+        6 => [ // Faturação
+            ['type' => 'invoice', 'label' => 'Fatura ao Cliente', 'required' => false],
+        ],
+        7 => [ // POD
+            ['type' => 'pod', 'label' => 'POD (Proof of Delivery)', 'required' => true],
+            ['type' => 'signature', 'label' => 'Assinatura do Cliente', 'required' => false],
+        ],
+    ];
+
+    $requiredDocs = $requiredDocsByPhase[$phase] ?? [];
+    $checklist = [];
+
+    // Buscar documentos anexados
+    $attachedDocs = $shipment->documents()
+        ->get()
+        ->groupBy('type');
+
+    foreach ($requiredDocs as $docConfig) {
+        $type = $docConfig['type'];
+        $docs = $attachedDocs->get($type, collect());
+        $isAttached = $docs->isNotEmpty();
+        $document = $docs->first();
+
+        $checklist[] = [
+            'type' => $type,
+            'label' => $docConfig['label'],
+            'required' => $docConfig['required'],
+            'attached' => $isAttached,
+            'document_id' => $document ? $document->id : null,
+            'uploaded_at' => $document ? $document->created_at : null,
+            'file_name' => $document ? $document->name : null,
+        ];
+    }
+
+    return $checklist;
+}
+
+
 
     /**
      * Formulário de edição
