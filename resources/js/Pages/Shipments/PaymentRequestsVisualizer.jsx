@@ -212,16 +212,18 @@ function PaymentRequestCard({ request, expanded, onToggle }) {
 
                         {/* 3. Comprovativo de Pagamento payment_proof: */}
                         <DocumentCheckItem
-                            label="Comprovativo de Pagamento"
+                            label="Comprovativo de Pagamento1"
                             completed={!!request.payment_proof}
                             document={request.payment_proof}
                             icon={DollarSign}
                         />
 
-                        {/* 4. Recibo */}
+                        {/* 4. Recibo receipt_document
+ */}
                         <DocumentCheckItem
-                            label="Recibo Anexado"
-                            completed={!!request.receipt_document}
+                            label="Recibo Anexado."
+                            completed={!!request.receipt_document
+}
                             document={request.receipt_document}
                             icon={Receipt}
                         />
