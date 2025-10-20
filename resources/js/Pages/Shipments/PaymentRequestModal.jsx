@@ -83,7 +83,9 @@ export function PaymentRequestModal({ shipment, phase, phaseName, onClose }) {
         data.append('description', formData.description);
         data.append('quotation_document', formData.quotation_file);
 
+        console.log("data",data);
         router.post(`/payment-requests/${shipment.id}`, data, {
+
             forceFormData: true,
             preserveScroll: true,
             onSuccess: () => {
