@@ -118,7 +118,7 @@ class Shipment extends Model
 public function getDocumentChecklistForPhase(int $phase): array
 {
     $documentsByPhase = [
-        1 => ['bl', 'carta_endosso'],
+        1 => ['bl', 'carta_endosso','boss'],
         2 => ['bl_carimbado', 'delivery_order'],
         3 => ['packing_list', 'commercial_invoice', 'aviso', 'autorizacao'],
         4 => ['draft', 'storage', 'termo'],
