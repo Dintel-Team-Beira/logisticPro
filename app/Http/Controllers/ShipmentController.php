@@ -35,10 +35,10 @@ class ShipmentController extends Controller
 
         if ($request->has('search') && $request->search) {
             $search = $request->search;
-            $query->where(function($q) use ($search) {
+            $query->where(function ($q) use ($search) {
                 $q->where('reference_number', 'like', "%{$search}%")
-                  ->orWhere('bl_number', 'like', "%{$search}%")
-                  ->orWhere('container_number', 'like', "%{$search}%");
+                    ->orWhere('bl_number', 'like', "%{$search}%")
+                    ->orWhere('container_number', 'like', "%{$search}%");
             });
         }
 
@@ -67,22 +67,19 @@ class ShipmentController extends Controller
     public function store(Request $request)
     {
 
-// dd($request->all());
-        Log::info('ShipmentController@store - Iniciando', [
-            'data' => $request->except('bl_file')
-            ]);
+        Log::info('ShipmentController@store - Iniciando', ['data' => $request->except('bl_file')]);
 
-            DB::beginTransaction();
+        DB::beginTransaction();
 
-            try {
-                // 1. Validação
-                $validated = $request->validate([
-                    'client_id' => 'required|exists:clients,id',
-                    'shipping_line_id' => 'required|exists:shipping_lines,id',
-                    'bl_number' => 'required|string|unique:shipments',
-                    'bl_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-                    'container_number' => 'required|string',
-                    'container_type' => 'nullable|string',
+        try {
+            // 1. Validação
+            $validated = $request->validate([
+                'client_id' => 'required|exists:clients,id',
+                'shipping_line_id' => 'required|exists:shipping_lines,id',
+                'bl_number' => 'required|string|unique:shipments',
+                'bl_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
+                'container_number' => 'required|string',
+                'container_type' => 'nullable|string',
                 'vessel_name' => 'nullable|string',
                 'arrival_date' => 'nullable|date',
                 'origin_port' => 'nullable|string',
@@ -93,23 +90,22 @@ class ShipmentController extends Controller
                 'cargo_value' => 'nullable|numeric',
                 'has_tax_exemption' => 'boolean',
                 'is_reexport' => 'boolean',
-                ]);
+            ]);
 
-                Log::info('Validação passou');
+            Log::info('Validação passou');
 
-                // 2. Gerar número de referência
-                $referenceNumber = 'ALEK-' . date('Y') . '-' . str_pad(
-                    Shipment::whereYear('created_at', date('Y'))->count() + 1,
-                    4,
-                    '0',
-                    STR_PAD_LEFT
-                );
+            // 2. Gerar número de referência
+            $referenceNumber = 'ALEK-' . date('Y') . '-' . str_pad(
+                Shipment::whereYear('created_at', date('Y'))->count() + 1,
+                4,
+                '0',
+                STR_PAD_LEFT
+            );
 
-                Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
+            Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
 
-                // dd($validated);
-                // 3. Criar shipment
-                $shipment = Shipment::create([
+            // 3. Criar shipment
+            $shipment = Shipment::create([
                 'reference_number' => $referenceNumber,
                 'client_id' => $validated['client_id'],
                 'shipping_line_id' => $validated['shipping_line_id'],
@@ -128,10 +124,10 @@ class ShipmentController extends Controller
                 'is_reexport' => $validated['is_reexport'] ?? false,
                 'status' => 'active',
                 'created_by' => auth()->id(),
-                ]);
+            ]);
 
-                Log::info('Shipment criado', ['id' => $shipment->id]);
-//    dd("sfklbsfkj");
+            Log::info('Shipment criado', ['id' => $shipment->id]);
+
             // 4. Upload BL
             $blFile = $request->file('bl_file');
             $blPath = $blFile->store("documents/shipments/{$shipment->id}/bl", 'public');
@@ -164,7 +160,6 @@ class ShipmentController extends Controller
             return redirect()
                 ->route('shipments.show', $shipment)
                 ->with('success', "Shipment {$referenceNumber} criado! Fase 1 iniciada.");
-
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -186,176 +181,176 @@ class ShipmentController extends Controller
     /**
      * Visualizar detalhes do shipment - MELHORADO
      */
-public function show(Shipment $shipment)
-{
-    $shipment->load([
-        'client',
-        'shippingLine',
-        'documents',
-        'stages',
-        'activities.user',
-        'paymentRequests' => function($query) {
-            $query->with([
-                'quotationDocument',
-                'paymentProof',
-                'receiptDocument',
-                'requester',
-                'approver',
-            ])->orderBy('created_at', 'desc');
-        },
-    ]);
+    public function show(Shipment $shipment)
+    {
+        $shipment->load([
+            'client',
+            'shippingLine',
+            'documents',
+            'stages',
+            'activities.user',
+            'paymentRequests' => function ($query) {
+                $query->with([
+                    'quotationDocument',
+                    'paymentProof',
+                    'receiptDocument',
+                    'requester',
+                    'approver',
+                ])->orderBy('created_at', 'desc');
+            },
+        ]);
 
-    // Preparar dados das fases
-    $phases = [
-        ['id' => 1, 'title' => 'Coleta Dispersa', 'icon' => 'Ship'],
-        ['id' => 2, 'title' => 'Legalização', 'icon' => 'FileCheck'],
-        ['id' => 3, 'title' => 'Alfândegas', 'icon' => 'Building2'],
-        ['id' => 4, 'title' => 'Cornelder', 'icon' => 'Container'],
-        ['id' => 5, 'title' => 'Taxação', 'icon' => 'Calculator'],
-        ['id' => 6, 'title' => 'Faturação', 'icon' => 'FileText'],
-        ['id' => 7, 'title' => 'POD', 'icon' => 'PackageCheck'],
-    ];
-
-    // Calcular progresso e status de cada fase
-    $phaseProgress = [];
-    foreach ($phases as $phase) {
-        $phaseId = $phase['id'];
-        $stageName = Shipment::getStageNameFromPhase($phaseId);
-        $stage = $shipment->stages()->where('stage', $stageName)->first();
-
-        $phaseData = [
-            'status' => $stage ? $stage->status : 'pending',
-            'progress' => $shipment->getPhaseProgress($phaseId),
-            'can_start' => false,
-            'warnings' => [],
-            'missing_items' => [],
-            'show_payment_request' => false,
+        // Preparar dados das fases
+        $phases = [
+            ['id' => 1, 'title' => 'Coleta Dispersa', 'icon' => 'Ship'],
+            ['id' => 2, 'title' => 'Legalização', 'icon' => 'FileCheck'],
+            ['id' => 3, 'title' => 'Alfândegas', 'icon' => 'Building2'],
+            ['id' => 4, 'title' => 'Cornelder', 'icon' => 'Container'],
+            ['id' => 5, 'title' => 'Taxação', 'icon' => 'Calculator'],
+            ['id' => 6, 'title' => 'Faturação', 'icon' => 'FileText'],
+            ['id' => 7, 'title' => 'POD', 'icon' => 'PackageCheck'],
         ];
 
-        // Verificar requisitos para avançar
-        $validation = $shipment->canAdvanceToPhase($phaseId);
-        $phaseData = array_merge($phaseData, $validation);
+        // Calcular progresso e status de cada fase
+        $phaseProgress = [];
+        foreach ($phases as $phase) {
+            $phaseId = $phase['id'];
+            $stageName = Shipment::getStageNameFromPhase($phaseId);
+            $stage = $shipment->stages()->where('stage', $stageName)->first();
 
-        // 🆕 ADICIONAR: Checklist de documentos tradicionais
-        $phaseData['checklist'] = $this->getDocumentChecklistForPhase($shipment, $phaseId);
-
-        $phaseProgress[$phaseId] = $phaseData;
-    }
-
-    // Calcular progresso geral
-    $completedPhases = collect($phaseProgress)->where('status', 'completed')->count();
-    $overallProgress = ($completedPhases / 7) * 100;
-
-    // Fases ativas
-    $activePhases = $shipment->stages()
-        ->where('status', 'in_progress')
-        ->pluck('stage')
-        ->map(function ($stageName) {
-            $map = [
-                'coleta_dispersa' => 1,
-                'legalizacao' => 2,
-                'alfandegas' => 3,
-                'cornelder' => 4,
-                'taxacao' => 5,
-                'faturacao' => 6,
-                'pod' => 7,
+            $phaseData = [
+                'status' => $stage ? $stage->status : 'pending',
+                'progress' => $shipment->getPhaseProgress($phaseId),
+                'can_start' => false,
+                'warnings' => [],
+                'missing_items' => [],
+                'show_payment_request' => false,
             ];
-            return $map[$stageName] ?? null;
-        })
-        ->filter()
-        ->values()
-        ->toArray();
+
+            // Verificar requisitos para avançar
+            $validation = $shipment->canAdvanceToPhase($phaseId);
+            $phaseData = array_merge($phaseData, $validation);
+
+            // 🆕 ADICIONAR: Checklist de documentos tradicionais
+            $phaseData['checklist'] = $this->getDocumentChecklistForPhase($shipment, $phaseId);
+
+            $phaseProgress[$phaseId] = $phaseData;
+        }
+
+        // Calcular progresso geral
+        $completedPhases = collect($phaseProgress)->where('status', 'completed')->count();
+        $overallProgress = ($completedPhases / 7) * 100;
+
+        // Fases ativas
+        $activePhases = $shipment->stages()
+            ->where('status', 'in_progress')
+            ->pluck('stage')
+            ->map(function ($stageName) {
+                $map = [
+                    'coleta_dispersa' => 1,
+                    'legalizacao' => 2,
+                    'alfandegas' => 3,
+                    'cornelder' => 4,
+                    'taxacao' => 5,
+                    'faturacao' => 6,
+                    'pod' => 7,
+                ];
+                return $map[$stageName] ?? null;
+            })
+            ->filter()
+            ->values()
+            ->toArray();
 
         // Carregar solicitações de pagamento do shipment
-    $paymentRequests = PaymentRequest::where('shipment_id', $shipment->id)
-    ->with(['requester','approver','quotationDocument','paymentProof','receiptDocument','shipment','payer'])
-        ->orderBy('phase')
-        ->orderBy('created_at')
-        ->get();
+        $paymentRequests = PaymentRequest::where('shipment_id', $shipment->id)
+            ->with(['requester', 'approver', 'quotationDocument', 'paymentProof', 'receiptDocument', 'shipment', 'payer'])
+            ->orderBy('phase')
+            ->orderBy('created_at')
+            ->get();
 
-// dd($paymentRequests);
-    return Inertia::render('Shipments/Show', [
-        'shipment' => $shipment,
-        'phases' => $phases,
-        'phaseProgress' => $phaseProgress,
-        'overallProgress' => $overallProgress,
-        'activePhases' => $activePhases,
-        'canForceAdvance' => auth()->user()->hasRole('manager'),
-        'paymentRequests' => $paymentRequests
-    ]);
-}
-
-/**
- * Obter checklist de documentos necessários para uma fase
- *
- * @param Shipment $shipment
- * @param int $phase
- * @return array
- */
-private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): array
-{
-    // Definir documentos necessários por fase
-    $requiredDocsByPhase = [
-        1 => [ // Coleta Dispersa
-            ['type' => 'bl', 'label' => 'BL Original', 'required' => true],
-            ['type' => 'carta_endosso', 'label' => 'Carta de Endosso', 'required' => false],
-            ['type' => 'receipt', 'label' => 'Recibo de pagamento', 'required' => false],
-        ],
-        2 => [ // Legalização
-            ['type' => 'bl_carimbado', 'label' => 'BL Carimbado', 'required' => true],
-            ['type' => 'delivery_order', 'label' => 'Delivery Order', 'required' => true],
-        ],
-        3 => [ // Alfândegas
-            ['type' => 'packing_list', 'label' => 'Packing List', 'required' => true],
-            ['type' => 'commercial_invoice', 'label' => 'Commercial Invoice', 'required' => true],
-            ['type' => 'aviso', 'label' => 'Aviso de Taxação', 'required' => false],
-            ['type' => 'autorizacao', 'label' => 'Autorização de Saída', 'required' => false],
-        ],
-        4 => [ // Cornelder
-            ['type' => 'draft', 'label' => 'Draft Cornelder', 'required' => true],
-            ['type' => 'storage', 'label' => 'Storage', 'required' => false],
-            ['type' => 'termo', 'label' => 'Termo da Linha', 'required' => true],
-        ],
-        5 => [ // Taxação
-            ['type' => 'sad', 'label' => 'SAD (Documento Trânsito)', 'required' => true],
-            ['type' => 'ido', 'label' => 'IDO', 'required' => false],
-        ],
-        6 => [ // Faturação
-            ['type' => 'invoice', 'label' => 'Fatura ao Cliente', 'required' => false],
-        ],
-        7 => [ // POD
-            ['type' => 'pod', 'label' => 'POD (Proof of Delivery)', 'required' => true],
-            ['type' => 'signature', 'label' => 'Assinatura do Cliente', 'required' => false],
-        ],
-    ];
-
-    $requiredDocs = $requiredDocsByPhase[$phase] ?? [];
-    $checklist = [];
-
-    // Buscar documentos anexados
-    $attachedDocs = $shipment->documents()
-        ->get()
-        ->groupBy('type');
-
-    foreach ($requiredDocs as $docConfig) {
-        $type = $docConfig['type'];
-        $docs = $attachedDocs->get($type, collect());
-        $isAttached = $docs->isNotEmpty();
-        $document = $docs->first();
-
-        $checklist[] = [
-            'type' => $type,
-            'label' => $docConfig['label'],
-            'required' => $docConfig['required'],
-            'attached' => $isAttached,
-            'document_id' => $document ? $document->id : null,
-            'uploaded_at' => $document ? $document->created_at : null,
-            'file_name' => $document ? $document->name : null,
-        ];
+        // dd($paymentRequests);
+        return Inertia::render('Shipments/Show', [
+            'shipment' => $shipment,
+            'phases' => $phases,
+            'phaseProgress' => $phaseProgress,
+            'overallProgress' => $overallProgress,
+            'activePhases' => $activePhases,
+            'canForceAdvance' => auth()->user()->hasRole('manager'),
+            'paymentRequests' => $paymentRequests
+        ]);
     }
 
-    return $checklist;
-}
+    /**
+     * Obter checklist de documentos necessários para uma fase
+     *
+     * @param Shipment $shipment
+     * @param int $phase
+     * @return array
+     */
+    private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): array
+    {
+        // Definir documentos necessários por fase
+        $requiredDocsByPhase = [
+            1 => [ // Coleta Dispersa
+                ['type' => 'bl', 'label' => 'BL Original', 'required' => true],
+                ['type' => 'carta_endosso', 'label' => 'Carta de Endosso', 'required' => false],
+                ['type' => 'receipt', 'label' => 'Recibo de pagamento', 'required' => false],
+            ],
+            2 => [ // Legalização
+                ['type' => 'bl_carimbado', 'label' => 'BL Carimbado', 'required' => true],
+                ['type' => 'delivery_order', 'label' => 'Delivery Order', 'required' => true],
+            ],
+            3 => [ // Alfândegas
+                ['type' => 'packing_list', 'label' => 'Packing List', 'required' => true],
+                ['type' => 'commercial_invoice', 'label' => 'Commercial Invoice', 'required' => true],
+                ['type' => 'aviso', 'label' => 'Aviso de Taxação', 'required' => false],
+                ['type' => 'autorizacao', 'label' => 'Autorização de Saída', 'required' => false],
+            ],
+            4 => [ // Cornelder
+                ['type' => 'draft', 'label' => 'Draft Cornelder', 'required' => true],
+                ['type' => 'storage', 'label' => 'Storage', 'required' => false],
+                ['type' => 'termo', 'label' => 'Termo da Linha', 'required' => true],
+            ],
+            5 => [ // Taxação
+                ['type' => 'sad', 'label' => 'SAD (Documento Trânsito)', 'required' => true],
+                ['type' => 'ido', 'label' => 'IDO', 'required' => false],
+            ],
+            6 => [ // Faturação
+                ['type' => 'invoice', 'label' => 'Fatura ao Cliente', 'required' => false],
+            ],
+            7 => [ // POD
+                ['type' => 'pod', 'label' => 'POD (Proof of Delivery)', 'required' => true],
+                ['type' => 'signature', 'label' => 'Assinatura do Cliente', 'required' => false],
+            ],
+        ];
+
+        $requiredDocs = $requiredDocsByPhase[$phase] ?? [];
+        $checklist = [];
+
+        // Buscar documentos anexados
+        $attachedDocs = $shipment->documents()
+            ->get()
+            ->groupBy('type');
+
+        foreach ($requiredDocs as $docConfig) {
+            $type = $docConfig['type'];
+            $docs = $attachedDocs->get($type, collect());
+            $isAttached = $docs->isNotEmpty();
+            $document = $docs->first();
+
+            $checklist[] = [
+                'type' => $type,
+                'label' => $docConfig['label'],
+                'required' => $docConfig['required'],
+                'attached' => $isAttached,
+                'document_id' => $document ? $document->id : null,
+                'uploaded_at' => $document ? $document->created_at : null,
+                'file_name' => $document ? $document->name : null,
+            ];
+        }
+
+        return $checklist;
+    }
 
 
 
@@ -412,7 +407,6 @@ private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): a
             return redirect()
                 ->route('shipments.index')
                 ->with('success', 'Processo removido com sucesso!');
-
         } catch (\Exception $e) {
             return back()->withErrors([
                 'error' => 'Erro ao remover: ' . $e->getMessage()
@@ -496,7 +490,6 @@ private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): a
             DB::commit();
 
             return back()->with('success', "Fase {$phase} iniciada com sucesso!");
-
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao avançar fase', [
@@ -533,11 +526,11 @@ private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): a
                 ]);
             }
 
-        if ($phase === 5) {
-            $shipment->update([
-                'taxation_status' => 'completed'
-            ]);
-        }
+            if ($phase === 5) {
+                $shipment->update([
+                    'taxation_status' => 'completed'
+                ]);
+            }
 
             // Registrar atividade
             try {
@@ -556,7 +549,6 @@ private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): a
             DB::commit();
 
             return back()->with('success', "Fase {$phase} completada com sucesso!");
-
         } catch (\Exception $e) {
             DB::rollBack();
             return back()->withErrors([
@@ -601,7 +593,6 @@ private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): a
             }
 
             return back()->with('success', 'Fase pausada com sucesso!');
-
         } catch (\Exception $e) {
             return back()->withErrors([
                 'error' => 'Erro ao pausar fase: ' . $e->getMessage()
@@ -679,40 +670,40 @@ private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): a
 
 
     public function getPaymentRequests(Shipment $shipment)
-{
-    // Buscar todas as solicitações de pagamento do shipment
-    $paymentRequests = PaymentRequest::where('shipment_id', $shipment->id)
-        ->with([
-            'requester',
-            'approver',
-            'payer',
-            'quotationDocument',
-            'paymentProof',
-            'receiptDocument'
-        ])
-        ->orderBy('phase')
-        ->orderBy('created_at')
-        ->get()
-        ->map(function ($request) {
-            return [
-                'id' => $request->id,
-                'shipment_id' => $request->shipment_id,
-                'phase' => $request->phase,
-                'request_type' => $request->request_type,
-                'payee' => $request->payee,
-                'amount' => $request->amount,
-                'currency' => $request->currency,
-                'status' => $request->status,
-                'description' => $request->description,
-                'created_at' => $request->created_at,
-                'updated_at' => $request->updated_at,
-                // Incluir informações adicionais conforme necessário
-                'requester' => $request->requester ? $request->requester->name : null,
-                'approver' => $request->approver ? $request->approver->name : null,
-                'payer' => $request->payer ? $request->payer->name : null,
-            ];
-        });
+    {
+        // Buscar todas as solicitações de pagamento do shipment
+        $paymentRequests = PaymentRequest::where('shipment_id', $shipment->id)
+            ->with([
+                'requester',
+                'approver',
+                'payer',
+                'quotationDocument',
+                'paymentProof',
+                'receiptDocument'
+            ])
+            ->orderBy('phase')
+            ->orderBy('created_at')
+            ->get()
+            ->map(function ($request) {
+                return [
+                    'id' => $request->id,
+                    'shipment_id' => $request->shipment_id,
+                    'phase' => $request->phase,
+                    'request_type' => $request->request_type,
+                    'payee' => $request->payee,
+                    'amount' => $request->amount,
+                    'currency' => $request->currency,
+                    'status' => $request->status,
+                    'description' => $request->description,
+                    'created_at' => $request->created_at,
+                    'updated_at' => $request->updated_at,
+                    // Incluir informações adicionais conforme necessário
+                    'requester' => $request->requester ? $request->requester->name : null,
+                    'approver' => $request->approver ? $request->approver->name : null,
+                    'payer' => $request->payer ? $request->payer->name : null,
+                ];
+            });
 
-    return response()->json($paymentRequests);
-}
+        return response()->json($paymentRequests);
+    }
 }
