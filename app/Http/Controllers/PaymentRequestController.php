@@ -57,6 +57,52 @@ class PaymentRequestController extends Controller
             'recentRequests' => $recentRequests,
         ]);
     }
+/**
+     * Registrar recibo para solicitação de pagamento
+     */
+    public function registerReceipt(Request $request)
+    {
+        $validated = $request->validate([
+            'payment_request_id' => 'required|exists:payment_requests,id',
+            'document_id' => 'required|exists:documents,id'
+        ]);
+
+        dd($request->all());
+
+        try {
+            $paymentRequest = PaymentRequest::findOrFail($validated['payment_request_id']);
+            $document = Document::findOrFail($validated['document_id']);
+
+            // Atualizar o campo receipt_document_id
+            $paymentRequest->update([
+                'receipt_document_id' => $document->id
+            ]);
+
+            // Log do evento
+            Log::info('Recibo registrado para solicitação de pagamento', [
+                'payment_request_id' => $paymentRequest->id,
+                'document_id' => $document->id
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Recibo registrado com sucesso'
+            ]);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao registrar recibo', [
+                'payment_request_id' => $validated['payment_request_id'],
+                'document_id' => $validated['document_id'],
+                'error' => $e->getMessage()
+            ]);
+
+            return response()->json([
+                'success' => false,
+                'message' => 'Erro ao registrar recibo'
+            ], 500);
+        }
+    }
+
 
     /**
      * Dashboard de Aprovações (Para Gestores)
@@ -472,30 +518,62 @@ public function reject(Request $request, PaymentRequest $paymentRequest)
      */
     public function attachReceipt(Request $request, PaymentRequest $paymentRequest)
     {
-        $validated = $request->validate([
-            'receipt' => 'required|file|max:10240',
-            'receipt_date' => 'required|date',
-        ]);
+        // dd($request->all());
+             $request->validate([
+                'receipt' => 'required|file|max:10240',
+             ]);
 
-        try {
-            DB::beginTransaction();
+             try {
+                DB::beginTransaction();
 
-            $receiptPath = $request->file('receipt')
-                ->store("documents/receipts/{$paymentRequest->shipment_id}", 'public');
+                $file = $request->file('receipt');
 
-            $receiptDoc = Document::create([
-                'shipment_id' => $paymentRequest->shipment_id,
+            // Armazenar arquivo
+            $path = $file->store('documents/receipts/' . $request->shimpment_id, 'public');
+
+            $document = Document::create([
+                'shipment_id' => $request->shimpment_id,
                 'type' => 'receipt',
-                'name' => 'Recibo - ' . $validated['receipt_date'],
-                'path' => $receiptPath,
-                'size' => $request->file('receipt')->getSize(),
+                'name' => $file->getClientOriginalName(),
+                'path' => $path,
+                'size' => $file->getSize(),
                 'uploaded_by' => auth()->id(),
                 'metadata' => [
-                    'receipt_date' => $validated['receipt_date'],
+                    'mime_type' => $file->getMimeType(),
+                    'original_name' => $file->getClientOriginalName(),
+                    'notes' => $request->notes ?? null,
                 ],
             ]);
 
-            $paymentRequest->attachReceipt($receiptDoc->id);
+                // $receiptPath = $request->file('receipt')->store("documents/receipts/{$request->shipment_id}", 'public');
+
+                // $receiptDoc = Document::create([
+                //     'shipment_id' => $request->shipment_id,
+                //     'type' => 'receipt',
+                //     'name' => $request->receipt->getClientOriginalName(),
+                //     'path' => $receiptPath,
+                //     'size' => $request->file('receipt')->getSize(),
+                //     'uploaded_by' => auth()->id(),
+                //     'metadata' => [
+                //         'receipt_date' => $request->receipt->getClientOriginalName(),
+                //     ],
+                // ]);
+
+
+                 $requisao = PaymentRequest::find($request->payment_requests_id);
+                 $requisao->receipt_document_id = $document->id;
+                 $requisao->save();
+// dd($requisao);
+                     // Registrar atividade
+                // Activity::create([
+                //     'shipment_id' => $request->shipment_id,
+                //     'user_id' => auth()->id(),
+                //     'action' => 'document_uploaded',
+                //     'description' => "Documento '{$file->getClientOriginalName()}' foi enviado",
+                // ]);
+
+            // $paymentRequest->attachReceipt($receiptDoc->id);
+
 
             DB::commit();
 
