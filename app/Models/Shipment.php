@@ -108,6 +108,70 @@ class Shipment extends Model
 }
 
 
+
+/**
+ * Obter checklist de documentos para uma fase específica
+ *
+ * @param int $phase
+ * @return array
+ */
+public function getDocumentChecklistForPhase(int $phase): array
+{
+    $documentsByPhase = [
+        1 => ['bl', 'carta_endosso'],
+        2 => ['bl_carimbado', 'delivery_order'],
+        3 => ['packing_list', 'commercial_invoice', 'aviso', 'autorizacao'],
+        4 => ['draft', 'storage', 'termo'],
+        5 => ['sad', 'ido'],
+        6 => ['invoice'],
+        7 => ['pod', 'signature'],
+    ];
+
+    $labels = [
+        'bl' => 'BL Original',
+        'carta_endosso' => 'Carta de Endosso',
+        'bl_carimbado' => 'BL Carimbado',
+        'delivery_order' => 'Delivery Order',
+        'packing_list' => 'Packing List',
+        'commercial_invoice' => 'Commercial Invoice',
+        'aviso' => 'Aviso de Taxação',
+        'autorizacao' => 'Autorização de Saída',
+        'draft' => 'Draft Cornelder',
+        'storage' => 'Storage',
+        'termo' => 'Termo da Linha',
+        'sad' => 'SAD (Documento Trânsito)',
+        'ido' => 'IDO',
+        'invoice' => 'Fatura ao Cliente',
+        'pod' => 'POD (Proof of Delivery)',
+        'signature' => 'Assinatura do Cliente',
+    ];
+
+    $requiredTypes = $documentsByPhase[$phase] ?? [];
+    $checklist = [];
+
+    // Buscar documentos anexados
+    $attachedDocs = $this->documents()
+        ->whereIn('type', $requiredTypes)
+        ->get()
+        ->keyBy('type');
+
+    foreach ($requiredTypes as $type) {
+        $document = $attachedDocs->get($type);
+
+        $checklist[] = [
+            'type' => $type,
+            'label' => $labels[$type] ?? ucfirst($type),
+            'required' => in_array($type, ['bl', 'bl_carimbado', 'delivery_order', 'sad', 'pod']),
+            'attached' => $document !== null,
+            'document_id' => $document ? $document->id : null,
+            'uploaded_at' => $document ? $document->created_at->toIso8601String() : null,
+            'file_name' => $document ? $document->name : null,
+        ];
+    }
+
+    return $checklist;
+}
+
     // ========================================
     // RELATIONSHIPS
     // ========================================
