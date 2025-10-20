@@ -193,12 +193,14 @@ export function BulkPaymentRequestModal({ shipment, phase, phaseName, onClose })
             onError: (errors) => {
                 console.error('Erros:', errors);
                 setErrors(errors);
+                // console.log("formData",shipment.id)
                 alert('❌ Erro ao enviar solicitações. Verifique os dados.');
             },
             onFinish: () => {
                 setUploading(false);
             }
         });
+
     };
 
     // Obter configuração do tipo de despesa
