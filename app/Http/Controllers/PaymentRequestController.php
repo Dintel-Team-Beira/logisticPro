@@ -6,7 +6,9 @@ use App\Models\Activity;
 use App\Models\PaymentRequest;
 use App\Models\Shipment;
 use App\Models\Document;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Notifications\Notification;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -374,10 +376,12 @@ class PaymentRequestController extends Controller
      */
     public function reject(Request $request, PaymentRequest $paymentRequest)
     {
-        if (!auth()->user()->isGestor()) {
-            abort(403, 'Sem permissão para rejeitar');
-        }
+        // if (!auth()->user()->isGestor()) {
+        //     abort(403, 'Sem permissão para rejeitar');
+        // }
 
+
+        // dd($paymentRequest);
         $validated = $request->validate([
             'reason' => 'required|string|max:500',
         ]);
@@ -563,6 +567,8 @@ class PaymentRequestController extends Controller
 
     public function storeBulk(Request $request, Shipment $shipment)
 {
+
+    // dd($request->all());
     // Validação
     $validated = $request->validate([
         'phase' => 'required|integer|between:1,7',
@@ -617,7 +623,7 @@ class PaymentRequestController extends Controller
         DB::commit();
 
         // Notificar gestores financeiros
-        $this->notifyFinanceManagers($shipment, $createdRequests);
+        // $this->notifyFinanceManagers($shipment, $createdRequests);
 
         return redirect()
             ->back()
@@ -653,19 +659,19 @@ private function notifyFinanceManagers(Shipment $shipment, array $requests)
     $totalAmount = collect($requests)->sum('amount');
     $requestCount = count($requests);
 
-    foreach ($financeManagers as $manager) {
-        Notification::create([
-            'user_id' => $manager->id,
-            'type' => 'payment_request',
-            'title' => "Nova(s) Solicitação(ões) de Pagamento",
-            'message' => "{$requestCount} solicitação(ões) de pagamento para o processo {$shipment->reference_number} aguardam aprovação.",
-            'data' => json_encode([
-                'shipment_id' => $shipment->id,
-                'request_count' => $requestCount,
-                'total_amount' => $totalAmount,
-            ]),
-        ]);
-    }
+    // foreach ($financeManagers as $manager) {
+    //     Notification::create([
+    //         'user_id' => $manager->id,
+    //         'type' => 'payment_request',
+    //         'title' => "Nova(s) Solicitação(ões) de Pagamento",
+    //         'message' => "{$requestCount} solicitação(ões) de pagamento para o processo {$shipment->reference_number} aguardam aprovação.",
+    //         'data' => json_encode([
+    //             'shipment_id' => $shipment->id,
+    //             'request_count' => $requestCount,
+    //             'total_amount' => $totalAmount,
+    //         ]),
+    //     ]);
+    // }
 }
 
 }
