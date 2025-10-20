@@ -317,6 +317,9 @@ Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.
         ->where('type', 'quotation|payment_proof|receipt');
 });
 
+
+Route::get('/shipments/{shipment}/payment-requests', [ShipmentController::class, 'getPaymentRequests'])
+    ->name('shipments.payment-requests');
 // ============================================================================
 // SHIPMENTS (Processos de Importação) - CRUD Completo
 // ============================================================================
