@@ -273,7 +273,7 @@ public function show(Shipment $shipment)
         ->orderBy('created_at')
         ->get();
 
-
+// dd($paymentRequests);
     return Inertia::render('Shipments/Show', [
         'shipment' => $shipment,
         'phases' => $phases,
@@ -299,6 +299,7 @@ private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): a
         1 => [ // Coleta Dispersa
             ['type' => 'bl', 'label' => 'BL Original', 'required' => true],
             ['type' => 'carta_endosso', 'label' => 'Carta de Endosso', 'required' => false],
+            ['type' => 'receipt', 'label' => 'Recibo de pagamento', 'required' => false],
         ],
         2 => [ // Legalização
             ['type' => 'bl_carimbado', 'label' => 'BL Carimbado', 'required' => true],
