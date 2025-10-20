@@ -344,15 +344,21 @@ function getPhaseKey(phaseNumber) {
 
                             {/* Ações da Fase */}
                             <div className='flex gap-3'>
-{selectedPhase === 1 && currentPhaseData.status === 'not_started' && (
-    <button
-        onClick={() => setBulkPaymentModalOpen(true)}
-        className="flex items-center justify-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-gradient-to-r from-purple-600 to-purple-700 hover:from-purple-700 hover:to-purple-800"
-    >
-        <DollarSign className="w-4 h-4" />
-        Solicitar Múltiplos Orçamentos
-    </button>
-)}
+
+     {/* BOTÃO SEMPRE VISÍVEL NA FASE 1 - TESTE */}
+    {selectedPhase === 1 && (
+        <button
+            onClick={() => {
+                alert('Botão clicado! Modal abrindo...');
+                setBulkPaymentModalOpen(true);
+            }}
+            className='flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg'
+        >
+            <DollarSign className='w-4 h-4' />
+            Solicitar Múltiplos Orçamentos
+        </button>
+    )}
+ 
 
 {currentPhaseData.show_payment_request && (
                     <button
