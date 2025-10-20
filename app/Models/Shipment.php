@@ -5,6 +5,7 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Support\Facades\Log;
 
 /**
  * Model Shipment - VERSÃO MELHORADA
@@ -75,7 +76,37 @@ class Shipment extends Model
         'invoice_amount' => 'decimal:2',
         'profit_margin' => 'decimal:2',
         'metadata' => 'array',
+
+
+
+    'freight_cost' => 'decimal:2',
+    'customs_cost' => 'decimal:2',
+    'cornelder_cost' => 'decimal:2',
+    'other_costs' => 'decimal:2',
     ];
+
+    protected $appends = ['request_type_label'];
+
+    public function getRequestTypeLabelAttribute()
+{
+    $labels = [
+        'shipping_line_quotation' => 'Cotação Linha de Navegação',
+        'cdm_fee' => 'Despesas CDM',
+        'customs_preliminary' => 'Taxas Alfandegárias Preliminares',
+        'legalization_advance' => 'Adiantamento Legalização',
+        'transport_fee' => 'Taxa de Transporte',
+        'other_coleta' => 'Outras Despesas Coleta',
+        'legalization_fee' => 'Taxas de Legalização',
+        'customs_tax' => 'Impostos Alfandegários',
+        'storage_fee' => 'Taxa de Armazenamento',
+        'tax_payment' => 'Pagamento de Impostos',
+        'invoice_related' => 'Custos de Faturação',
+        'delivery_fee' => 'Taxa de Entrega/Transporte',
+    ];
+
+    return $labels[$this->request_type] ?? $this->request_type;
+}
+
 
     // ========================================
     // RELATIONSHIPS
@@ -157,25 +188,211 @@ class Shipment extends Model
     // MÉTODOS DE PROGRESSO POR FASE (PÚBLICOS)
     // ========================================
 
-   public function getPhase1Progress(): float
+// ========================================
+// 🔄 ATUALIZAR O MÉTODO getPhase1Progress()
+// Substituir o código existente por este:
+// ========================================
+
+public function getPhase1Progress(): float
 {
+    // Verificar se há payment_requests para esta fase
+    $hasRequests = $this->paymentRequests()->where('phase', 1)->exists();
+
+    if ($hasRequests) {
+        // Usar nova lógica baseada em PaymentRequests
+        return $this->getPhaseProgressFromPaymentRequests(1);
+    }
+
+    // Fallback: Lógica antiga (inline, sem método separado)
     $steps = [
-        // BL já anexado na criação
         $this->documents()->where('type', 'bl')->exists() ? 25 : 0,
-
-        // Cotação solicitada
         $this->quotation_status === 'requested' ? 25 : 0,
-
-        // Pagamento efetuado
         $this->payment_status === 'paid' ? 25 : 0,
-
-        // Recibo anexado
         $this->documents()->where('type', 'receipt')->exists() ? 25 : 0,
     ];
 
     return array_sum($steps);
 }
 
+
+
+/**
+ * 🎯 MÉTODO UNIFICADO: Obter progresso de qualquer fase
+ * Usa PaymentRequests quando disponível, senão usa métodos legados
+ */
+public function getPhaseProgress(int $phase): float
+{
+    // Verificar se há payment_requests para esta fase
+    $hasRequests = $this->paymentRequests()->where('phase', $phase)->exists();
+
+    if ($hasRequests) {
+        return $this->getPhaseProgressFromPaymentRequests($phase);
+    }
+
+    // Fallback: Usar métodos de progresso existentes
+    switch ($phase) {
+        case 1:
+            return $this->getPhase1Progress();
+        case 2:
+            return $this->getPhase2Progress();
+        case 3:
+            return $this->getPhase3Progress();
+        case 4:
+            return $this->getPhase4Progress();
+        case 5:
+            return $this->getPhase5Progress();
+        case 6:
+            return $this->getPhase6Progress();
+        case 7:
+            return $this->getPhase7Progress();
+        default:
+            return 0;
+    }
+}
+
+
+/**
+ * 🆕 OBTER CHECKLIST BASEADO EM PAYMENT REQUESTS
+ * Retorna array com status de cada payment_request
+ */
+public function getPaymentRequestsChecklist(int $phase): array
+{
+    $requests = $this->paymentRequests()
+        ->where('phase', $phase)
+        ->with(['quotationDocument', 'paymentProof', 'receiptDocument'])
+        ->get();
+
+    $checklist = [];
+
+    foreach ($requests as $request) {
+        $checklist[] = [
+            'id' => $request->id,
+            'label' => $request->getTypeLabel() . ' - ' . $request->payee,
+            'type' => $request->request_type,
+            'amount' => $request->formatted_amount,
+            'status' => $request->status,
+
+            // Sub-itens do checklist
+            'steps' => [
+                [
+                    'label' => 'Cotação Anexada',
+                    'completed' => $request->quotation_document_id !== null,
+                    'icon' => 'FileText',
+                    'document' => $request->quotationDocument,
+                ],
+                [
+                    'label' => 'Aprovação Recebida',
+                    'completed' => in_array($request->status, ['approved', 'paid']),
+                    'icon' => 'CheckCircle2',
+                    'approved_at' => $request->approved_at,
+                    'approved_by' => $request->approver?->name,
+                ],
+                [
+                    'label' => 'Pagamento Efetuado',
+                    'completed' => $request->payment_proof_id !== null,
+                    'icon' => 'DollarSign',
+                    'document' => $request->paymentProof,
+                    'paid_at' => $request->paid_at,
+                ],
+                [
+                    'label' => 'Recibo Anexado',
+                    'completed' => $request->receipt_document_id !== null,
+                    'icon' => 'Receipt',
+                    'document' => $request->receiptDocument,
+                ],
+            ],
+
+            // Progresso individual deste request (0-100%)
+            'progress' => $this->calculateSingleRequestProgress($request),
+
+            // Status geral
+            'is_complete' => $request->receipt_document_id !== null,
+            'can_advance' => $request->payment_proof_id !== null && $request->receipt_document_id !== null,
+        ];
+    }
+
+    return $checklist;
+}
+
+/**
+ * 🆕 CALCULAR PROGRESSO DE UM ÚNICO PAYMENT REQUEST
+ */
+private function calculateSingleRequestProgress($request): int
+{
+    $points = 0;
+
+    // 25%: Request criado e aprovado
+    if (in_array($request->status, ['approved', 'paid'])) {
+        $points += 33;
+    }
+
+    // 33%: Pagamento efetuado
+    if ($request->payment_proof_id !== null) {
+        $points += 34;
+    }
+
+    // 33%: Recibo anexado
+    if ($request->receipt_document_id !== null) {
+        $points += 33;
+    }
+
+    return $points;
+}
+
+
+/**
+ * 🆕 VERIFICAR SE FASE PODE AVANÇAR (baseado em PaymentRequests)
+ */
+public function canAdvancePhaseFromPaymentRequests(int $phase): array
+{
+    $result = [
+        'can_advance' => false,
+        'missing_items' => [],
+        'warnings' => [],
+        'progress' => 0,
+    ];
+
+    // Obter todos os payment_requests da fase
+    $requests = $this->paymentRequests()->where('phase', $phase)->get();
+
+    // Se não há requests, pode avançar (não bloqueia)
+    if ($requests->isEmpty()) {
+        $result['can_advance'] = true;
+        return $result;
+    }
+
+    $result['progress'] = $this->getPhaseProgressFromPaymentRequests($phase);
+
+    // Verificar cada request
+    foreach ($requests as $request) {
+        // Deve estar aprovado
+        if (!in_array($request->status, ['approved', 'paid'])) {
+            $result['missing_items'][] = "{$request->getTypeLabel()} - Aguardando aprovação";
+            continue;
+        }
+
+        // Deve ter comprovativo de pagamento
+        if ($request->payment_proof_id === null) {
+            $result['warnings'][] = "{$request->getTypeLabel()} - Pagamento ainda não confirmado";
+        }
+
+        // Deve ter recibo
+        if ($request->receipt_document_id === null) {
+            $result['warnings'][] = "{$request->getTypeLabel()} - Recibo de pagamento não anexado";
+        }
+    }
+
+    // Pode avançar se todos os requests têm pelo menos comprovativo
+    // (Recibo é opcional para avançar, mas aparece como warning)
+    $allPaid = $requests->every(function ($request) {
+        return in_array($request->status, ['approved', 'paid']) &&
+               $request->payment_proof_id !== null;
+    });
+
+    $result['can_advance'] = $allPaid && empty($result['missing_items']);
+
+    return $result;
+}
 
     /**
      * 🆕 RELACIONAMENTO COM PAYMENT REQUESTS
@@ -248,6 +465,43 @@ class Shipment extends Model
         return array_sum($steps);
     }
 
+
+// ========================================
+// ACCESSORS ÚTEIS
+// ========================================
+
+/**
+ * Obter formatted amount para PaymentRequest
+ */
+public function getFormattedAmountAttribute(): string
+{
+    return number_format($this->amount, 2, ',', '.') . ' ' . $this->currency;
+}
+
+/**
+ * Verificar se payment_request está completo
+ */
+public function getIsCompleteAttribute(): bool
+{
+    return $this->payment_proof_id !== null &&
+           $this->receipt_document_id !== null;
+}
+
+/**
+ * Obter label de status traduzido
+ */
+public function getStatusLabelAttribute(): string
+{
+    return match($this->status) {
+        'pending' => 'Pendente',
+        'approved' => 'Aprovado',
+        'paid' => 'Pago',
+        'rejected' => 'Rejeitado',
+        default => 'Desconhecido'
+    };
+}
+
+
     // ========================================
     // VALIDAÇÃO FLEXÍVEL - NOVO
     // ========================================
@@ -259,96 +513,107 @@ class Shipment extends Model
     public function canAdvanceToPhase(int $phase): array
     {
         $result = [
-            'can_advance' => false,
-            'warnings' => [],
-            'risks' => [],
-            'missing_items' => [],
-        ];
+        'can_advance' => false,
+        'missing_items' => [],
+        'warnings' => [],
+        'risks' => [],
+        'progress' => 0,
+        'show_payment_request' => false,
+    ];
 
-        switch ($phase) {
-            case 1: // Coleta Dispersa
-                $result['can_advance'] = $this->quotation_status === 'received';
+    switch ($phase) {
+        case 1: // Coleta Dispersa
+            // 🆕 USAR NOVA LÓGICA
+            $paymentValidation = $this->canAdvancePhaseFromPaymentRequests(1);
+            $result = array_merge($result, $paymentValidation);
 
-                if ($this->payment_status !== 'paid') {
-                    $result['warnings'][] = 'Pagamento ainda não confirmado';
-                    $result['risks'][] = 'delay';
+            // Sempre mostrar botão de solicitar orçamento na fase 1
+            $result['show_payment_request'] = true;
+
+            // Verificar BL
+            if (!$this->documents()->where('type', 'bl')->exists()) {
+                $result['missing_items'][] = 'BL Original deve estar anexado';
+                $result['can_advance'] = false;
+            }
+            break;
+
+        case 2: // Legalização
+            // Similar para outras fases...
+            $paymentValidation = $this->canAdvancePhaseFromPaymentRequests(2);
+            $result = array_merge($result, $paymentValidation);
+
+            // Verificar documentos necessários
+            if (!$this->documents()->where('type', 'bl_carimbado')->exists()) {
+                $result['missing_items'][] = 'BL Carimbado';
+            }
+            break;
+
+        case 3: // Alfândegas
+            $paymentValidation = $this->canAdvancePhaseFromPaymentRequests(3);
+            $result = array_merge($result, $paymentValidation);
+
+            $result['show_payment_request'] = true;
+            break;
+
+        case 4: // Cornelder
+            $paymentValidation = $this->canAdvancePhaseFromPaymentRequests(4);
+            $result = array_merge($result, $paymentValidation);
+
+            $result['show_payment_request'] = true;
+            break;
+
+        case 5: // Taxação
+            $paymentValidation = $this->canAdvancePhaseFromPaymentRequests(5);
+            $result = array_merge($result, $paymentValidation);
+
+            $requiredDocs = $this->getRequiredTaxationDocuments();
+            foreach ($requiredDocs as $doc) {
+                if (!$this->documents()->where('type', $doc)->exists()) {
+                    $result['missing_items'][] = $doc;
                 }
+            }
+            break;
 
-                if (!$this->documents()->where('type', 'receipt')->exists()) {
-                    $result['warnings'][] = 'Recibo de pagamento não anexado';
-                    $result['missing_items'][] = 'receipt';
-                }
-                break;
+         case 6: // Faturação
+    // ✅ CORREÇÃO: Verificar usando shipment_stages ao invés de taxation_status
+    $taxacaoCompleta = $this->stages()
+        ->where('stage', 'taxacao')
+        ->where('status', 'completed')
+        ->exists();
 
-            case 2: // Legalização
-                $hasBL = $this->documents()->where('type', 'bl')->exists();
-                $result['can_advance'] = $hasBL;
+    $result['can_advance'] = $taxacaoCompleta;
 
-                if (!$hasBL) {
-                    $result['warnings'][] = 'BL original necessário';
-                    $result['missing_items'][] = 'bl';
-                }
+    // Se Taxação completa, calcular custos automaticamente
+    if ($taxacaoCompleta) {
+        // Calcular total_cost se não existir
+        if (!$this->total_cost || $this->total_cost <= 0) {
+            $this->calculateTotalCost();
+            $this->refresh(); // Recarregar valores
+        }
 
-                if (!$this->documents()->where('type', 'carta_endosso')->exists()) {
-                    $result['warnings'][] = 'Carta de endosso pendente';
-                    $result['risks'][] = 'cannot_proceed_to_customs';
-                }
-                break;
+        // Definir profit_margin se não existir
+        if (!$this->profit_margin || $this->profit_margin <= 0) {
+            $this->setDefaultProfitMargin();
+            $this->refresh();
+        }
+    }
 
-            case 3: // Alfândegas
-                $result['can_advance'] = $this->documents()->where('type', 'bl_carimbado')->exists();
+    // Warnings informativos (não bloqueiam)
+    if (!$this->total_cost || $this->total_cost <= 0) {
+        $result['warnings'][] = 'Custos totais não calculados';
+    }
 
-                if ($this->customs_payment_status !== 'paid' && !$this->has_tax_exemption) {
-                    $result['warnings'][] = 'Pagamento alfandegário pendente';
-                    $result['risks'][] = 'high_delay';
-                }
+    if (!$this->profit_margin || $this->profit_margin <= 0) {
+        $result['warnings'][] = 'Margem de lucro não definida';
+    }
 
-                if ($this->has_tax_exemption && !$this->documents()->where('type', 'certificado_isencao')->exists()) {
-                    $result['warnings'][] = 'Certificado de isenção necessário';
-                }
-                break;
+    // 🔒 OPCIONAL: Tornar bloqueante (descomentar se quiser bloquear)
+    // if (!$this->total_cost || $this->total_cost <= 0) {
+    //     $result['can_advance'] = false;
+    //     $result['missing_items'][] = 'Custos totais devem ser calculados';
+    // }
 
-            case 4: // Cornelder
-                // Pode iniciar em paralelo com Fase 3 se >= 70%
-                $phase3Progress = $this->getPhase3Progress();
-                $result['can_advance'] = $phase3Progress >= 70;
-
-                if ($this->cornelder_payment_status !== 'paid') {
-                    $result['warnings'][] = 'Pagamento Cornelder pendente';
-                }
-
-                // Alerta de storage deadline
-                if ($this->storage_deadline && $this->storage_deadline->isPast()) {
-                    $result['warnings'][] = 'URGENTE: Prazo de armazenamento expirado!';
-                    $result['risks'][] = 'storage_fees';
-                }
-                break;
-
-            case 5: // Taxação
-                // Requer Fase 3 e 4 completas
-                $result['can_advance'] =
-                    $this->getPhase3Progress() >= 100 &&
-                    $this->getPhase4Progress() >= 100;
-
-                $requiredDocs = $this->getRequiredTaxationDocuments();
-                foreach ($requiredDocs as $doc) {
-                    if (!$this->documents()->where('type', $doc)->exists()) {
-                        $result['missing_items'][] = $doc;
-                    }
-                }
-                break;
-
-            case 6: // Faturação
-                $result['can_advance'] = $this->taxation_status === 'completed';
-
-                if (!$this->total_cost) {
-                    $result['warnings'][] = 'Custos totais não calculados';
-                }
-
-                if (!$this->profit_margin) {
-                    $result['warnings'][] = 'Margem de lucro não definida';
-                }
-                break;
+    break;
 
             case 7: // POD
                 $result['can_advance'] =
@@ -390,6 +655,126 @@ class Shipment extends Model
 
         return $docs;
     }
+
+    /**
+ * Calcular custos totais do processo
+ * Soma todos os custos registrados nas fases anteriores
+ *
+ * @return float
+ */
+public function calculateTotalCost(): float
+{
+    // Opção 1: Calcular baseado em payment_requests aprovados
+    $costFromRequests = $this->paymentRequests()
+        ->whereIn('status', ['approved', 'paid'])
+        ->sum('amount');
+
+    // Opção 2: Calcular baseado nos campos do shipment
+    $costFromFields = ($this->freight_cost ?? 0) +
+                      ($this->customs_cost ?? 0) +
+                      ($this->cornelder_cost ?? 0) +
+                      ($this->other_costs ?? 0);
+
+    // Usar o maior valor entre os dois
+    $totalCost = max($costFromRequests, $costFromFields);
+
+    // Se houver custo, atualizar o registro
+    if ($totalCost > 0) {
+        $this->update(['total_cost' => $totalCost]);
+
+        // Registrar atividade
+        Activity::create([
+            'shipment_id' => $this->id,
+            'user_id' => auth()->id() ?? 1,
+            'action' => 'cost_calculated',
+            'description' => "Custos totais calculados: " . number_format($totalCost, 2) . " MZN",
+        ]);
+    }
+
+    return $totalCost;
+}
+
+
+/**
+ * Definir margem de lucro padrão
+ * Usa configuração global ou 15% como padrão
+ *
+ * @return void
+ */
+public function setDefaultProfitMargin(): void
+{
+    if (!$this->profit_margin || $this->profit_margin <= 0) {
+        // Buscar configuração global (se existir)
+        // $defaultMargin = Setting::get('default_profit_margin', 15);
+        $defaultMargin = 15; // 15% padrão
+
+        $this->update(['profit_margin' => $defaultMargin]);
+
+        // Registrar atividade
+        Activity::create([
+            'shipment_id' => $this->id,
+            'user_id' => auth()->id() ?? 1,
+            'action' => 'profit_margin_set',
+            'description' => "Margem de lucro definida: {$defaultMargin}%",
+        ]);
+    }
+}
+
+/**
+ * Obter breakdown detalhado de custos
+ *
+ * @return array
+ */
+public function getCostBreakdown(): array
+{
+    return [
+        'freight' => [
+            'label' => 'Linha de Navegação',
+            'amount' => $this->freight_cost ?? 0,
+        ],
+        'customs' => [
+            'label' => 'Alfândegas',
+            'amount' => $this->customs_cost ?? 0,
+        ],
+        'cornelder' => [
+            'label' => 'Cornelder',
+            'amount' => $this->cornelder_cost ?? 0,
+        ],
+        'others' => [
+            'label' => 'Outras Despesas',
+            'amount' => $this->other_costs ?? 0,
+        ],
+        'total' => [
+            'label' => 'Total de Custos',
+            'amount' => $this->total_cost ?? 0,
+        ],
+        'profit_margin' => [
+            'label' => 'Margem de Lucro',
+            'percentage' => $this->profit_margin ?? 0,
+            'amount' => ($this->total_cost ?? 0) * (($this->profit_margin ?? 0) / 100),
+        ],
+        'total_revenue' => [
+            'label' => 'Total a Faturar',
+            'amount' => $this->calculateTotalRevenue(),
+        ],
+    ];
+}
+
+/**
+ * Calcular receita total baseado em custos e margem
+ *
+ * @return float
+ */
+public function calculateTotalRevenue(): float
+{
+    if (!$this->total_cost || !$this->profit_margin) {
+        return 0;
+    }
+
+    return $this->total_cost * (1 + $this->profit_margin / 100);
+}
+
+
 
     // ========================================
     // GESTÃO DE FASES PARALELAS - NOVO
@@ -437,45 +822,84 @@ class Shipment extends Model
         ]);
     }
 
-    /**
-     * Completar uma fase
-     */
-    public function completePhase(int $phase): bool
-    {
-        $stageName = $this->getStageNameFromPhase($phase);
-        $stage = $this->stages()->where('stage', $stageName)->first();
+ // 3️⃣ ATUALIZAR O MÉTODO completePhase
+// Localizar o método completePhase e SUBSTITUIR ou ADICIONAR após $stage->update():
 
-        if (!$stage) {
-            return false;
-        }
+public function completePhase(int $phase): bool
+{
+    $stageName = $this->getStageNameFromPhase($phase);
+    $stage = $this->stages()->where('stage', $stageName)->first();
 
-        $stage->update([
-            'status' => 'completed',
-            'completed_at' => now(),
-            'updated_by' => auth()->id() ?? 1,
+    if (!$stage) {
+        return false;
+    }
+
+    $stage->update([
+        'status' => 'completed',
+        'completed_at' => now(),
+        'updated_by' => auth()->id() ?? 1,
+    ]);
+
+    // ✅ ADICIONAR: Hook específico para Fase 5 (Taxação)
+    if ($phase === 5) {
+        // Calcular custos automaticamente
+        $this->calculateTotalCost();
+
+        // Definir margem de lucro padrão
+        $this->setDefaultProfitMargin();
+
+        // Registrar que está pronto para faturação
+        Activity::create([
+            'shipment_id' => $this->id,
+            'user_id' => auth()->id() ?? 1,
+            'action' => 'ready_for_invoice',
+            'description' => 'Processo pronto para faturação. Custos calculados.',
         ]);
-
-        // Auto-iniciar próxima fase se aplicável
-        $this->autoStartNextPhase($phase);
-
-        return true;
     }
 
-    /**
-     * Auto-iniciar próxima fase baseado em dependências
-     */
-    public function autoStartNextPhase(int $completedPhase): void
-    {
-        $autoStart = [
-            1 => 2, // Coleta completa → iniciar Legalização
-            2 => 3, // Legalização completa → iniciar Alfândegas
-            5 => 6, // Taxação completa → iniciar Faturação
-        ];
+    // Auto-iniciar próxima fase se aplicável
+    $this->autoStartNextPhase($phase);
 
-        if (isset($autoStart[$completedPhase])) {
-            $this->startPhase($autoStart[$completedPhase]);
-        }
+    return true;
+}
+
+
+
+// 4️⃣ VERIFICAR/ATUALIZAR O MÉTODO autoStartNextPhase
+// Garantir que tem a linha 5 => 6
+
+public function autoStartNextPhase(int $completedPhase): void
+{
+    $autoStart = [
+        1 => 2, // Coleta completa → iniciar Legalização
+        2 => 3, // Legalização completa → iniciar Alfândegas
+        5 => 6, // Taxação completa → iniciar Faturação ✅ GARANTIR QUE EXISTE
+    ];
+
+    if (isset($autoStart[$completedPhase])) {
+        $this->startPhase($autoStart[$completedPhase]);
     }
+}
+
+
+// 5️⃣ OPCIONAL: ADICIONAR ACCESSOR PARA FORMATTED COSTS
+// Facilita exibição nos components
+
+public function getFormattedTotalCostAttribute(): string
+{
+    return number_format($this->total_cost ?? 0, 2, ',', '.') . ' MZN';
+}
+
+public function getFormattedProfitMarginAttribute(): string
+{
+    return ($this->profit_margin ?? 0) . '%';
+}
+
+public function getFormattedTotalRevenueAttribute(): string
+{
+    return number_format($this->calculateTotalRevenue(), 2, ',', '.') . ' MZN';
+}
+
 
     // ========================================
     // HELPERS
@@ -569,5 +993,93 @@ class Shipment extends Model
             ];
         })->toArray();
     }
-    
+
+
+/**
+ * 🆕 MÉTODO PRINCIPAL: Calcular progresso de fase baseado em PaymentRequests
+ * VERSÃO SIMPLIFICADA (sem fallback)
+ */
+public function getPhaseProgressFromPaymentRequests(int $phase): float
+{
+    // Obter todos os payment_requests desta fase
+    $requests = $this->paymentRequests()->where('phase', $phase)->get();
+
+    // Se não há requests, retornar 0
+    if ($requests->isEmpty()) {
+        return 0;
+    }
+
+    $totalRequests = $requests->count();
+    $completedSteps = 0;
+
+    foreach ($requests as $request) {
+        // Cada payment_request contribui com pontos baseado no status
+        $points = 0;
+
+        // 33%: Request criado e aprovado
+        if (in_array($request->status, ['approved', 'paid'])) {
+            $points += 0.33;
+        }
+
+        // 34%: Pagamento efetuado (tem payment_proof)
+        if ($request->payment_proof_id !== null) {
+            $points += 0.34;
+        }
+
+        // 33%: Recibo anexado
+        if ($request->receipt_document_id !== null) {
+            $points += 0.33;
+        }
+
+        $completedSteps += $points;
+    }
+
+    // Calcular porcentagem: (soma dos pontos / total de requests) * 100
+    return round(($completedSteps / $totalRequests) * 100, 2);
+}
+
+/**
+ * 📊 MÉTODO LEGACY: Cálculo antigo da Fase 1
+ * Usado apenas quando não há payment_requests
+ */
+private function getPhase1ProgressLegacy(): float
+{
+    $steps = [
+        // BL já anexado na criação
+        $this->documents()->where('type', 'bl')->exists() ? 25 : 0,
+
+        // Cotação solicitada (campo antigo)
+        $this->quotation_status === 'requested' ? 25 : 0,
+
+        // Pagamento efetuado (campo antigo)
+        $this->payment_status === 'paid' ? 25 : 0,
+
+        // Recibo anexado
+        $this->documents()->where('type', 'receipt')->exists() ? 25 : 0,
+    ];
+
+    return array_sum($steps);
+}
+
+
+/**
+ * Método temporário para evitar erro
+ * @deprecated Remover após refatoração completa
+ */
+private function getLegacyPhaseProgress(int $phase): float
+{
+    // Simplesmente retornar o método de progresso específico
+    try {
+        $method = "getPhase{$phase}Progress";
+        if (method_exists($this, $method)) {
+            return $this->$method();
+        }
+    } catch (\Exception $e) {
+        Log::warning("Erro ao calcular progresso legacy da fase {$phase}: " . $e->getMessage());
+    }
+
+    return 0;
+}
+
+
 }
