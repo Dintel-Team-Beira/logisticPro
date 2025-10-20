@@ -15,7 +15,10 @@ import {
     Building2,
     Receipt,
     CircleDashed,
+    X,
+    Upload,
 } from 'lucide-react';
+import AttachReceiptButton from './AttachReceiptButton';
 
 /**
  * 🎨 COMPONENTE VISUAL COMPLETO: Payment Requests Visualizer
@@ -83,8 +86,6 @@ const phaseRequests = paymentRequests.filter(req => String(req.phase) === String
 function PaymentRequestCard({ request, expanded, onToggle }) {
     const statusConfig = getStatusConfig(request.status);
     const progress = calculateRequestProgress(request);
-
-    {console.log("request",request)}
     return (
         <div className="overflow-hidden transition-all border-2 rounded-xl border-slate-200 hover:shadow-lg">
             {/* Header do Card */}
@@ -136,6 +137,7 @@ function PaymentRequestCard({ request, expanded, onToggle }) {
             {expanded && (
                 <div className="p-4 space-y-4 border-t bg-slate-50 border-slate-200">
                     {/* Informações Básicas */}
+                    {/* {request.id} */}
                     <div className="grid grid-cols-2 gap-4">
                         <InfoItem
                             icon={User}
@@ -212,21 +214,27 @@ function PaymentRequestCard({ request, expanded, onToggle }) {
 
                         {/* 3. Comprovativo de Pagamento payment_proof: */}
                         <DocumentCheckItem
-                            label="Comprovativo de Pagamento1"
+                            label="Comprovativo de Pagamento"
                             completed={!!request.payment_proof}
                             document={request.payment_proof}
                             icon={DollarSign}
                         />
 
-                        {/* 4. Recibo receipt_document
- */}
+                        {/* 4. Recibo receipt_document*/}
                         <DocumentCheckItem
                             label="Recibo Anexado."
-                            completed={!!request.receipt_document
-}
+                            completed={!!request.receipt_document}
                             document={request.receipt_document}
                             icon={Receipt}
                         />
+
+{!request.receipt_document&&
+                <AttachReceiptButton
+                    key={request.id}
+                    request={request}
+                />
+
+}
                     </div>
 
                     {/* Timeline Visual */}
@@ -533,3 +541,4 @@ function formatDate(date) {
         year: 'numeric',
     });
 }
+
