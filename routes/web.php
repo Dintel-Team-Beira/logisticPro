@@ -81,8 +81,8 @@ Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.
      * Usado por: Operações (após pagamento confirmado)
      */
     Route::post('/{paymentRequest}/attach-receipt', [PaymentRequestController::class, 'attachReceipt'])
-        ->name('attach-receipt')
-        ->middleware('can:attach_receipt');
+        ->name('attach-receipt');
+        // ->middleware('can:attach_receipt');
 
     // ========================================
     // GESTORES - APROVAÇÃO
