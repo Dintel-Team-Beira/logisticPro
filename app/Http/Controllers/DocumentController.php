@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Document;
 use App\Models\Shipment;
 use App\Models\Activity;
+use App\Models\PaymentRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
@@ -147,7 +148,8 @@ class DocumentController extends Controller
      */
     public function store(Request $request, Shipment $shipment)
     {
-        // Validação
+
+        
         $validated = $request->validate([
             'file' => 'required|file|max:10240', // 10MB
             'type' => 'required|string|max:50',
