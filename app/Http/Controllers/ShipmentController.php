@@ -272,6 +272,8 @@ public function show(Shipment $shipment)
         ->orderBy('phase')
         ->orderBy('created_at')
         ->get();
+
+
     return Inertia::render('Shipments/Show', [
         'shipment' => $shipment,
         'phases' => $phases,
