@@ -24,9 +24,9 @@ import {
  */
 export function PaymentRequestsVisualizer({ shipment, phase, paymentRequests = [] }) {
     const [expandedRequests, setExpandedRequests] = useState({});
-
+// console.log("paymentRequests visluazer",paymentRequests);
     // Filtrar requests desta fase
-    const phaseRequests = paymentRequests.filter(req => req.phase === phase);
+const phaseRequests = paymentRequests.filter(req => String(req.phase) === String(phase));
 
     // Se não há requests, mostrar mensagem
     if (phaseRequests.length === 0) {
@@ -82,7 +82,6 @@ export function PaymentRequestsVisualizer({ shipment, phase, paymentRequests = [
 function PaymentRequestCard({ request, expanded, onToggle }) {
     const statusConfig = getStatusConfig(request.status);
     const progress = calculateRequestProgress(request);
-
     return (
         <div className="overflow-hidden transition-all border-2 rounded-xl border-slate-200 hover:shadow-lg">
             {/* Header do Card */}
@@ -148,7 +147,7 @@ function PaymentRequestCard({ request, expanded, onToggle }) {
                         {request.approved_at && (
                             <InfoItem
                                 icon={CheckCircle2}
-                                label="Aprovado por"
+                                label={`${request.status === 'rejected'? 'Rejeiado Por' : 'Aprovado por' }`}
                                 value={request.approver?.name || 'N/A'}
                             />
                         )}
@@ -195,8 +194,8 @@ function PaymentRequestCard({ request, expanded, onToggle }) {
                         {/* 1. Cotação */}
                         <DocumentCheckItem
                             label="Cotação Anexada"
-                            completed={!!request.quotation_document}
-                            document={request.quotation_document}
+                            completed={!!request.quotationDocument}
+                            document={request.quotationDocument}
                             icon={FileText}
                         />
 
@@ -211,16 +210,16 @@ function PaymentRequestCard({ request, expanded, onToggle }) {
                         {/* 3. Comprovativo de Pagamento */}
                         <DocumentCheckItem
                             label="Comprovativo de Pagamento"
-                            completed={!!request.payment_proof}
-                            document={request.payment_proof}
+                            completed={!!request.paymentProof}
+                            document={request.paymentProof}
                             icon={DollarSign}
                         />
 
                         {/* 4. Recibo */}
                         <DocumentCheckItem
                             label="Recibo Anexado"
-                            completed={!!request.receipt_document}
-                            document={request.receipt_document}
+                            completed={!!request.receiptDocument}
+                            document={request.receiptDocument}
                             icon={Receipt}
                         />
                     </div>
@@ -402,13 +401,13 @@ function TimelineVisual({ request }) {
         {
             label: 'Pagamento Efetuado',
             date: request.paid_at,
-            completed: !!request.payment_proof_id,
+            completed: !!request.paymentProof_id,
             icon: DollarSign,
         },
         {
             label: 'Recibo Anexado',
             date: null, // Não tem data específica
-            completed: !!request.receipt_document_id,
+            completed: !!request.receiptDocument_id,
             icon: Receipt,
         },
     ];
@@ -502,12 +501,12 @@ function calculateRequestProgress(request) {
     }
 
     // 33%: Comprovativo
-    if (request.payment_proof_id) {
+    if (request.paymentProof_id) {
         progress += 34;
     }
 
     // 33%: Recibo
-    if (request.receipt_document_id) {
+    if (request.receiptDocument_id) {
         progress += 33;
     }
 
