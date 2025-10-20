@@ -140,7 +140,7 @@ class PaymentRequest extends Model
         ]);
 
         // Notificar Finanças
-        $this->notifyFinance();
+        // $this->notifyFinance();
 
         return true;
     }
@@ -162,7 +162,7 @@ class PaymentRequest extends Model
         ]);
 
         // Notificar Operações
-        $this->notifyOperations('rejected');
+        // $this->notifyOperations('rejected');
 
         return true;
     }
@@ -200,7 +200,7 @@ class PaymentRequest extends Model
         ]);
 
         // Notificar Operações que pagamento foi feito
-        $this->notifyOperations('paid');
+        // $this->notifyOperations('paid');
 
         // Avançar fase do shipment se aplicável
         $this->advanceShipmentPhase();
