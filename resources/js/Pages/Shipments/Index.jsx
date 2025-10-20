@@ -1,8 +1,3 @@
-// ========================================
-// resources/js/Pages/Shipments/Index.jsx
-// VERSÃO COMPLETA E FUNCIONAL
-// ========================================
-
 import { useState } from 'react';
 import { Head, Link, router } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
@@ -12,6 +7,7 @@ import {
 } from 'lucide-react';
 
 export default function Index({ shipments, filters }) {
+    console.log("shipment",shipments);
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
 
