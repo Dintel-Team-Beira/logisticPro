@@ -185,97 +185,102 @@ class ShipmentController extends Controller
     /**
      * Visualizar detalhes do shipment - MELHORADO
      */
-    public function show(Shipment $shipment)
-    {
-        $shipment->load([
-            'client',
-            'shippingLine',
-            'documents',
-            'stages' => function($q) {
-                $q->orderBy('id', 'desc');
-            },
-
-              'paymentRequests' => function($q) {
-            $q->with([
-                'requester:id,name',
-                'approver:id,name',
-                'payer:id,name',
-                'quotationDocument',      // 🆕 ADICIONAR
-                'paymentProof',            // 🆕 ADICIONAR
-                'receiptDocument'          // 🆕 ADICIONAR
-            ])->latest();
-
-        }
-        ]);
-
-        // Tentar carregar activities se existir
-        try {
-            $shipment->load(['activities' => function($q) {
-                $q->latest()->limit(10);
-            }]);
-        } catch (\Exception $e) {
-            Log::info('Activities não disponível');
-        }
-
-        // Progresso detalhado por fase
-        $phaseProgress = [];
-        for ($i = 1; $i <= 7; $i++) {
-            $validation = $shipment->canAdvanceToPhase($i);
-            $phaseProgress[$i] = [
-                'phase' => $i,
-                'name' => $this->getPhaseName($i),
-                'progress' => $this->getPhaseProgress($shipment, $i),
-                'status' => $this->getPhaseStatus($shipment, $i),
-                'can_start' => $validation['can_advance'],
-                'warnings' => $validation['warnings'],
-                'risks' => $validation['risks'],
-                'missing_items' => $validation['missing_items'],
-                'checklist' => $shipment->getDynamicChecklist($i),
-            ];
-        }
-
-        // Fases ativas
-        $activePhases = $shipment->stages()
-            ->where('status', 'in_progress')
-            ->get()
-            ->map(function($stage) {
-                $phaseMap = [
-                    'coleta_dispersa' => 1,
-                    'legalizacao' => 2,
-                    'alfandegas' => 3,
-                    'cornelder' => 4,
-                    'taxacao' => 5,
-                    'faturacao' => 6,
-                    'pod' => 7,
-                ];
-                return $phaseMap[$stage->stage] ?? 1;
-            });
-
-        // return Inertia::render('Shipments/Show', [
-        //     'shipment' => $shipment,
-        //     'phaseProgress' => $phaseProgress,
-        //     'activePhases' => $activePhases,
-        //     'overallProgress' => $shipment->real_progress,
-        //     'canForceAdvance' => auth()->user()->role=='admin' ?? false,
-        //      'paymentRequests' => $shipment->paymentRequests,
-        // ]);
-
-
-        return Inertia::render('Shipments/Show', [
-        'shipment' => $shipment->load([
-            'client',
-            'shippingLine',
-            'documents',
-            'stages',
-        ]),
-        'phaseProgress' => $phaseProgress, // se você tiver
-            'activePhases' => $activePhases,
-            'overallProgress' => $shipment->real_progress,
-            'canForceAdvance' => auth()->user()->role=='admin' ?? false,
-             'paymentRequests' => $shipment->paymentRequests,
-
+  public function show(Shipment $shipment)
+{
+    $shipment->load([
+        'client',
+        'shippingline',
+        'documents',
+        'stages',
+        'activities.user',
+        // 🆕 ADICIONAR ESTAS LINHAS:
+        'paymentRequests' => function($query) {
+            $query->with([
+                'quotationDocument',
+                'paymentProof',
+                'receiptDocument',
+                'requester',
+                'approver',
+            ])->orderBy('created_at', 'desc');
+        },
     ]);
+
+    // Preparar dados das fases
+    $phases = [
+        ['id' => 1, 'title' => 'Coleta Dispersa', 'icon' => 'Ship'],
+        ['id' => 2, 'title' => 'Legalização', 'icon' => 'FileCheck'],
+        ['id' => 3, 'title' => 'Alfândegas', 'icon' => 'Building2'],
+        ['id' => 4, 'title' => 'Cornelder', 'icon' => 'Container'],
+        ['id' => 5, 'title' => 'Taxação', 'icon' => 'Calculator'],
+        ['id' => 6, 'title' => 'Faturação', 'icon' => 'FileText'],
+        ['id' => 7, 'title' => 'POD', 'icon' => 'PackageCheck'],
+    ];
+
+    // Calcular progresso e status de cada fase
+    $phaseProgress = [];
+    foreach ($phases as $phase) {
+        $phaseId = $phase['id'];
+        $stageName = Shipment::getStageNameFromPhase($phaseId);
+        $stage = $shipment->stages()->where('stage', $stageName)->first();
+
+        $phaseData = [
+            'status' => $stage ? $stage->status : 'pending',
+            'progress' => $shipment->getPhaseProgress($phaseId), // 🆕 Usar novo método
+            'can_start' => false,
+            'warnings' => [],
+            'missing_items' => [],
+            'show_payment_request' => false,
+        ];
+
+        // Verificar requisitos para avançar
+        $validation = $shipment->canAdvanceToPhase($phaseId);
+        $phaseData = array_merge($phaseData, $validation);
+
+        // 🆕 ADICIONAR: Checklist baseado em PaymentRequests
+        $phaseData['payment_requests_checklist'] = $shipment->getPaymentRequestsChecklist($phaseId);
+
+        // 🆕 ADICIONAR: Payment request atual da fase (se houver)
+        $phaseData['current_payment_request'] = $shipment->paymentRequests()
+            ->where('phase', $phaseId)
+            ->latest()
+            ->first();
+
+        $phaseProgress[$phaseId] = $phaseData;
     }
+
+    // Calcular progresso geral
+    $completedPhases = collect($phaseProgress)->where('status', 'completed')->count();
+    $overallProgress = ($completedPhases / 7) * 100;
+
+    // Fases ativas
+    $activePhases = $shipment->stages()
+        ->where('status', 'in_progress')
+        ->pluck('stage')
+        ->map(function ($stageName) {
+            $map = [
+                'coleta_dispersa' => 1,
+                'legalizacao' => 2,
+                'alfandegas' => 3,
+                'cornelder' => 4,
+                'taxacao' => 5,
+                'faturacao' => 6,
+                'pod' => 7,
+            ];
+            return $map[$stageName] ?? null;
+        })
+        ->filter()
+        ->values()
+        ->toArray();
+
+   return Inertia::render('Shipments/Show', [
+        'shipment' => $shipment,
+        'phases' => $phases,
+        'phaseProgress' => $phaseProgress,
+        'overallProgress' => $overallProgress,
+        'activePhases' => $activePhases,
+        'canForceAdvance' => auth()->user()->hasRole('manager'),
+    ]);
+}
 
     /**
      * Formulário de edição
