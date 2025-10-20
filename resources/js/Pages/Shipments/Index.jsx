@@ -224,8 +224,8 @@ export default function Index({ shipments, filters }) {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPhaseColor(shipment.current_phase)}`}>
-                                                    {getPhaseName(shipment.current_phase)}
+                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPhaseColor(shipment.stages.length)}`}>
+                                                    {getPhaseName(shipment.stages.length)}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">
