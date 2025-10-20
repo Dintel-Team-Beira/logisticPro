@@ -14,6 +14,7 @@ import {
     Calendar,
     Building2,
     Receipt,
+    CircleDashed,
 } from 'lucide-react';
 
 /**
@@ -53,8 +54,8 @@ const phaseRequests = paymentRequests.filter(req => String(req.phase) === String
     return (
         <div className="space-y-4">
             <div className="flex items-center justify-between">
-                <h3 className="text-lg font-semibold text-slate-900">
-                    💰 Solicitações de Pagamento
+                <h3 className="flex text-lg font-semibold text-center text-slate-900">
+                   Solicitações de Pagamento
                 </h3>
                 <span className="px-3 py-1 text-sm font-medium text-blue-700 rounded-full bg-blue-50">
                     {phaseRequests.length} {phaseRequests.length === 1 ? 'solicitação' : 'solicitações'}
@@ -82,6 +83,8 @@ const phaseRequests = paymentRequests.filter(req => String(req.phase) === String
 function PaymentRequestCard({ request, expanded, onToggle }) {
     const statusConfig = getStatusConfig(request.status);
     const progress = calculateRequestProgress(request);
+
+    {console.log("request",request)}
     return (
         <div className="overflow-hidden transition-all border-2 rounded-xl border-slate-200 hover:shadow-lg">
             {/* Header do Card */}
@@ -187,15 +190,15 @@ function PaymentRequestCard({ request, expanded, onToggle }) {
 
                     {/* Checklist de Documentos */}
                     <div className="p-4 space-y-3 bg-white rounded-lg">
-                        <h5 className="text-sm font-semibold text-slate-900">
-                            📋 Checklist de Documentos
+                        <h5 className="flex text-sm font-semibold text-center ">
+                                  <FileText color='#64748b ' size={15} />  Checklist de Documentos
                         </h5>
 
                         {/* 1. Cotação */}
                         <DocumentCheckItem
                             label="Cotação Anexada"
-                            completed={!!request.quotationDocument}
-                            document={request.quotationDocument}
+                            completed={!!request.quotation_document}
+                            document={request.quotation_document}
                             icon={FileText}
                         />
 
@@ -207,19 +210,19 @@ function PaymentRequestCard({ request, expanded, onToggle }) {
                             icon={CheckCircle2}
                         />
 
-                        {/* 3. Comprovativo de Pagamento */}
+                        {/* 3. Comprovativo de Pagamento payment_proof: */}
                         <DocumentCheckItem
                             label="Comprovativo de Pagamento"
-                            completed={!!request.paymentProof}
-                            document={request.paymentProof}
+                            completed={!!request.payment_proof}
+                            document={request.payment_proof}
                             icon={DollarSign}
                         />
 
                         {/* 4. Recibo */}
                         <DocumentCheckItem
                             label="Recibo Anexado"
-                            completed={!!request.receiptDocument}
-                            document={request.receiptDocument}
+                            completed={!!request.receipt_document}
+                            document={request.receipt_document}
                             icon={Receipt}
                         />
                     </div>
