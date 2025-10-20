@@ -562,6 +562,7 @@ export default function Show ({
                                         <h4 className='flex mb-4 text-base font-semibold text-center text-slate-900'>
                                                <FileText color='#64748b ' /> Outros Documentos
                                         </h4>
+                                        { console.log("currentPhaseData",currentPhaseData)}
                                         <div className='space-y-3'>
                                             {currentPhaseData.checklist.map(
                                                 (item, idx) => (
