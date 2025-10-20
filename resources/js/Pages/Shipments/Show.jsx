@@ -545,8 +545,7 @@ export default function Show ({
                             <PaymentRequestsVisualizer
                                 shipment={shipment}
                                 phase={selectedPhase}
-                                paymentRequests={paymentRequests || []
-                                }
+                                paymentRequests={paymentRequests || [] }
                             />
 
                             {/* Divisor */}
@@ -562,7 +561,7 @@ export default function Show ({
                                         <h4 className='flex mb-4 text-base font-semibold text-center text-slate-900'>
                                                <FileText color='#64748b ' /> Outros Documentos
                                         </h4>
-                                        { console.log("currentPhaseData",currentPhaseData)}
+                                        {/* { console.log("currentPhaseData",currentPhaseData)} */}
                                         <div className='space-y-3'>
                                             {currentPhaseData.checklist.map(
                                                 (item, idx) => (
@@ -570,6 +569,7 @@ export default function Show ({
                                                         key={idx}
                                                         className='flex items-center justify-between p-3 border rounded-lg border-slate-200'
                                                     >
+                                                        {/* {item} */}
                                                         <div className='flex items-center gap-3'>
                                                             {item.attached ? (
                                                                 <CheckCircle2 className='w-5 h-5 text-emerald-600' />
@@ -696,6 +696,7 @@ export default function Show ({
             {/* Modal de Upload */}
             {uploadModalOpen && (
                 <UploadModal
+                   paymentRequests={paymentRequests || []}
                     shipment={shipment}
                     docType={selectedDocType}
                     phase={selectedPhase}
@@ -759,12 +760,13 @@ function InfoItem ({ label, value }) {
 // ========================================
 // COMPONENTE: Upload Modal
 // ========================================
-function UploadModal ({ shipment, docType, phase, onClose }) {
+function UploadModal ({ shipment, docType, phase, onClose,paymentRequests }) {
     const [file, setFile] = useState(null)
     const [notes, setNotes] = useState('')
     const [uploading, setUploading] = useState(false)
 
     const handleSubmit = () => {
+
         if (!file) {
             alert('Selecione um arquivo')
             return
@@ -778,13 +780,34 @@ function UploadModal ({ shipment, docType, phase, onClose }) {
         formData.append('phase', phase)
         formData.append('notes', notes)
 
+
+        // ✅ ROTA CORRIGIDA
+       // Se for um recibo e tiver uma solicitação de pagamento, adicionar ID
+        if (docType === 'receipt' && paymentRequest) {
+            formData.append('payment_request_id', paymentRequest.id)
+        }
+
         // ✅ ROTA CORRIGIDA
         router.post(`/shipments/${shipment.id}/documents`, formData, {
             preserveScroll: true,
             forceFormData: true,
-            onSuccess: () => {
-                onClose()
-                setUploading(false)
+            onSuccess: (response) => {
+                // Se for um recibo, registrar no backend
+                if (docType === 'receipt' && paymentRequest && response.document) {
+                    router.post(route('payment-requests.register-receipt'), {
+                        payment_request_id: paymentRequest.id,
+                        document_id: response.document.id
+                    }, {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            onClose()
+                            setUploading(false)
+                        }
+                    })
+                } else {
+                    onClose()
+                    setUploading(false)
+                }
             },
             onError: errors => {
                 console.error('Erro no upload:', errors)
@@ -792,17 +815,13 @@ function UploadModal ({ shipment, docType, phase, onClose }) {
             },
             onFinish: () => setUploading(false)
         })
+
     }
 
     return (
-        <div
-            className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'
-            onClick={onClose}
-        >
-            <div
-                className='w-full max-w-lg bg-white rounded-lg shadow-2xl'
-                onClick={e => e.stopPropagation()}
-            >
+        <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'
+            onClick={onClose}   >
+            <div  className='w-full max-w-lg bg-white rounded-lg shadow-2xl' onClick={e => e.stopPropagation()} >
                 <div className='flex items-center justify-between p-6 border-b border-slate-200'>
                     <div>
                         <h2 className='text-xl font-bold text-slate-900'>
@@ -868,6 +887,135 @@ function UploadModal ({ shipment, docType, phase, onClose }) {
     )
 }
 
+// ====================================
+// COMPONETE: UPOAD ANEXO
+// ==================================
+ function ReciboAnexo ({ shipment, docType, phase, onClose,paymentRequests }) {
+    const [file, setFile] = useState(null)
+    const [notes, setNotes] = useState('')
+    const [uploading, setUploading] = useState(false)
+
+    const handleSubmit = () => {
+
+        if (!file) {
+            alert('Selecione um arquivo')
+            return
+        }
+
+        setUploading(true)
+
+        const formData = new FormData()
+        formData.append('file', file)
+        formData.append('type', docType)
+        formData.append('phase', phase)
+        formData.append('notes', notes)
+
+
+        // ✅ ROTA CORRIGIDA
+       // Se for um recibo e tiver uma solicitação de pagamento, adicionar ID
+        if (docType === 'receipt' && paymentRequest) {
+            formData.append('payment_request_id', paymentRequest.id)
+        }
+
+        // ✅ ROTA CORRIGIDA
+        router.post(`/shipments/${shipment.id}/documents`, formData, {
+            preserveScroll: true,
+            forceFormData: true,
+            onSuccess: (response) => {
+                // Se for um recibo, registrar no backend
+                if (docType === 'receipt' && paymentRequest && response.document) {
+                    router.post(route('payment-requests.register-receipt'), {
+                        payment_request_id: paymentRequest.id,
+                        document_id: response.document.id
+                    }, {
+                        preserveScroll: true,
+                        onSuccess: () => {
+                            onClose()
+                            setUploading(false)
+                        }
+                    })
+                } else {
+                    onClose()
+                    setUploading(false)
+                }
+            },
+            onError: errors => {
+                console.error('Erro no upload:', errors)
+                setUploading(false)
+            },
+            onFinish: () => setUploading(false)
+        })
+
+    }
+
+    return (
+        <div className='fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-sm'
+            onClick={onClose}   >
+            <div  className='w-full max-w-lg bg-white rounded-lg shadow-2xl' onClick={e => e.stopPropagation()} >
+                <div className='flex items-center justify-between p-6 border-b border-slate-200'>
+                    <div>
+                        <h2 className='text-xl font-bold text-slate-900'>
+                           Recibo
+                        </h2>
+                        <p className='mt-1 text-sm text-slate-600'>
+                            Tipo: {docType}
+                        </p>
+                    </div>
+                    <button
+                        onClick={onClose}
+                        className='p-2 rounded-lg hover:bg-slate-100'
+                    >
+                        <X className='w-5 h-5' />
+                    </button>
+                </div>
+
+                <div className='p-6 space-y-4'>
+                    <div>
+                        <label className='block mb-2 text-sm font-medium text-slate-900'>
+                            Selecionar Arquivo
+                        </label>
+                        <input
+                            type='file'
+                            onChange={e => setFile(e.target.files[0])}
+                            className='w-full px-4 py-2 border rounded-lg border-slate-300'
+                            accept='.pdf,.jpg,.jpeg,.png,.doc,.docx'
+                        />
+                    </div>
+
+                    <div>
+                        <label className='block mb-2 text-sm font-medium text-slate-900'>
+                            Observações
+                        </label>
+                        <textarea
+                            value={notes}
+                            onChange={e => setNotes(e.target.value)}
+                            rows={3}
+                            className='w-full px-4 py-2 border rounded-lg border-slate-300'
+                            placeholder='Adicione observações...'
+                        />
+                    </div>
+                </div>
+
+                <div className='flex gap-3 p-6 border-t border-slate-200'>
+                    <button
+                        onClick={onClose}
+                        disabled={uploading}
+                        className='flex-1 px-4 py-2 border rounded-lg border-slate-300 text-slate-700 hover:bg-slate-50'
+                    >
+                        Cancelar
+                    </button>
+                    <button
+                        onClick={handleSubmit}
+                        disabled={!file || uploading}
+                        className='flex-1 px-4 py-2 text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50'
+                    >
+                        {uploading ? 'Enviando...' : 'Enviar'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    )
+}
 // ========================================
 // COMPONENTE: Force Advance Modal
 // ========================================
