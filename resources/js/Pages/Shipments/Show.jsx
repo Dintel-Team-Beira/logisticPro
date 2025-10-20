@@ -25,6 +25,7 @@ import {
 } from 'lucide-react'
 import { PaymentRequestModal } from './PaymentRequestModal'
 import { BulkPaymentRequestModal } from './BulkPaymentRequestModal'
+import { PaymentRequestsVisualizer } from './PaymentRequestsVisualizer';
 export default function Show ({
     paymentRequests = [],
     shipment,
@@ -523,93 +524,102 @@ export default function Show ({
                     {/* Sidebar - Checklist */}
                     <div className='space-y-6'>
                         {/* Checklist de Documentos */}
-                        <div className='p-6 bg-white border rounded-lg border-slate-200'>
-                            <h3 className='mb-4 text-lg font-semibold text-slate-900'>
-                                Documentos Necessários
-                            </h3>
+                    {/* Documentos e Pagamentos */}
+<div className='p-6 bg-white border rounded-lg border-slate-200'>
+    <div className="flex items-center justify-between mb-4">
+        <h3 className='text-lg font-semibold text-slate-900'>
+            📋 Requisitos e Pagamentos
+        </h3>
+        <span className="text-sm text-slate-500">
+            Fase {selectedPhase}
+        </span>
+    </div>
 
-                            {currentPhaseRequest?.status === 'approved' ||
-                            currentPhaseRequest?.status === 'paid' ? (
-                                <div className='space-y-3'>
-                                    {/* Comprovativo de Pagamento */}
-                                    <DocumentItem
-                                        label='Comprovativo Pagamento'
-                                        document={
-                                            currentPhaseRequest.payment_proof
-                                        }
-                                        requestId={currentPhaseRequest.id}
-                                        type='payment_proof'
-                                    />
+    {/* 🆕 PAYMENT REQUESTS VISUALIZER */}
+    <PaymentRequestsVisualizer
+        shipment={shipment}
+        phase={selectedPhase}
+        paymentRequests={shipment.payment_requests || []}
+    />
 
-                                    {/* Recibo */}
-                                    <DocumentItem
-                                        label='Recibo'
-                                        document={
-                                            currentPhaseRequest.receipt_document
-                                        }
-                                        requestId={currentPhaseRequest.id}
-                                        type='receipt'
-                                    />
-                                </div>
-                            ) : currentPhaseRequest?.status === 'rejected' ? (
-                                <div className='p-4 mt-4 border border-red-200 rounded-lg bg-red-50'>
-                                    <p className='mb-2 text-sm font-medium text-red-900'>
-                                        Motivo da Rejeição:
-                                    </p>
-                                    <p className='text-sm text-red-700'>
-                                        {currentPhaseRequest.rejection_reason}
-                                    </p>
-                                </div>
-                            ) : currentPhaseRequest?.status === 'pending' ? (
-                                <div className='mt-4 text-sm text-gray-600'>
-                                    Aguardando aprovação da solicitação
-                                </div>
-                            ) : // Checklist original quando NÃO tem payment request
-                            currentPhaseData.checklist &&
-                              currentPhaseData.checklist.length > 0 ? (
-                                <div className='space-y-3'>
-                                    {currentPhaseData.checklist.map(
-                                        (item, idx) => (
-                                            <div
-                                                key={idx}
-                                                className='flex items-center justify-between p-3 border rounded-lg border-slate-200'
-                                            >
-                                                <div className='flex items-center gap-3'>
-                                                    {item.attached ? (
-                                                        <CheckCircle2 className='w-5 h-5 text-emerald-500' />
-                                                    ) : (
-                                                        <Clock className='w-5 h-5 text-amber-500' />
-                                                    )}
-                                                    <span className='text-sm font-medium text-slate-700'>
-                                                        {item.label}
-                                                    </span>
-                                                </div>
-                                                {!item.attached && (
-                                                    <button
-                                                        onClick={() => {
-                                                            setSelectedDocType(
-                                                                item.type
-                                                            )
-                                                            setUploadModalOpen(
-                                                                true
-                                                            )
-                                                        }}
-                                                        className='flex items-center gap-2 px-3 py-1.5 text-xs font-medium text-blue-600 transition-colors bg-blue-50 rounded-lg hover:bg-blue-100'
-                                                    >
-                                                        <Upload className='w-4 h-4' />
-                                                        Anexar
-                                                    </button>
-                                                )}
-                                            </div>
-                                        )
-                                    )}
-                                </div>
+    {/* Divisor */}
+    {currentPhaseData.checklist && currentPhaseData.checklist.length > 0 && (
+        <div className="my-6 border-t border-slate-200" />
+    )}
+
+    {/* Checklist de Documentos Tradicionais (se houver) */}
+    {currentPhaseData.checklist && currentPhaseData.checklist.length > 0 && (
+        <div>
+            <h4 className="mb-4 text-base font-semibold text-slate-900">
+                📄 Outros Documentos
+            </h4>
+            <div className='space-y-3'>
+                {currentPhaseData.checklist.map((item, idx) => (
+                    <div
+                        key={idx}
+                        className='flex items-center justify-between p-3 border rounded-lg border-slate-200'
+                    >
+                        <div className='flex items-center gap-3'>
+                            {item.attached ? (
+                                <CheckCircle2 className='w-5 h-5 text-emerald-600' />
                             ) : (
-                                <p className='text-sm text-slate-500'>
-                                    Nenhum documento necessário para esta fase
+                                <Clock className='w-5 h-5 text-slate-400' />
+                            )}
+                            <div>
+                                <p className='text-sm font-medium text-slate-900'>
+                                    {item.label}
                                 </p>
+                                {item.attached && (
+                                    <p className='text-xs text-slate-500'>
+                                        Anexado em{' '}
+                                        {new Date(
+                                            item.uploaded_at
+                                        ).toLocaleDateString()}
+                                    </p>
+                                )}
+                            </div>
+                        </div>
+
+                        <div className='flex gap-2'>
+                            {item.attached ? (
+                                <>
+                                    <button
+                                        onClick={() =>
+                                            handleViewDocument(item.id)
+                                        }
+                                        className='p-2 transition-colors rounded-lg hover:bg-slate-100'
+                                    >
+                                        <Eye className='w-4 h-4 text-slate-600' />
+                                    </button>
+                                    <button
+                                        onClick={() =>
+                                            handleDownloadDocument(item.id)
+                                        }
+                                        className='p-2 transition-colors rounded-lg hover:bg-slate-100'
+                                    >
+                                        <Download className='w-4 h-4 text-slate-600' />
+                                    </button>
+                                </>
+                            ) : (
+                                <button
+                                    onClick={() => {
+                                        setSelectedDocType(item.type)
+                                        setUploadModalOpen(true)
+                                    }}
+                                    className='flex items-center gap-2 px-3 py-1 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700'
+                                >
+                                    <Upload className='w-4 h-4' />
+                                    Anexar
+                                </button>
                             )}
                         </div>
+                    </div>
+                ))}
+            </div>
+        </div>
+    )}
+</div>
+
 
                         {/* Fases Ativas */}
                         {activePhasesList.length > 1 && (
