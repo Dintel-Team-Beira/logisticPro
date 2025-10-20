@@ -118,7 +118,7 @@ class Shipment extends Model
 public function getDocumentChecklistForPhase(int $phase): array
 {
     $documentsByPhase = [
-        1 => ['bl', 'carta_endosso','boss'],
+        1 => ['bl', 'carta_endosso','receipt'],
         2 => ['bl_carimbado', 'delivery_order'],
         3 => ['packing_list', 'commercial_invoice', 'aviso', 'autorizacao'],
         4 => ['draft', 'storage', 'termo'],
@@ -130,6 +130,7 @@ public function getDocumentChecklistForPhase(int $phase): array
     $labels = [
         'bl' => 'BL Original',
         'carta_endosso' => 'Carta de Endosso',
+        'receipt'=>'Recibo de pagamento',
         'bl_carimbado' => 'BL Carimbado',
         'delivery_order' => 'Delivery Order',
         'packing_list' => 'Packing List',
@@ -1021,7 +1022,7 @@ public function getFormattedTotalRevenueAttribute(): string
     public function getDynamicChecklist(int $phase): array
     {
         $baseDocuments = [
-            1 => ['cotacao', 'comprovativo_pagamento', 'recibo'],
+            1 => ['cotacao', 'comprovativo_pagamento', 'receipt_document'],
             2 => ['bl', 'carta_endosso', 'delivery_order'],
             3 => ['bl_carimbado', 'packing_list', 'commercial_invoice', 'autorizacao'],
             4 => ['draft', 'storage', 'recibo_cornelder'],
