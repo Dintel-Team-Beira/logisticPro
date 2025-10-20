@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Shipment;
 use App\Models\Client;
+use App\Models\PaymentRequest;
 use App\Models\ShippingLine;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -265,6 +266,12 @@ public function show(Shipment $shipment)
         ->values()
         ->toArray();
 
+        // Carregar solicitações de pagamento do shipment
+    $paymentRequests = PaymentRequest::where('shipment_id', $shipment->id)
+    ->with(['requester','approver','quotationDocument','paymentProof','receiptDocument','shipment','payer'])
+        ->orderBy('phase')
+        ->orderBy('created_at')
+        ->get();
     return Inertia::render('Shipments/Show', [
         'shipment' => $shipment,
         'phases' => $phases,
@@ -272,6 +279,7 @@ public function show(Shipment $shipment)
         'overallProgress' => $overallProgress,
         'activePhases' => $activePhases,
         'canForceAdvance' => auth()->user()->hasRole('manager'),
+        'paymentRequests' => $paymentRequests
     ]);
 }
 
@@ -665,4 +673,43 @@ private function getDocumentChecklistForPhase(Shipment $shipment, int $phase): a
 
         return $shipment->$method();
     }
+
+
+    public function getPaymentRequests(Shipment $shipment)
+{
+    // Buscar todas as solicitações de pagamento do shipment
+    $paymentRequests = PaymentRequest::where('shipment_id', $shipment->id)
+        ->with([
+            'requester',
+            'approver',
+            'payer',
+            'quotationDocument',
+            'paymentProof',
+            'receiptDocument'
+        ])
+        ->orderBy('phase')
+        ->orderBy('created_at')
+        ->get()
+        ->map(function ($request) {
+            return [
+                'id' => $request->id,
+                'shipment_id' => $request->shipment_id,
+                'phase' => $request->phase,
+                'request_type' => $request->request_type,
+                'payee' => $request->payee,
+                'amount' => $request->amount,
+                'currency' => $request->currency,
+                'status' => $request->status,
+                'description' => $request->description,
+                'created_at' => $request->created_at,
+                'updated_at' => $request->updated_at,
+                // Incluir informações adicionais conforme necessário
+                'requester' => $request->requester ? $request->requester->name : null,
+                'approver' => $request->approver ? $request->approver->name : null,
+                'payer' => $request->payer ? $request->payer->name : null,
+            ];
+        });
+
+    return response()->json($paymentRequests);
+}
 }
