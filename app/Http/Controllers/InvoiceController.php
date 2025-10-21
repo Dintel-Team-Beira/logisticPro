@@ -33,7 +33,9 @@ class InvoiceController extends Controller
         $query = Shipment::with([
             'client',
             'paymentRequests' => function($q) {
-                $q->where('status', 'paid');
+                $q->with(['requester', 'approver', 'payer'])
+                  ->orderBy('phase')
+                  ->orderBy('created_at');
             },
             'stages' => function($q) {
                 $q->whereIn('stage', ['coleta_dispersa', 'faturacao']);
@@ -414,13 +416,26 @@ class InvoiceController extends Controller
      */
     public function download(Shipment $shipment)
     {
+        \Log::info('Download invoice requested', ['shipment_id' => $shipment->id]);
+
         $invoice = Invoice::clientInvoices()
             ->where('shipment_id', $shipment->id)
             ->latest()
             ->first();
 
         if (!$invoice) {
+            \Log::error('Invoice not found for download', ['shipment_id' => $shipment->id]);
             abort(404, 'Fatura não encontrada');
+        }
+
+        \Log::info('Invoice found', [
+            'invoice_id' => $invoice->id,
+            'file_path' => $invoice->file_path
+        ]);
+
+        if (!Storage::disk('public')->exists($invoice->file_path)) {
+            \Log::error('Invoice file not found', ['file_path' => $invoice->file_path]);
+            abort(404, 'Arquivo da fatura não encontrado');
         }
 
         return Storage::disk('public')->download($invoice->file_path, $invoice->invoice_number . '.pdf');
@@ -431,13 +446,26 @@ class InvoiceController extends Controller
      */
     public function preview(Shipment $shipment)
     {
+        \Log::info('Preview invoice requested', ['shipment_id' => $shipment->id]);
+
         $invoice = Invoice::clientInvoices()
             ->where('shipment_id', $shipment->id)
             ->latest()
             ->first();
 
         if (!$invoice) {
+            \Log::error('Invoice not found for preview', ['shipment_id' => $shipment->id]);
             abort(404, 'Fatura não encontrada');
+        }
+
+        \Log::info('Invoice found', [
+            'invoice_id' => $invoice->id,
+            'file_path' => $invoice->file_path
+        ]);
+
+        if (!Storage::disk('public')->exists($invoice->file_path)) {
+            \Log::error('Invoice file not found', ['file_path' => $invoice->file_path]);
+            abort(404, 'Arquivo da fatura não encontrado');
         }
 
         return response()->file(Storage::disk('public')->path($invoice->file_path));
@@ -467,12 +495,12 @@ class InvoiceController extends Controller
     private function getCompanyData(): array
     {
         return [
-            'name' => 'Logística Pro',
+            'name' => 'ALEK Transporte',
             'address' => 'Beira, Sofala, Moçambique',
-            'phone' => '+258 XX XXX XXXX',
-            'email' => 'contato@logisticapro.co.mz',
-            'nuit' => 'XXXXXXXXX',
-            'logo_path' => public_path('images/logo.png'),
+            'phone' => '+258 84 74 000 00 ',
+            'email' => 'contacto@logisticapro.co.mz',
+            'nuit' => '6474687',
+            'logo_path' => public_path('logoH.webp'),
         ];
     }
 }
