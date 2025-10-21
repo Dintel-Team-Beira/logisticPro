@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\AuditController;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Foundation\Application;
