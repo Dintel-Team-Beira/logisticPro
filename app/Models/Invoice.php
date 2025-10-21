@@ -110,7 +110,7 @@ class Invoice extends Model
 
         // 3. Adicionar custos padrões (Base Rates)
         $baseRates = self::getBaseRates();
-        $containerCount = $shipment->containers()->count() ?: 1;
+        $containerCount = 1; // Um shipment = 1 container
 
         $baseRatesCosts = [
             [
@@ -247,9 +247,8 @@ class Invoice extends Model
         }
 
         // 4. Verificar se existem containers
-        $containerCount = $shipment->containers()->count();
-        if ($containerCount === 0) {
-            $validation['warnings'][] = 'Nenhum container registrado. Base rates serão calculados para 1 container.';
+        if (empty($shipment->container_number)) {
+            $validation['warnings'][] = 'Nenhum container registrado no shipment.';
         }
 
         return $validation;
