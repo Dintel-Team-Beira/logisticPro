@@ -6,11 +6,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 /**
- * Model Invoice - Gerencia Faturas ao Cliente
- * RF-022: Gerar Fatura ao Cliente
- *
- * Usa a estrutura de Documents existente com type='client_invoice'
- * Armazena dados calculados no metadata JSON
+ * Model Invoice - Gerencia TODAS as Faturas
+ * - Faturas de fornecedores (coleta_dispersa, alfandegas, cornelder)
+ * - Faturas ao cliente final (client_invoice)
  *
  * @author Arnaldo Tomo
  */
@@ -18,42 +16,64 @@ class Invoice extends Model
 {
     use HasFactory;
 
-    protected $table = 'documents';
-
     protected $fillable = [
         'shipment_id',
+        'client_id',
+        'invoice_number',
         'type',
-        'name',
+        'issuer',
+        'amount',
+        'currency',
+        'issue_date',
+        'due_date',
+        'status',
+        'payment_date',
+        'payment_reference',
+        'notes',
         'file_path',
-        'file_type',
-        'file_size',
-        'metadata',
-        'uploaded_by',
+        'metadata'
     ];
 
     protected $casts = [
-        'metadata' => 'array',
+        'amount' => 'decimal:2',
+        'issue_date' => 'date',
+        'due_date' => 'date',
+        'payment_date' => 'date',
+        'metadata' => 'array'
     ];
 
-    /**
-     * Escopo para buscar apenas faturas
-     */
-    public function scopeInvoices($query)
-    {
-        return $query->where('type', 'client_invoice');
-    }
+    // ========================================
+    // RELATIONSHIPS
+    // ========================================
 
-    /**
-     * Relacionamentos
-     */
     public function shipment()
     {
         return $this->belongsTo(Shipment::class);
     }
 
-    public function uploader()
+    public function client()
     {
-        return $this->belongsTo(User::class, 'uploaded_by');
+        return $this->belongsTo(Client::class);
+    }
+
+    // ========================================
+    // SCOPES
+    // ========================================
+
+    /**
+     * Faturas ao cliente final
+     */
+    public function scopeClientInvoices($query)
+    {
+        return $query->where('type', 'client_invoice');
+    }
+
+    /**
+     * Faturas de fornecedores
+     */
+    public function scopeSupplierInvoices($query)
+    {
+        return $query->whereIn('type', ['coleta_dispersa', 'alfandegas', 'cornelder', 'outros']);
     }
 
     // ========================================
@@ -61,7 +81,7 @@ class Invoice extends Model
     // ========================================
 
     /**
-     * Calcula todos os custos do shipment
+     * Calcula todos os custos do shipment baseado em PaymentRequests
      */
     public static function calculateShipmentCosts(Shipment $shipment): array
     {
@@ -110,7 +130,7 @@ class Invoice extends Model
 
         // 3. Adicionar custos padrões (Base Rates)
         $baseRates = self::getBaseRates();
-        $containerCount = 1; // Um shipment = 1 container
+        $containerCount = 1; // 1 shipment = 1 container
 
         $baseRatesCosts = [
             [
@@ -155,7 +175,7 @@ class Invoice extends Model
             'total_base_rates' => $totalBaseRates,
             'subtotal' => $subtotal,
             'container_count' => $containerCount,
-            'currency' => 'USD', // Principal
+            'currency' => 'USD',
         ];
     }
 
@@ -190,23 +210,23 @@ class Invoice extends Model
     }
 
     /**
-     * Gera número sequencial de fatura
+     * Gera número sequencial de fatura ao cliente
      */
     public static function generateInvoiceNumber(): string
     {
         $year = date('Y');
-        $lastInvoice = self::invoices()
+        $lastInvoice = self::clientInvoices()
             ->whereYear('created_at', $year)
             ->orderBy('id', 'desc')
             ->first();
 
-        $sequence = $lastInvoice ? ((int) substr($lastInvoice->metadata['invoice_number'] ?? '0', -4)) + 1 : 1;
+        $sequence = $lastInvoice ? ((int) substr($lastInvoice->invoice_number, -4)) + 1 : 1;
 
         return sprintf('INV-%s-%04d', $year, $sequence);
     }
 
     /**
-     * Verifica se shipment pode gerar fatura
+     * Verifica se shipment pode gerar fatura ao cliente
      */
     public static function canGenerateInvoice(Shipment $shipment): array
     {
@@ -237,16 +257,16 @@ class Invoice extends Model
             $validation['errors'][] = "Existem {$pendingRequests} solicitação(ões) de pagamento pendentes.";
         }
 
-        // 3. Verificar se já existe fatura
-        $existingInvoice = self::invoices()
+        // 3. Verificar se já existe fatura ao cliente
+        $existingInvoice = self::clientInvoices()
             ->where('shipment_id', $shipment->id)
             ->exists();
 
         if ($existingInvoice) {
-            $validation['warnings'][] = 'Já existe uma fatura gerada para este shipment. Gerar nova fatura irá substituir a anterior.';
+            $validation['warnings'][] = 'Já existe uma fatura gerada para este shipment. Gerar nova fatura irá criar uma adicional.';
         }
 
-        // 4. Verificar se existem containers
+        // 4. Verificar se existe container
         if (empty($shipment->container_number)) {
             $validation['warnings'][] = 'Nenhum container registrado no shipment.';
         }
@@ -255,7 +275,7 @@ class Invoice extends Model
     }
 
     /**
-     * Accessor para obter dados da fatura
+     * Accessor para obter dados da fatura do metadata
      */
     public function getInvoiceDataAttribute(): ?array
     {
@@ -263,26 +283,16 @@ class Invoice extends Model
     }
 
     /**
-     * Accessor para número da fatura
-     */
-    public function getInvoiceNumberAttribute(): ?string
-    {
-        return $this->metadata['invoice_number'] ?? null;
-    }
-
-    /**
      * Accessor para total
      */
     public function getTotalAttribute(): float
     {
-        return $this->metadata['invoice_data']['total_invoice'] ?? 0;
-    }
+        // Se for fatura ao cliente, pegar do metadata
+        if ($this->type === 'client_invoice' && isset($this->metadata['invoice_data']['total_invoice'])) {
+            return (float) $this->metadata['invoice_data']['total_invoice'];
+        }
 
-    /**
-     * Accessor para status de pagamento
-     */
-    public function getPaymentStatusAttribute(): string
-    {
-        return $this->metadata['payment_status'] ?? 'pending';
+        // Senão, usar o amount direto
+        return (float) $this->amount;
     }
 }
