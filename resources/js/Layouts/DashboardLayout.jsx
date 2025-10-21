@@ -132,13 +132,13 @@ export default function DashboardLayout({ children }) {
             roles: ['admin', 'manager', 'operator', 'viewer'],
             badge: null
         },
-        // {
-        //     name: 'Finanças',
-        //     icon: DollarSign,
-        //     href: '/invoices',
-        //     roles: ['admin', 'manager'],
-        //     badge: '3'
-        // },
+        {
+            name: 'Facturas',
+            icon: DollarSign,
+            href: '/invoices',
+            roles: ['admin', 'manager'],
+            badge: '3'
+        },
         {
             name: 'Relatórios',
             icon: BarChart3,
