@@ -239,7 +239,7 @@ export default function Create() {
                             {/* <Link href='/clients/create'> */}
                                  <button
                                     type="button"
-                                    onClick={() => router.get('/clients/create/')  }
+                                    // onClick={() => router.get('/clients/create/')  }
                                     className={`
                                         flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all
                                         ${showNewClientForm
@@ -248,7 +248,7 @@ export default function Create() {
                                         }
                                         `}
                                         >
-                                    Novo Cliente
+                                   Colocar opcoes de escolher entre importacao e exportacao
                                 </button>
                            {/* </Link> */}
 
