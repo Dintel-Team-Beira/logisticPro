@@ -609,29 +609,64 @@ Route::middleware(['auth'])->group(function () {
 // ============================================================================
 // FINANÇAS / INVOICES - Gestão de Faturas
 // ============================================================================
-Route::middleware(['auth'])->group(function () {
+// Route::middleware(['auth'])->group(function () {
 
-    // CRUD de Faturas
-    Route::resource('invoices', InvoiceController::class);
+//     // CRUD de Faturas
+//     Route::resource('invoices', InvoiceController::class);
 
-    // Marcar Fatura como Paga
-    Route::post('/invoices/{invoice}/pay', [InvoiceController::class, 'markAsPaid'])
-        ->name('invoices.pay');
+//     // Marcar Fatura como Paga
+//     Route::post('/invoices/{invoice}/pay', [InvoiceController::class, 'markAsPaid'])
+//         ->name('invoices.pay');
 
-    // Gerar PDF da Fatura
-    Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'generatePDF'])
-        ->name('invoices.pdf');
+//     // Gerar PDF da Fatura
+//     Route::get('/invoices/{invoice}/pdf', [InvoiceController::class, 'generatePDF'])
+//         ->name('invoices.pdf');
 
-    // Enviar Fatura por Email
-    Route::post('/invoices/{invoice}/send', [InvoiceController::class, 'sendEmail'])
+//     // Enviar Fatura por Email
+//     Route::post('/invoices/{invoice}/send', [InvoiceController::class, 'sendEmail'])
+//         ->name('invoices.send');
+
+//     // Dashboard Financeiro
+//     Route::get('/financial-dashboard', [InvoiceController::class, 'dashboard'])
+//         ->name('invoices.dashboard');
+
+
+//     // ->middleware('role:admin');
+// });
+
+
+// ============================================================================
+// INVOICES - Faturação (Fase 6)
+// ============================================================================
+Route::middleware(['auth'])->prefix('invoices')->group(function () {
+
+    // Página principal de faturação
+    Route::get('/', [InvoiceController::class, 'index'])
+        ->name('invoices.index');
+
+    // API: Calcular custos e preview (RF-020)
+    Route::get('/{shipment}/calculate', [InvoiceController::class, 'calculateCosts'])
+        ->name('invoices.calculate');
+
+    // RF-022: Gerar Fatura
+    Route::post('/{shipment}/generate', [InvoiceController::class, 'generate'])
+        ->name('invoices.generate');
+
+    // RF-023: Enviar Fatura ao Cliente
+    Route::post('/{shipment}/send', [InvoiceController::class, 'send'])
         ->name('invoices.send');
 
-    // Dashboard Financeiro
-    Route::get('/financial-dashboard', [InvoiceController::class, 'dashboard'])
-        ->name('invoices.dashboard');
+    // RF-024: Registrar Pagamento do Cliente
+    Route::post('/{shipment}/register-payment', [InvoiceController::class, 'registerPayment'])
+        ->name('invoices.register-payment');
 
+    // Download PDF
+    Route::get('/{shipment}/download', [InvoiceController::class, 'download'])
+        ->name('invoices.download');
 
-    // ->middleware('role:admin');
+    // Preview PDF
+    Route::get('/{shipment}/preview', [InvoiceController::class, 'preview'])
+        ->name('invoices.preview');
 });
 
     Route::put('/invoices', [SettingsController::class, 'updateInvoiceSettings'])
