@@ -271,7 +271,7 @@
         <!-- HEADER -->
         <div class="header">
             <div class="header-left">
-                <div class="company-name">{{ $company['name'] }}</div>
+                       <div class="company-name">{{ $company['name'] }}</div>
                 <div class="company-details">
                     {{ $company['address'] }}<br>
                     Tel: {{ $company['phone'] }} | Email: {{ $company['email'] }}<br>
