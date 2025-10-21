@@ -204,7 +204,7 @@ export default function ClientForm({ client, types, priorities, paymentTerms, us
 
   const tabs = [
     { id: 'basic', label: 'Informações Básicas', icon: Building2 },
-    { id: 'contact', label: 'Contato', icon: Phone },
+    { id: 'contact', label: 'Contacto', icon: Phone },
     { id: 'address', label: 'Endereço', icon: MapPin },
     { id: 'commercial', label: 'Comercial', icon: DollarSign },
     { id: 'additional', label: 'Adicional', icon: FileText },
@@ -399,7 +399,7 @@ export default function ClientForm({ client, types, priorities, paymentTerms, us
               <div className="flex items-center gap-2 mb-6">
                 <Phone className="w-5 h-5 text-slate-600" />
                 <h2 className="text-lg font-semibold text-slate-900">
-                  Informações de Contato
+                  Informações de Contacto
                 </h2>
               </div>
 
@@ -472,11 +472,11 @@ export default function ClientForm({ client, types, priorities, paymentTerms, us
                 {/* Contact Person Section */}
                 <div className="pt-6 border-t border-slate-200">
                   <h3 className="mb-3 text-sm font-semibold text-slate-700">
-                    Pessoa de Contato
+                    Pessoa de Contacto
                   </h3>
                   <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                     <Input
-                      label="Nome do Contato"
+                      label="Nome do Contacto"
                       icon={User}
                       value={data.contact_person}
                       onChange={(e) => setData('contact_person', e.target.value)}
@@ -511,7 +511,7 @@ export default function ClientForm({ client, types, priorities, paymentTerms, us
                     </div>
 
                     <Input
-                      label="Telefone do Contato"
+                      label="Telefone do Contacto"
                       icon={Phone}
                       value={data.contact_phone}
                       onChange={(e) => setData('contact_phone', e.target.value)}
@@ -520,7 +520,7 @@ export default function ClientForm({ client, types, priorities, paymentTerms, us
                     />
 
                     <Input
-                      label="E-mail do Contato"
+                      label="E-mail do Contacto"
                       type="email"
                       icon={Mail}
                       value={data.contact_email}
