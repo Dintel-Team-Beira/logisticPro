@@ -314,6 +314,9 @@ class ShipmentController extends Controller
             5 => [ // Taxação
                 ['type' => 'sad', 'label' => 'SAD (Documento Trânsito)', 'required' => true],
                 ['type' => 'ido', 'label' => 'IDO', 'required' => false],
+                // ['type' => 'bl_carimbado', 'label' => 'BL Carimbado', 'required' => true],
+                // ['type' => 'autorizacao', 'label' => 'Autorização de Saída', 'required' => false],
+                // / $docs = ['sad', 'termo', 'bl_carimbado', 'autorizacao'];
             ],
             6 => [ // Faturação
                 ['type' => 'invoice', 'label' => 'Fatura ao Cliente', 'required' => false],
@@ -508,6 +511,8 @@ class ShipmentController extends Controller
      */
     public function completePhase(Request $request, Shipment $shipment)
     {
+
+
         $request->validate([
             'phase' => 'required|integer|min:1|max:7',
             'notes' => 'nullable|string',
@@ -518,7 +523,7 @@ class ShipmentController extends Controller
 
             $phase = $request->phase;
             $success = $shipment->completePhase($phase);
-
+//   dd($request->all());
             if (!$success) {
                 DB::rollBack();
                 return back()->withErrors([
