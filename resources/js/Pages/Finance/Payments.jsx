@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 
 export default function Payments({ payments, stats, filters }) {
+
     const [searchTerm, setSearchTerm] = useState(filters?.search || '');
     const [statusFilter, setStatusFilter] = useState(filters?.status || 'all');
     const [dateFilter, setDateFilter] = useState(filters?.date || 'all');
