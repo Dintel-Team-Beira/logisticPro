@@ -239,7 +239,17 @@ export default function Show ({
                                     </p>
 
                                     <p className='text-xs text-slate-600'>
-                                        {Math.round(phaseData.progress)}% {console.log("phaseData",phaseData)}
+                                        {Math.round(phaseData.progress)}%
+ {console.log('Phase Progress Details:', phases.map(phase => {
+    const phaseData = phaseProgress[phase.id];
+    return {
+        id: phase.id,
+        title: phase.title,
+        progress: phaseData?.progress,
+        status: phaseData?.status,
+        details: phaseData
+    };
+}))}
                                     </p>
                                 </button>
                             )
