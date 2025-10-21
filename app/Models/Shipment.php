@@ -115,7 +115,7 @@ class Shipment extends Model
             2 => ['bl_carimbado', 'delivery_order'],
             3 => ['packing_list', 'commercial_invoice', 'aviso', 'autorizacao'],
             4 => ['draft', 'storage', 'termo'],
-            5 => ['sad', 'ido'],
+            5 => ['sad', 'delivery_order'],
             6 => ['invoice'],
             7 => ['pod', 'signature'],
         ];
@@ -134,7 +134,7 @@ class Shipment extends Model
             'storage' => 'Storage',
             'termo' => 'Termo da Linha',
             'sad' => 'SAD (Documento Trânsito)',
-            'ido' => 'IDO',
+            // 'ido' => 'IDO',
             'invoice' => 'Fatura ao Cliente',
             'pod' => 'POD (Proof of Delivery)',
             'signature' => 'Assinatura do Cliente',
@@ -479,6 +479,7 @@ class Shipment extends Model
             $this->documents()->where('type', 'autorizacao')->exists() ? 25 : 0,
         ];
 
+
         return array_sum($steps);
     }
 
@@ -494,26 +495,66 @@ class Shipment extends Model
         return array_sum($steps);
     }
 
-    public function getPhase5Progress(): float
-    {
-        // Documentos necessários para a Fase 5 (Taxação)
-        $requiredDocTypes = [
-            'sad',           // Documento Administrativo de Trânsito
-            'delivery_order', // IDO (Instruction Delivery Order)
-        ];
+public function getPhase5Progress(): float
+{
+    $requiredDocs = ['sad', 'delivery_order'];
 
-        // Verificar se TODOS os documentos necessários existem
-        $attachedDocsCount = $this->documents()
-            ->whereIn('type', $requiredDocTypes)
-            ->count();
+    // Documentos anexados
+    $attachedDocs = $this->documents()
+        ->whereIn('type', $requiredDocs)
+        ->get();
 
-        // Se todos os documentos necessários estão anexados, retorna 100%
-        // Caso contrário, retorna 0%
-        return $attachedDocsCount === count($requiredDocTypes) ? 100 : 0;
+    // Calcular progresso baseado em documentos
+    $uploadedCount = $attachedDocs->count();
+    $documentProgress = ($uploadedCount / count($requiredDocs)) * 50; // 50% baseado em documentos
+
+    // Calcular progresso baseado no tempo
+    $stage = $this->stages()->where('stage', 'taxacao')->first();
+
+    $timeProgress = 0;
+    if ($stage && $stage->started_at) {
+        $daysSinceStart = now()->diffInDays($stage->started_at);
+
+        // Limite máximo de 15 dias para considerar 50% de progresso
+        $maxDays = 15;
+        $timeProgress = min(($daysSinceStart / $maxDays) * 50, 50);
     }
+
+    // Progresso total
+    $totalProgress = $documentProgress + $timeProgress;
+
+    // Debug: adicionar log para entender o cálculo
+    // Log mais detalhado
+    Log::info('Phase 5 Progress Details', [
+        'uploadedCount' => $uploadedCount,
+        'requiredDocsCount' => count($requiredDocs),
+        'documentProgress' => $documentProgress,
+        'timeProgress' => $timeProgress,
+        'totalProgress' => $totalProgress,
+        'stage' => $stage ? $stage->toArray() : 'No stage found'
+    ]);
+    // Se todos documentos estiverem anexados, completar stage
+    if ($uploadedCount === count($requiredDocs)) {
+        if ($stage && $stage->status === 'in_progress') {
+            $stage->update([
+                'status' => 'completed',
+                'completed_at' => now()
+            ]);
+
+            Activity::create([
+                'shipment_id' => $this->id,
+                'user_id' => auth()->id() ?? 1,
+                'action' => 'stage_completed',
+                'description' => 'Fase de Taxação completada automaticamente'
+            ]);
+        }
+    }
+
+    return min($totalProgress, 100);
+}
     // public function getPhase5Progress(): float
     // {
-    //     $requiredDocs = ['sad', 'termo', 'bl_carimbado', 'autorizacao'];
+    //     $requiredDocs = ['sad', 'termo', 'bl_carimbado', 'autorizacao','delivery_order'];
     //     $uploadedCount = $this->documents()
     //         ->whereIn('type', $requiredDocs)
     //         ->count();
@@ -562,6 +603,8 @@ class Shipment extends Model
         return $this->payment_proof_id !== null &&
                $this->receipt_document_id !== null;
     }
+
+
 
     /**
      * Obter label de status traduzido
@@ -710,7 +753,7 @@ class Shipment extends Model
      */
     public function getRequiredTaxationDocuments(): array
     {
-        $docs = ['sad', 'ido'];
+        $docs = ['sad', 'delivery_order'];
         // $docs = ['sad', 'termo', 'bl_carimbado', 'autorizacao'];
 
         if ($this->cargo_type === 'perishable') {
@@ -1024,7 +1067,7 @@ class Shipment extends Model
             2 => ['bl', 'carta_endosso', 'delivery_order'],
             3 => ['bl_carimbado', 'packing_list', 'commercial_invoice', 'autorizacao'],
             4 => ['draft', 'storage', 'recibo_cornelder'],
-            5 => ['sad', 'termo', 'ido'],
+            5 => ['sad', 'delivery_order'],
             6 => ['client_invoice'],
             7 => ['pod', 'container_return'],
         ];
