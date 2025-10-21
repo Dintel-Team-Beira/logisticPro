@@ -239,7 +239,7 @@ export default function Show ({
                                     </p>
 
                                     <p className='text-xs text-slate-600'>
-                                        {Math.round(phaseData.progress)}%
+                                        {Math.round(phaseData.progress)}% {console.log("phaseData",phaseData)}
                                     </p>
                                 </button>
                             )
