@@ -218,14 +218,14 @@ class ShipmentController extends Controller
             $stageName = Shipment::getStageNameFromPhase($phaseId);
             $stage = $shipment->stages()->where('stage', $stageName)->first();
 
-            $phaseData = [
-                'status' => $stage ? $stage->status : 'pending',
-                'progress' => $shipment->getPhaseProgress($phaseId),
-                'can_start' => false,
-                'warnings' => [],
-                'missing_items' => [],
-                'show_payment_request' => false,
-            ];
+        $phaseData = [
+    'status' => $stage ? $stage->status : 'pending',
+    'progress' => round($shipment->getPhaseProgress($phaseId), 2), // Arredondar para 2 casas decimais
+    'can_start' => false,
+    'warnings' => [],
+    'missing_items' => [],
+    'show_payment_request' => false,
+];
 
             // Verificar requisitos para avançar
             $validation = $shipment->canAdvanceToPhase($phaseId);
@@ -268,7 +268,7 @@ class ShipmentController extends Controller
             ->orderBy('created_at')
             ->get();
 
-        // dd($paymentRequests);
+        // dd($phaseProgress);
         return Inertia::render('Shipments/Show', [
             'shipment' => $shipment,
             'phases' => $phases,
@@ -313,7 +313,7 @@ class ShipmentController extends Controller
             ],
             5 => [ // Taxação
                 ['type' => 'sad', 'label' => 'SAD (Documento Trânsito)', 'required' => true],
-                ['type' => 'ido', 'label' => 'IDO', 'required' => false],
+                ['type' => 'delivery_order', 'label' => 'Delivery Order', 'required' => true]
                 // ['type' => 'bl_carimbado', 'label' => 'BL Carimbado', 'required' => true],
                 // ['type' => 'autorizacao', 'label' => 'Autorização de Saída', 'required' => false],
                 // / $docs = ['sad', 'termo', 'bl_carimbado', 'autorizacao'];
