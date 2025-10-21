@@ -368,16 +368,34 @@ function GenerateInvoiceModal({ shipment, onClose }) {
   const fetchPreview = async () => {
     try {
       setLoading(true);
-      const response = await fetch(`/api/invoices/${shipment.id}/calculate`);
+      setError(null);
+
+      // Log para debug
+      console.log('Buscando preview para shipment:', shipment.id);
+
+      const response = await fetch(`/invoices/${shipment.id}/calculate`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+          'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || ''
+        }
+      });
+
+      console.log('Response status:', response.status);
+
       const data = await response.json();
+      console.log('Response data:', data);
 
       if (data.success) {
         setPreview(data);
       } else {
         setError(data.error || 'Erro ao calcular custos');
+        console.error('Erro na resposta:', data);
       }
     } catch (err) {
-      setError('Erro ao conectar com o servidor');
+      console.error('Erro na requisição:', err);
+      setError('Erro ao conectar com o servidor: ' + err.message);
     } finally {
       setLoading(false);
     }
