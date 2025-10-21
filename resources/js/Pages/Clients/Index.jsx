@@ -254,7 +254,7 @@ export default function ClientsIndex({ clients, filters, stats, types, prioritie
                     Cliente
                   </th>
                   <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
-                    Contato
+                    Contacto
                   </th>
                   <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
                     Tipo
