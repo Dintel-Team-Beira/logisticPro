@@ -32,7 +32,6 @@ class InvoiceController extends Controller
         // Buscar shipments que estão prontos para faturação ou já têm fatura
         $query = Shipment::with([
             'client',
-            // 'containers',
             'paymentRequests' => function($q) {
                 $q->where('status', 'paid');
             },
@@ -107,17 +106,29 @@ class InvoiceController extends Controller
     public function calculateCosts(Shipment $shipment)
     {
         try {
+            // Log para debug
+            \Log::info('calculateCosts chamado', [
+                'shipment_id' => $shipment->id,
+                'reference' => $shipment->reference_number
+            ]);
+
             // Validar se pode gerar fatura
             $validation = Invoice::canGenerateInvoice($shipment);
 
+            \Log::info('Validação completa', $validation);
+
             if (!$validation['can_generate']) {
-                return back()->withErrors([
-                    'invoice' => implode(' ', $validation['errors'])
-                ]);
+                return response()->json([
+                    'success' => false,
+                    'error' => implode(' ', $validation['errors']),
+                    'validation' => $validation
+                ], 422);
             }
 
             // Calcular custos
             $costs = Invoice::calculateShipmentCosts($shipment);
+
+            \Log::info('Custos calculados', ['subtotal' => $costs['subtotal']]);
 
             // Aplicar margem padrão (15%)
             $marginPercent = 15; // TODO: Buscar de configurações
@@ -131,9 +142,19 @@ class InvoiceController extends Controller
             ]);
 
         } catch (\Exception $e) {
+            \Log::error('Erro em calculateCosts', [
+                'shipment_id' => $shipment->id ?? null,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
             return response()->json([
                 'success' => false,
-                'error' => $e->getMessage(),
+                'error' => 'Erro ao calcular custos: ' . $e->getMessage(),
+                'debug' => [
+                    'file' => $e->getFile(),
+                    'line' => $e->getLine()
+                ]
             ], 500);
         }
     }
