@@ -283,16 +283,21 @@ class Invoice extends Model
     }
 
     /**
-     * Accessor para total
+     * Accessor para total da fatura
      */
     public function getTotalAttribute(): float
     {
-        // Se for fatura ao cliente, pegar do metadata
+        // 1. Se já tem amount definido (campo direto), usar
+        if (isset($this->attributes['amount']) && $this->attributes['amount'] !== null) {
+            return (float) $this->attributes['amount'];
+        }
+
+        // 2. Se for fatura ao cliente, tentar pegar do metadata
         if ($this->type === 'client_invoice' && isset($this->metadata['invoice_data']['total_invoice'])) {
             return (float) $this->metadata['invoice_data']['total_invoice'];
         }
 
-        // Senão, usar o amount direto
-        return (float) $this->amount;
+        // 3. Fallback para 0
+        return 0.0;
     }
 }
