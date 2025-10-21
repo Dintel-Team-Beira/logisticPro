@@ -137,7 +137,7 @@ export default function DashboardLayout({ children }) {
             icon: DollarSign,
             href: '/invoices',
             roles: ['admin', 'manager'],
-            badge: '3'
+            badge: stats?.pendingInvoices || null,
         },
         {
             name: 'Relatórios',
