@@ -634,38 +634,37 @@ Route::middleware(['auth'])->group(function () {
 //     // ->middleware('role:admin');
 // });
 
-
 // ============================================================================
 // INVOICES - Faturação (Fase 6)
 // ============================================================================
-Route::middleware(['auth'])->prefix('invoices')->group(function () {
+Route::middleware(['auth'])->group(function () {
 
     // Página principal de faturação
-    Route::get('/', [InvoiceController::class, 'index'])
+    Route::get('/invoices', [App\Http\Controllers\InvoiceController::class, 'index'])
         ->name('invoices.index');
 
     // API: Calcular custos e preview (RF-020)
-    Route::get('/{shipment}/calculate', [InvoiceController::class, 'calculateCosts'])
+    Route::get('/invoices/{shipment}/calculate', [App\Http\Controllers\InvoiceController::class, 'calculateCosts'])
         ->name('invoices.calculate');
 
     // RF-022: Gerar Fatura
-    Route::post('/{shipment}/generate', [InvoiceController::class, 'generate'])
+    Route::post('/invoices/{shipment}/generate', [App\Http\Controllers\InvoiceController::class, 'generate'])
         ->name('invoices.generate');
 
     // RF-023: Enviar Fatura ao Cliente
-    Route::post('/{shipment}/send', [InvoiceController::class, 'send'])
+    Route::post('/invoices/{shipment}/send', [App\Http\Controllers\InvoiceController::class, 'send'])
         ->name('invoices.send');
 
     // RF-024: Registrar Pagamento do Cliente
-    Route::post('/{shipment}/register-payment', [InvoiceController::class, 'registerPayment'])
+    Route::post('/invoices/{shipment}/register-payment', [App\Http\Controllers\InvoiceController::class, 'registerPayment'])
         ->name('invoices.register-payment');
 
     // Download PDF
-    Route::get('/{shipment}/download', [InvoiceController::class, 'download'])
+    Route::get('/invoices/{shipment}/download', [App\Http\Controllers\InvoiceController::class, 'download'])
         ->name('invoices.download');
 
     // Preview PDF
-    Route::get('/{shipment}/preview', [InvoiceController::class, 'preview'])
+    Route::get('/invoices/{shipment}/preview', [App\Http\Controllers\InvoiceController::class, 'preview'])
         ->name('invoices.preview');
 });
 
