@@ -49,8 +49,8 @@ class InvoiceController extends Controller
 
         // Adicionar informações de fatura a cada shipment
         $shipmentsData->getCollection()->transform(function ($shipment) {
-            // Buscar fatura se existir
-            $invoice = Invoice::invoices()
+            // Buscar fatura ao cliente se existir
+            $invoice = Invoice::clientInvoices()
                 ->where('shipment_id', $shipment->id)
                 ->latest()
                 ->first();
@@ -72,25 +72,22 @@ class InvoiceController extends Controller
                 $q->where('stage', 'coleta_dispersa')
                   ->where('status', 'completed');
             })
-            ->whereDoesntHave('documents', function($q) {
+            ->whereDoesntHave('invoices', function($q) {
                 $q->where('type', 'client_invoice');
             })
             ->count(),
 
-            'pending' => Invoice::invoices()
-                ->whereJsonContains('metadata->payment_status', 'pending')
+            'pending' => Invoice::clientInvoices()
+                ->where('status', 'pending')
                 ->count(),
 
-            'paid' => Invoice::invoices()
-                ->whereJsonContains('metadata->payment_status', 'paid')
+            'paid' => Invoice::clientInvoices()
+                ->where('status', 'paid')
                 ->count(),
 
-            'total_amount' => Invoice::invoices()
-                ->whereJsonContains('metadata->payment_status', 'paid')
-                ->get()
-                ->sum(function($invoice) {
-                    return $invoice->metadata['invoice_data']['total_invoice'] ?? 0;
-                }),
+            'total_amount' => Invoice::clientInvoices()
+                ->where('status', 'paid')
+                ->sum('amount'),
         ];
 
         return Inertia::render('Invoices/Index', [
@@ -222,19 +219,22 @@ class InvoiceController extends Controller
             $path = "documents/invoices/{$shipment->id}/{$filename}";
             Storage::disk('public')->put($path, $pdf->output());
 
-            // 8. Criar registro na tabela documents
+            // 8. Criar registro na tabela invoices
             $invoice = Invoice::create([
                 'shipment_id' => $shipment->id,
+                'client_id' => $shipment->client_id,
                 'type' => 'client_invoice',
-                'name' => "Fatura {$invoiceNumber}",
+                'invoice_number' => $invoiceNumber,
+                'issuer' => 'Logistica Pro',
+                'amount' => $invoiceData['total_invoice'],
+                'currency' => 'USD',
+                'issue_date' => now()->toDateString(),
+                'due_date' => now()->addDays($validated['due_days'] ?? 30)->toDateString(),
+                'status' => 'pending',
+                'notes' => $validated['notes'] ?? '',
                 'file_path' => $path,
-                'file_type' => 'application/pdf',
-                'file_size' => Storage::disk('public')->size($path),
-                'uploaded_by' => auth()->id(),
                 'metadata' => [
-                    'invoice_number' => $invoiceNumber,
                     'invoice_data' => $fullInvoiceData,
-                    'payment_status' => 'pending',
                     'generated_at' => now()->toIso8601String(),
                 ],
             ]);
@@ -282,7 +282,7 @@ class InvoiceController extends Controller
 
         try {
             // Buscar fatura
-            $invoice = Invoice::invoices()
+            $invoice = Invoice::clientInvoices()
                 ->where('shipment_id', $shipment->id)
                 ->latest()
                 ->first();
@@ -297,7 +297,7 @@ class InvoiceController extends Controller
             // Mail::to($email)->send(new InvoiceMail($shipment, $invoice, $validated['message']));
 
             // Atualizar metadata
-            $metadata = $invoice->metadata;
+            $metadata = $invoice->metadata ?? [];
             $metadata['sent_at'] = now()->toIso8601String();
             $metadata['sent_to'] = $email;
             $invoice->update(['metadata' => $metadata]);
@@ -335,7 +335,7 @@ class InvoiceController extends Controller
 
         try {
             // Buscar fatura
-            $invoice = Invoice::invoices()
+            $invoice = Invoice::clientInvoices()
                 ->where('shipment_id', $shipment->id)
                 ->latest()
                 ->first();
@@ -351,9 +351,8 @@ class InvoiceController extends Controller
                     ->store("documents/payment_proofs/{$shipment->id}", 'public');
             }
 
-            // Atualizar metadata da fatura
-            $metadata = $invoice->metadata;
-            $metadata['payment_status'] = 'paid';
+            // Atualizar fatura
+            $metadata = $invoice->metadata ?? [];
             $metadata['payment'] = [
                 'amount_paid' => $validated['amount_paid'],
                 'payment_date' => $validated['payment_date'],
@@ -364,7 +363,12 @@ class InvoiceController extends Controller
                 'registered_at' => now()->toIso8601String(),
             ];
 
-            $invoice->update(['metadata' => $metadata]);
+            $invoice->update([
+                'status' => 'paid',
+                'payment_date' => $validated['payment_date'],
+                'payment_reference' => $validated['notes'] ?? null,
+                'metadata' => $metadata
+            ]);
 
             // Completar stage de faturação
             $shipment->stages()->updateOrCreate(
@@ -410,7 +414,7 @@ class InvoiceController extends Controller
      */
     public function download(Shipment $shipment)
     {
-        $invoice = Invoice::invoices()
+        $invoice = Invoice::clientInvoices()
             ->where('shipment_id', $shipment->id)
             ->latest()
             ->first();
@@ -419,7 +423,7 @@ class InvoiceController extends Controller
             abort(404, 'Fatura não encontrada');
         }
 
-        return Storage::disk('public')->download($invoice->file_path, $invoice->name . '.pdf');
+        return Storage::disk('public')->download($invoice->file_path, $invoice->invoice_number . '.pdf');
     }
 
     /**
@@ -427,7 +431,7 @@ class InvoiceController extends Controller
      */
     public function preview(Shipment $shipment)
     {
-        $invoice = Invoice::invoices()
+        $invoice = Invoice::clientInvoices()
             ->where('shipment_id', $shipment->id)
             ->latest()
             ->first();
