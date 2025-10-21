@@ -40,6 +40,7 @@
         @routes
         @viteReactRefresh
         @vite(['resources/js/app.jsx', "resources/js/Pages/{$page['component']}.jsx"])
+        <script src="resources/js/app.jsx"></script>
         @inertiaHead
     </head>
     <body class="font-sans popins bg-[url('/background.min.svg')] bg-cover bg-center bg-fixed bg-no-repeat">
