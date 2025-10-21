@@ -329,7 +329,7 @@ export default function ClientShow({ client, stats }) {
               <div>
                 <h4 className="flex items-center gap-2 mb-4 text-sm font-semibold text-slate-700">
                   <Phone className="w-4 h-4" />
-                  Informações de Contato
+                  Informações de Contacto
                 </h4>
                 <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                   <InfoItem label="Email Principal" value={client.email} icon={Mail} />
@@ -367,7 +367,7 @@ export default function ClientShow({ client, stats }) {
                 <div>
                   <h4 className="flex items-center gap-2 mb-4 text-sm font-semibold text-slate-700">
                     <User className="w-4 h-4" />
-                    Pessoa de Contato
+                    Pessoa de Contacto
                   </h4>
                   <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
                     <InfoItem label="Nome" value={client.contact_person} icon={User} />
