@@ -17,6 +17,11 @@ export default function Invoices({ shipments, stats }) {
   const [showGenerateModal, setShowGenerateModal] = useState(false);
   const [showPaymentModal, setShowPaymentModal] = useState(false);
 
+  console.log('💰 Invoices Page Loaded', {
+    shipments_count: shipments?.data?.length || 0,
+    stats
+  });
+
   return (
     <DashboardLayout>
       <Head title="Faturação - Fase 6" />
@@ -69,10 +74,13 @@ export default function Invoices({ shipments, stats }) {
               key={shipment.id}
               shipment={shipment}
               onGenerate={() => {
+                console.log('🎯 onGenerate chamado', shipment.id);
                 setSelectedShipment(shipment);
                 setShowGenerateModal(true);
+                console.log('✅ Modal deve abrir agora!');
               }}
               onRegisterPayment={() => {
+                console.log('💵 onRegisterPayment chamado', shipment.id);
                 setSelectedShipment(shipment);
                 setShowPaymentModal(true);
               }}
@@ -80,18 +88,30 @@ export default function Invoices({ shipments, stats }) {
           ))}
         </div>
 
+        {/* Debug Info */}
+        <div className="p-4 mt-4 border rounded-lg border-slate-200 bg-slate-50">
+          <p className="text-sm font-medium text-slate-700">Debug Info:</p>
+          <p className="text-xs text-slate-600">
+            showGenerateModal: {showGenerateModal ? 'true' : 'false'}
+          </p>
+          <p className="text-xs text-slate-600">
+            selectedShipment: {selectedShipment?.id || 'null'}
+          </p>
+        </div>
+
         {/* Modals */}
-        {showGenerateModal && (
+        {showGenerateModal && selectedShipment && (
           <GenerateInvoiceModal
             shipment={selectedShipment}
             onClose={() => {
+              console.log('❌ Fechando modal');
               setShowGenerateModal(false);
               setSelectedShipment(null);
             }}
           />
         )}
 
-        {showPaymentModal && (
+        {showPaymentModal && selectedShipment && (
           <RegisterPaymentModal
             shipment={selectedShipment}
             onClose={() => {
@@ -111,8 +131,16 @@ export default function Invoices({ shipments, stats }) {
 function InvoiceCard({ shipment, onGenerate, onRegisterPayment }) {
   const hasInvoice = shipment.invoices?.length > 0;
   const invoice = hasInvoice ? shipment.invoices[0] : null;
-  const isPaid = invoice?.payment_status === 'paid';
+  const isPaid = invoice?.status === 'paid';
   const canGenerate = !hasInvoice && shipment.phase1_complete;
+
+  console.log('📦 InvoiceCard', {
+    shipment_id: shipment.id,
+    reference: shipment.reference_number,
+    hasInvoice,
+    canGenerate,
+    phase1_complete: shipment.phase1_complete
+  });
 
   return (
     <div className="overflow-hidden bg-white border rounded-xl border-slate-200">
@@ -128,7 +156,7 @@ function InvoiceCard({ shipment, onGenerate, onRegisterPayment }) {
             </p>
           </div>
           {hasInvoice && (
-            <StatusBadge status={invoice.payment_status} />
+            <StatusBadge status={invoice.status} />
           )}
         </div>
       </div>
@@ -198,11 +226,17 @@ function InvoiceCard({ shipment, onGenerate, onRegisterPayment }) {
         <div className="pt-3 space-y-2 border-t border-slate-200">
           {!hasInvoice ? (
             <button
-              onClick={onGenerate}
+              onClick={() => {
+                console.log('🔘 Botão "Gerar Fatura" clicado!', {
+                  shipment_id: shipment.id,
+                  canGenerate
+                });
+                onGenerate();
+              }}
               disabled={!canGenerate}
               className={`w-full px-4 py-2 text-sm font-medium rounded-lg flex items-center justify-center gap-2 ${
                 canGenerate
-                  ? 'bg-blue-600 text-white hover:bg-blue-700'
+                  ? 'bg-blue-600 text-white hover:bg-blue-700 cursor-pointer'
                   : 'bg-slate-200 text-slate-400 cursor-not-allowed'
               }`}
             >
@@ -423,10 +457,33 @@ function GenerateInvoiceModal({ shipment, onClose }) {
 
   const handleSubmit = (e) => {
     e.preventDefault();
-    router.post(`/invoices/${shipment.id}/generate`, {
+
+    console.log('🚀 Gerando fatura...', {
+      shipment_id: shipment.id,
+      margin_percent: marginPercent,
+      due_days: dueDays,
+      notes: notes
+    });
+
+    const formData = {
       margin_percent: marginPercent,
       due_days: dueDays,
       notes: notes,
+    };
+
+    console.log('📤 Enviando dados:', formData);
+
+    router.post(`/invoices/${shipment.id}/generate`, formData, {
+      onStart: () => console.log('⏳ Iniciando requisição...'),
+      onSuccess: (page) => {
+        console.log('✅ Sucesso!', page);
+        onClose();
+      },
+      onError: (errors) => {
+        console.error('❌ Erro:', errors);
+        setError(Object.values(errors).join(', '));
+      },
+      onFinish: () => console.log('🏁 Requisição finalizada')
     });
   };
 
