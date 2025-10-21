@@ -183,7 +183,7 @@ export default function FinanceDashboard({ stats, recentRequests }) {
               </p>
             </div>
             <Link
-              href="/finance/pending-requests"
+    href="/finance/pending"
               className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
             >
               Ver Todas
