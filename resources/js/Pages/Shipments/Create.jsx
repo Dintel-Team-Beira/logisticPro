@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import React from 'react';
 import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
@@ -17,27 +17,23 @@ import {
     Upload,
     Check,
     ChevronRight,
+    Globe,
+    TrendingUp
 } from 'lucide-react';
 
 export default function Create() {
-  const { shippingLines, clients } = usePage().props;
+    const { shippingLines, clients } = usePage().props;
     const [step, setStep] = useState(1);
-    const [showNewClientForm, setShowNewClientForm] = useState(false);
     const [blFile, setBlFile] = useState(null);
-    const [dataa, setDataa]=useState(shippingLines);
 
     const { data, setData, post, processing, errors } = useForm({
-        // Tipo de Processo
-        type: 'import',
-
         // Cliente
         client_id: '',
-        new_client_name: '',
-        new_client_email: '',
-        new_client_phone: '',
-        new_client_address: '',
 
-        // Linha de Navegação e BL
+        // Tipo de Processo (será escolhido no step 2)
+        type: '',
+
+        // Linha de Navegação e Documentos
         shipping_line_id: '',
         bl_number: '',
         bl_file: null,
@@ -46,11 +42,11 @@ export default function Create() {
         container_number: '',
         container_type: '',
         vessel_name: '',
+        arrival_date: '',
 
-        // Rota e Datas
+        // Rota (dinâmica baseada no tipo)
         origin_port: '',
         destination_port: '',
-        arrival_date: '',
 
         // Carga
         cargo_description: '',
@@ -58,9 +54,32 @@ export default function Create() {
         cargo_value: '',
     });
 
-    // const showNewClientForm(){
+    // ========================================
+    // PORTOS DINÂMICOS
+    // ========================================
 
-    // }
+    // Portos de Moçambique (para Export = origem, Import = destino)
+    const mozambiquePorts = [
+        { value: 'BEIRA, MOZAMBIQUE', label: 'Beira, Moçambique' },
+        { value: 'MAPUTO, MOZAMBIQUE', label: 'Maputo, Moçambique' },
+        { value: 'NACALA, MOZAMBIQUE', label: 'Nacala, Moçambique' },
+        { value: 'PEMBA, MOZAMBIQUE', label: 'Pemba, Moçambique' },
+    ];
+
+    // Portos Internacionais (para Export = destino, Import = origem)
+    const internationalPorts = [
+        { value: 'SHANGHAI, CHINA', label: 'Shanghai, China' },
+        { value: 'QINGDAO, CHINA', label: 'Qingdao, China' },
+        { value: 'MUMBAI, INDIA', label: 'Mumbai, Índia' },
+        { value: 'DURBAN, SOUTH AFRICA', label: 'Durban, África do Sul' },
+        { value: 'DAR ES SALAAM, TANZANIA', label: 'Dar es Salaam, Tanzânia' },
+        { value: 'HAMBURG, GERMANY', label: 'Hamburg, Alemanha' },
+        { value: 'ROTTERDAM, NETHERLANDS', label: 'Rotterdam, Holanda' },
+        { value: 'LOS ANGELES, USA', label: 'Los Angeles, EUA' },
+        { value: 'SINGAPORE', label: 'Singapura' },
+        { value: 'DUBAI, UAE', label: 'Dubai, EAU' },
+    ];
+
     const containerTypes = [
         { value: '20DC', label: "20' Dry Container" },
         { value: '40DC', label: "40' Dry Container" },
@@ -71,23 +90,20 @@ export default function Create() {
         { value: '40OT', label: "40' Open Top" },
     ];
 
-     // Lista de portos de origem (países exportadores)
-  const originPorts = [
-    { value: 'QINGDAO, CHINA', label: 'QINGDAO, CHINA' },
-    { value: 'SHANGHAI, CHINA', label: 'SHANGHAI, CHINA' },
-    { value: 'MUMBAI, INDIA', label: 'MUMBAI, INDIA' },
-    { value: 'HAMBURG, GERMANY', label: 'HAMBURG, GERMANY' },
-    { value: 'LOS ANGELES, USA', label: 'LOS ANGELES, USA' },
-  ];
+    // ========================================
+    // EFEITOS E HANDLERS
+    // ========================================
 
-  // Lista de portos de destino (países importadores)
-  const destinationPorts = [
-    { value: 'BEIRA, MOZAMBIQUE', label: 'BEIRA, MOZAMBIQUE' },
-    { value: 'MAPUTO, MOZAMBIQUE', label: 'MAPUTO, MOZAMBIQUE' },
-    { value: 'NACALA, MOZAMBIQUE', label: 'NACALA, MOZAMBIQUE' },
-    { value: 'DURBAN, SOUTH AFRICA', label: 'DURBAN, SOUTH AFRICA' },
-    { value: 'DAR ES SALAAM, TANZANIA', label: 'DAR ES SALAAM, TANZANIA' },
-  ];
+    // Quando o tipo mudar, limpar portos para evitar conflitos
+    useEffect(() => {
+        if (data.type) {
+            setData(prev => ({
+                ...prev,
+                origin_port: '',
+                destination_port: '',
+            }));
+        }
+    }, [data.type]);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -100,6 +116,14 @@ export default function Create() {
 
         post('/shipments', {
             forceFormData: true,
+            onSuccess: (response) => {
+                // Redirecionar baseado no tipo
+                if (data.type === 'export') {
+                    router.visit('/operations/export/preparacao');
+                } else {
+                    router.visit('/operations/coleta');
+                }
+            }
         });
     };
 
@@ -111,14 +135,19 @@ export default function Create() {
         }
     };
 
+    // ========================================
+    // VALIDAÇÕES DE STEPS
+    // ========================================
+
     const canProceedToStep2 = () => {
-        if (showNewClientForm) {
-            return data.new_client_name && data.new_client_email;
-        }
         return data.client_id;
     };
 
     const canProceedToStep3 = () => {
+        return data.type;
+    };
+
+    const canProceedToStep4 = () => {
         // Para importação: exige shipping_line_id, bl_number e bl_file
         if (data.type === 'import') {
             return data.shipping_line_id && data.bl_number && data.bl_file;
@@ -127,22 +156,27 @@ export default function Create() {
         return data.shipping_line_id;
     };
 
-    const novoCklinte = ()=>{
-        console.log("Clincado"),
-        router.get('clients/create')
-    }
+    const canProceedToStep5 = () => {
+        return data.container_type && data.origin_port && data.destination_port;
+    };
+
+    // ========================================
+    // STEPS CONFIGURATION
+    // ========================================
+
     const steps = [
         { number: 1, title: 'Cliente', icon: User },
-        { number: 2, title: 'Documentação', icon: FileText },
-        { number: 3, title: 'Container', icon: Package },
-        { number: 4, title: 'Rota', icon: MapPin },
+        { number: 2, title: 'Tipo', icon: Globe },
+        { number: 3, title: 'Documentação', icon: FileText },
+        { number: 4, title: 'Container & Rota', icon: Package },
+        { number: 5, title: 'Carga', icon: TrendingUp },
     ];
 
     return (
         <DashboardLayout>
-            <Head title="Novo Shipment" />
+            <Head title="Novo Processo" />
 
-          <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
+            <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
                 {/* Header */}
                 <div className="mb-6">
                     <Link
@@ -150,13 +184,18 @@ export default function Create() {
                         className="inline-flex items-center gap-2 mb-4 text-sm transition-colors text-slate-600 hover:text-slate-900"
                     >
                         <ArrowLeft className="w-4 h-4" />
-                        Voltar para Shipments
+                        Voltar para Processos
                     </Link>
                     <h1 className="text-2xl font-semibold text-slate-900">
-                        Criar Novo Shipment
+                        Criar Novo Processo Logístico
                     </h1>
                     <p className="mt-1 text-sm text-slate-500">
-                        Preencha todos os dados para iniciar o processo de importação
+                        {data.type === 'export'
+                            ? 'Processo de Exportação: mercadoria saindo de Moçambique para o exterior'
+                            : data.type === 'import'
+                            ? 'Processo de Importação: mercadoria chegando do exterior para Moçambique'
+                            : 'Selecione o tipo de processo para começar'
+                        }
                     </p>
                 </div>
 
@@ -214,143 +253,42 @@ export default function Create() {
                         })}
                     </div>
                 </div>
-        {/* {    console.log('shippingLines',shippingLines)} */}
+
                 {/* Form */}
                 <form onSubmit={handleSubmit}>
-                    {/* Step 1: Cliente */}
+                    {/* STEP 1: SELECIONAR CLIENTE */}
                     {step === 1 && (
                         <div className="p-6 bg-white border rounded-lg border-slate-200">
                             <div className="flex items-center gap-2 mb-6">
                                 <User className="w-5 h-5 text-slate-600" />
                                 <h2 className="text-lg font-semibold text-slate-900">
-                                    Informações do Cliente
+                                    Selecionar Cliente
                                 </h2>
                             </div>
 
-                            {/* Toggle Tipo de Processo */}
-                            <div className="mb-6">
-                                <label className="block mb-2 text-sm font-medium text-slate-700">
-                                    Tipo de Processo *
-                                </label>
-                                <div className="flex gap-4">
-                                    <button
-                                        type="button"
-                                        onClick={() => setData('type', 'import')}
-                                        className={`
-                                            flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all
-                                            ${data.type === 'import'
-                                                ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
-                                                : 'bg-slate-50 text-slate-600 border border-slate-200'
-                                            }
-                                        `}
-                                    >
-                                        📦 Importação
-                                    </button>
-                                    <button
-                                        type="button"
-                                        onClick={() => setData('type', 'export')}
-                                        className={`
-                                            flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all
-                                            ${data.type === 'export'
-                                                ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-500'
-                                                : 'bg-slate-50 text-slate-600 border border-slate-200'
-                                            }
-                                        `}
-                                    >
-                                        🚢 Exportação
-                                    </button>
-                                </div>
-                                <p className="mt-2 text-xs text-slate-500">
-                                    {data.type === 'import'
-                                        ? 'Processo de importação: mercadoria chegando do exterior'
-                                        : 'Processo de exportação: mercadoria saindo para o exterior'}
+                            <Select
+                                label="Cliente *"
+                                value={data.client_id}
+                                onChange={(e) => setData('client_id', e.target.value)}
+                                error={errors.client_id}
+                                required
+                            >
+                                <option value="">Selecione o cliente</option>
+                                {clients?.map((client) => (
+                                    <option key={client.id} value={client.id}>
+                                        {client.name} - {client.email}
+                                    </option>
+                                ))}
+                            </Select>
+
+                            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
+                                <p className="text-sm text-blue-800">
+                                    💡 <strong>Dica:</strong> Se o cliente não estiver na lista, você pode cadastrá-lo em{' '}
+                                    <Link href="/clients/create" className="underline font-semibold">
+                                        Gestão de Clientes
+                                    </Link>
                                 </p>
                             </div>
-
-                            {/* Toggle Cliente Existente / Novo */}
-                            <div className="flex gap-4 mb-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNewClientForm(false)}
-                                    className={`
-                                        flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all
-                                        ${!showNewClientForm
-                                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
-                                            : 'bg-slate-50 text-slate-600 border border-slate-200'
-                                        }
-                                    `}
-                                >
-                                    Cliente Existente
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setShowNewClientForm(true)}
-                                    className={`
-                                        flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all
-                                        ${showNewClientForm
-                                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
-                                            : 'bg-slate-50 text-slate-600 border border-slate-200'
-                                        }
-                                    `}
-                                >
-                                    Novo Cliente
-                                </button>
-                            </div>
-
-                            {!showNewClientForm ? (
-                                <Select
-                                    label="Selecione o Cliente *"
-                                    value={data.client_id}
-                                    onChange={(e) => setData('client_id', e.target.value)}
-                                    error={errors.client_id}
-                                    required
-                                >
-                                    <option value="">Selecione um cliente</option>
-                                    {clients?.map((client) => (
-                                        <option key={client.id} value={client.id}>
-                                            {client.name} - {client.email}
-                                        </option>
-                                    ))}
-                                </Select>
-                            ) : (
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <Input
-                                        label="Nome da Empresa *"
-                                        icon={Building2}
-                                        value={data.new_client_name}
-                                        onChange={(e) => setData('new_client_name', e.target.value)}
-                                        error={errors.new_client_name}
-                                        placeholder="Ex: ABC Importações Lda"
-                                        required
-                                    />
-                                    <Input
-                                        label="Email *"
-                                        type="email"
-                                        icon={User}
-                                        value={data.new_client_email}
-                                        onChange={(e) => setData('new_client_email', e.target.value)}
-                                        error={errors.new_client_email}
-                                        placeholder="contato@empresa.com"
-                                        required
-                                    />
-                                    <Input
-                                        label="Telefone"
-                                        icon={User}
-                                        value={data.new_client_phone}
-                                        onChange={(e) => setData('new_client_phone', e.target.value)}
-                                        error={errors.new_client_phone}
-                                        placeholder="+258 84 123 4567"
-                                    />
-                                    <Input
-                                        label="Endereço"
-                                        icon={MapPin}
-                                        value={data.new_client_address}
-                                        onChange={(e) => setData('new_client_address', e.target.value)}
-                                        error={errors.new_client_address}
-                                        placeholder="Cidade, País"
-                                    />
-                                </div>
-                            )}
 
                             <div className="flex justify-end mt-6">
                                 <button
@@ -366,13 +304,126 @@ export default function Create() {
                         </div>
                     )}
 
-                    {/* Step 2: Documentação (BL) */}
+                    {/* STEP 2: ESCOLHER TIPO (IMPORT/EXPORT) */}
                     {step === 2 && (
+                        <div className="p-6 bg-white border rounded-lg border-slate-200">
+                            <div className="flex items-center gap-2 mb-6">
+                                <Globe className="w-5 h-5 text-slate-600" />
+                                <h2 className="text-lg font-semibold text-slate-900">
+                                    Tipo de Processo
+                                </h2>
+                            </div>
+
+                            <p className="mb-6 text-sm text-slate-600">
+                                Selecione o tipo de operação logística que deseja realizar:
+                            </p>
+
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                {/* IMPORTAÇÃO */}
+                                <button
+                                    type="button"
+                                    onClick={() => setData('type', 'import')}
+                                    className={`
+                                        p-6 border-2 rounded-xl text-left transition-all transform hover:scale-105
+                                        ${data.type === 'import'
+                                            ? 'border-blue-500 bg-blue-50 shadow-lg'
+                                            : 'border-slate-200 bg-white hover:border-blue-300'
+                                        }
+                                    `}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-3 bg-blue-100 rounded-lg">
+                                            <Ship className="w-8 h-8 text-blue-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-lg font-bold text-slate-900 mb-2">
+                                                📦 Importação
+                                            </h3>
+                                            <p className="text-sm text-slate-600 mb-3">
+                                                Mercadoria chegando <strong>do exterior</strong> para <strong>Moçambique</strong>
+                                            </p>
+                                            <div className="space-y-1 text-xs text-slate-500">
+                                                <p>• Origem: Portos Internacionais</p>
+                                                <p>• Destino: Beira, Maputo, Nacala...</p>
+                                                <p>• Requer: BL Original</p>
+                                            </div>
+                                            {data.type === 'import' && (
+                                                <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
+                                                    <Check className="w-3 h-3" />
+                                                    Selecionado
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
+
+                                {/* EXPORTAÇÃO */}
+                                <button
+                                    type="button"
+                                    onClick={() => setData('type', 'export')}
+                                    className={`
+                                        p-6 border-2 rounded-xl text-left transition-all transform hover:scale-105
+                                        ${data.type === 'export'
+                                            ? 'border-emerald-500 bg-emerald-50 shadow-lg'
+                                            : 'border-slate-200 bg-white hover:border-emerald-300'
+                                        }
+                                    `}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-3 bg-emerald-100 rounded-lg">
+                                            <TrendingUp className="w-8 h-8 text-emerald-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-lg font-bold text-slate-900 mb-2">
+                                                🚢 Exportação
+                                            </h3>
+                                            <p className="text-sm text-slate-600 mb-3">
+                                                Mercadoria saindo <strong>de Moçambique</strong> para <strong>o exterior</strong>
+                                            </p>
+                                            <div className="space-y-1 text-xs text-slate-500">
+                                                <p>• Origem: Beira, Maputo, Nacala...</p>
+                                                <p>• Destino: Portos Internacionais</p>
+                                                <p>• Requer: Fatura Comercial, Packing List</p>
+                                            </div>
+                                            {data.type === 'export' && (
+                                                <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white text-xs font-semibold rounded-full">
+                                                    <Check className="w-3 h-3" />
+                                                    Selecionado
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
+                            </div>
+
+                            <div className="flex justify-between mt-6">
+                                <button
+                                    type="button"
+                                    onClick={() => setStep(1)}
+                                    className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
+                                >
+                                    Voltar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setStep(3)}
+                                    disabled={!canProceedToStep3()}
+                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Próximo
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 3: DOCUMENTAÇÃO (DINÂMICA) */}
+                    {step === 3 && (
                         <div className="p-6 bg-white border rounded-lg border-slate-200">
                             <div className="flex items-center gap-2 mb-6">
                                 <FileText className="w-5 h-5 text-slate-600" />
                                 <h2 className="text-lg font-semibold text-slate-900">
-                                    {data.type === 'import' ? 'Bill of Lading (BL)' : 'Documentação Inicial'}
+                                    {data.type === 'import' ? 'Documentação de Importação' : 'Documentação de Exportação'}
                                 </h2>
                             </div>
 
@@ -385,7 +436,6 @@ export default function Create() {
                                     required
                                 >
                                     <option value="">Selecione uma linha</option>
-
                                     {shippingLines?.map((line) => (
                                         <option key={line.id} value={line.id}>
                                             {line.name}
@@ -394,7 +444,7 @@ export default function Create() {
                                 </Select>
 
                                 <Input
-                                    label={data.type === 'import' ? 'Número do BL *' : 'Número do BL'}
+                                    label={data.type === 'import' ? 'Número do BL *' : 'Número do BL (Opcional)'}
                                     icon={FileText}
                                     value={data.bl_number}
                                     onChange={(e) => setData('bl_number', e.target.value)}
@@ -404,12 +454,12 @@ export default function Create() {
                                 />
                             </div>
 
-                            {/* Upload BL Original */}
+                            {/* Upload de Documentos */}
                             <div className="mt-6">
                                 <label className="block mb-2 text-sm font-medium text-slate-700">
                                     {data.type === 'import'
-                                        ? 'Upload do BL Original * (PDF, JPG, PNG)'
-                                        : 'Upload de Documentos (Opcional) (PDF, JPG, PNG)'}
+                                        ? '📄 Upload do BL Original * (PDF, JPG, PNG)'
+                                        : '📄 Upload de Documentos (Fatura Comercial, Packing List) (PDF, JPG, PNG)'}
                                 </label>
                                 <div className="flex items-center justify-center w-full">
                                     <label className={`
@@ -456,81 +506,6 @@ export default function Create() {
                             <div className="flex justify-between mt-6">
                                 <button
                                     type="button"
-                                    onClick={() => setStep(1)}
-                                    className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
-                                >
-                                    Voltar
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(3)}
-                                    disabled={!canProceedToStep3()}
-                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Próximo
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* Step 3: Container */}
-                    {step === 3 && (
-                        <div className="p-6 bg-white border rounded-lg border-slate-200">
-                            <div className="flex items-center gap-2 mb-6">
-                                <Package className="w-5 h-5 text-slate-600" />
-                                <h2 className="text-lg font-semibold text-slate-900">
-                                    Informações do Container
-                                </h2>
-                            </div>
-
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                <Input
-                                    label="Número do Container"
-                                    icon={Package}
-                                    value={data.container_number}
-                                    onChange={(e) => setData('container_number', e.target.value)}
-                                    error={errors.container_number}
-                                    placeholder="Ex: TCLU2437301"
-                                />
-
-                                <Select
-                                    label="Tipo de Container *"
-                                    value={data.container_type}
-                                    onChange={(e) => setData('container_type', e.target.value)}
-                                    error={errors.container_type}
-                                    required
-                                >
-                                    <option value="">Selecione o tipo</option>
-                                    {containerTypes.map((type) => (
-                                        <option key={type.value} value={type.value}>
-                                            {type.label}
-                                        </option>
-                                    ))}
-                                </Select>
-
-                                <Input
-                                    label="Nome do Navio"
-                                    icon={Ship}
-                                    value={data.vessel_name}
-                                    onChange={(e) => setData('vessel_name', e.target.value)}
-                                    error={errors.vessel_name}
-                                    placeholder="Ex: MSC MAYA"
-                                />
-
-                                <Input
-                                    type="date"
-                                    label="Data de Chegada (ETA)"
-                                    icon={Calendar}
-                                    value={data.arrival_date}
-                                    onChange={(e) => setData('arrival_date', e.target.value)}
-                                    error={errors.arrival_date}
-                                />
-                            </div>
-
-                            <div className="flex justify-between mt-6">
-                                <button
-                                    type="button"
                                     onClick={() => setStep(2)}
                                     className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
                                 >
@@ -539,7 +514,7 @@ export default function Create() {
                                 <button
                                     type="button"
                                     onClick={() => setStep(4)}
-                                    disabled={!data.container_type}
+                                    disabled={!canProceedToStep4()}
                                     className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     Próximo
@@ -549,86 +524,151 @@ export default function Create() {
                         </div>
                     )}
 
-                    {/* Step 4: Rota e Carga */}
+                    {/* STEP 4: CONTAINER E ROTA (DINÂMICA) */}
                     {step === 4 && (
                         <div className="space-y-6">
-                            {/* Rota */}
+                            {/* Container */}
                             <div className="p-6 bg-white border rounded-lg border-slate-200">
                                 <div className="flex items-center gap-2 mb-6">
-                                    <MapPin className="w-5 h-5 text-slate-600" />
+                                    <Package className="w-5 h-5 text-slate-600" />
                                     <h2 className="text-lg font-semibold text-slate-900">
-                                        Rota
+                                        Informações do Container
                                     </h2>
                                 </div>
 
                                 <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-{/*
-<Input
-                                        label="Porto de Origem"
-                                        icon={MapPin}
-                                        value={data.origin_port}
-                                        onChange={(e) => setData('origin_port', e.target.value)}
-                                        error={errors.origin_port}
-                                        placeholder="Ex: QINGDAO, CHINA"
-                                    /> */}
-                                    <Select
-                                    label="Porto de Origem"
-                                     options={originPorts}
-                                     onChange={(e) => setData('origin_port', e.target.value)}
-                                    error={errors.origin_port}
-                                    required
-                                >
-                                    <option value="" >Selecione um ou mais portos de origem</option>
-
-                                    {originPorts?.map((line) => (
-                                        <option key={line.id} value={line.value}>
-                                            {line.value}
-                                        </option>
-                                    ))}
-                                </Select>
-
-                                    <Select
-                                       label="Porto de Destino *"
-                                        icon={MapPin}
-                                        value={data.destination_port}
-                                        onChange={(e) => setData('destination_port', e.target.value)}
-                                        error={errors.destination_port}
-                                    required
-                                >
-                                    <option value="" disabled>Selecione um ou mais portos de origem</option>
-
-                                    {destinationPorts?.map((line) => (
-                                        <option key={line.id} value={line.value}>
-                                            {line.value}
-                                        </option>
-                                    ))}
-                                </Select>
-                                    {/* <Input
-                                        label="Porto de Origem"
-                                        icon={MapPin}
-                                        value={data.origin_port}
-                                        onChange={(e) => setData('origin_port', e.target.value)}
-                                        error={errors.origin_port}
-                                        placeholder="Ex: QINGDAO, CHINA"
+                                    <Input
+                                        label="Número do Container"
+                                        icon={Package}
+                                        value={data.container_number}
+                                        onChange={(e) => setData('container_number', e.target.value)}
+                                        error={errors.container_number}
+                                        placeholder="Ex: TCLU2437301"
                                     />
 
+                                    <Select
+                                        label="Tipo de Container *"
+                                        value={data.container_type}
+                                        onChange={(e) => setData('container_type', e.target.value)}
+                                        error={errors.container_type}
+                                        required
+                                    >
+                                        <option value="">Selecione o tipo</option>
+                                        {containerTypes.map((type) => (
+                                            <option key={type.value} value={type.value}>
+                                                {type.label}
+                                            </option>
+                                        ))}
+                                    </Select>
 
                                     <Input
-                                        label="Porto de Destino *"
-                                        icon={MapPin}
-                                        value={data.destination_port}
-                                        onChange={(e) => setData('destination_port', e.target.value)}
-                                        error={errors.destination_port}
-                                        placeholder="Ex: BEIRA, MOZAMBIQUE"
-                                        required
-                                    /> */}
+                                        label="Nome do Navio"
+                                        icon={Ship}
+                                        value={data.vessel_name}
+                                        onChange={(e) => setData('vessel_name', e.target.value)}
+                                        error={errors.vessel_name}
+                                        placeholder="Ex: MSC MAYA"
+                                    />
+
+                                    <Input
+                                        type="date"
+                                        label={data.type === 'import' ? 'Data de Chegada (ETA)' : 'Data de Partida (ETD)'}
+                                        icon={Calendar}
+                                        value={data.arrival_date}
+                                        onChange={(e) => setData('arrival_date', e.target.value)}
+                                        error={errors.arrival_date}
+                                    />
                                 </div>
                             </div>
 
-                            {/* Carga */}
+                            {/* Rota Dinâmica */}
                             <div className="p-6 bg-white border rounded-lg border-slate-200">
                                 <div className="flex items-center gap-2 mb-6">
-                                    <Package className="w-5 h-5 text-slate-600" />
+                                    <MapPin className="w-5 h-5 text-slate-600" />
+                                    <h2 className="text-lg font-semibold text-slate-900">
+                                        Rota {data.type === 'export' ? '(Moçambique → Exterior)' : '(Exterior → Moçambique)'}
+                                    </h2>
+                                </div>
+
+                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    {/* Porto de Origem (Dinâmico) */}
+                                    <Select
+                                        label="Porto de Origem *"
+                                        value={data.origin_port}
+                                        onChange={(e) => setData('origin_port', e.target.value)}
+                                        error={errors.origin_port}
+                                        required
+                                    >
+                                        <option value="">Selecione o porto de origem</option>
+                                        {(data.type === 'export' ? mozambiquePorts : internationalPorts).map((port) => (
+                                            <option key={port.value} value={port.value}>
+                                                {port.label}
+                                            </option>
+                                        ))}
+                                    </Select>
+
+                                    {/* Porto de Destino (Dinâmico) */}
+                                    <Select
+                                        label="Porto de Destino *"
+                                        value={data.destination_port}
+                                        onChange={(e) => setData('destination_port', e.target.value)}
+                                        error={errors.destination_port}
+                                        required
+                                    >
+                                        <option value="">Selecione o porto de destino</option>
+                                        {(data.type === 'export' ? internationalPorts : mozambiquePorts).map((port) => (
+                                            <option key={port.value} value={port.value}>
+                                                {port.label}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                </div>
+
+                                {/* Info visual */}
+                                <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
+                                    <div className="flex items-center justify-between text-sm">
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="w-4 h-4 text-blue-600" />
+                                            <span className="font-semibold">{data.origin_port || 'Origem'}</span>
+                                        </div>
+                                        <div className="flex-1 mx-4 border-t-2 border-dashed border-slate-300"></div>
+                                        <Ship className="w-5 h-5 text-slate-400" />
+                                        <div className="flex-1 mx-4 border-t-2 border-dashed border-slate-300"></div>
+                                        <div className="flex items-center gap-2">
+                                            <MapPin className="w-4 h-4 text-emerald-600" />
+                                            <span className="font-semibold">{data.destination_port || 'Destino'}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div className="flex justify-between">
+                                <button
+                                    type="button"
+                                    onClick={() => setStep(3)}
+                                    className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
+                                >
+                                    Voltar
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setStep(5)}
+                                    disabled={!canProceedToStep5()}
+                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                >
+                                    Próximo
+                                    <ChevronRight className="w-4 h-4" />
+                                </button>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* STEP 5: CARGA */}
+                    {step === 5 && (
+                        <div className="space-y-6">
+                            <div className="p-6 bg-white border rounded-lg border-slate-200">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <TrendingUp className="w-5 h-5 text-slate-600" />
                                     <h2 className="text-lg font-semibold text-slate-900">
                                         Descrição da Carga
                                     </h2>
@@ -674,11 +714,40 @@ export default function Create() {
                                 </div>
                             </div>
 
+                            {/* Resumo Final */}
+                            <div className="p-6 bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200 rounded-lg">
+                                <h3 className="text-lg font-bold text-slate-900 mb-4">📋 Resumo do Processo</h3>
+                                <div className="grid grid-cols-2 gap-4 text-sm">
+                                    <div>
+                                        <p className="text-slate-600">Tipo:</p>
+                                        <p className="font-semibold text-slate-900">
+                                            {data.type === 'export' ? '🚢 Exportação' : '📦 Importação'}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-600">Rota:</p>
+                                        <p className="font-semibold text-slate-900">
+                                            {data.origin_port} → {data.destination_port}
+                                        </p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-600">Container:</p>
+                                        <p className="font-semibold text-slate-900">{data.container_type || 'N/A'}</p>
+                                    </div>
+                                    <div>
+                                        <p className="text-slate-600">Linha:</p>
+                                        <p className="font-semibold text-slate-900">
+                                            {shippingLines?.find(l => l.id == data.shipping_line_id)?.name || 'N/A'}
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
+
                             {/* Actions */}
                             <div className="flex items-center justify-between p-6 bg-white border rounded-lg border-slate-200">
                                 <button
                                     type="button"
-                                    onClick={() => setStep(3)}
+                                    onClick={() => setStep(4)}
                                     className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
                                 >
                                     Voltar
@@ -686,10 +755,10 @@ export default function Create() {
                                 <button
                                     type="submit"
                                     disabled={processing}
-                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-gradient-to-r from-blue-600 to-emerald-600 rounded-lg hover:from-blue-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                     <Save className="w-4 h-4" />
-                                    {processing ? 'Criando Shipment...' : 'Criar Shipment'}
+                                    {processing ? 'Criando Processo...' : 'Criar Processo'}
                                 </button>
                             </div>
                         </div>
