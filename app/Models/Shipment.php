@@ -226,6 +226,22 @@ class Shipment extends Model
     }
 
     // ========================================
+    // SCOPES
+    // ========================================
+
+    /**
+     * Scope para filtrar shipments por stage atual
+     * Usado nos métodos do OperationsController
+     */
+    public function scopeInStage($query, $stageName)
+    {
+        return $query->whereHas('stages', function($q) use ($stageName) {
+            $q->where('stage', $stageName)
+              ->where('status', 'in_progress');
+        });
+    }
+
+    // ========================================
     // ACCESSORS - NOVOS
     // ========================================
 
@@ -918,7 +934,7 @@ public function getPhase5Progress(): float
      */
     public function startPhase(int $phase, bool $force = false): ?ShipmentStage
     {
-        $stageName = $this->getStageNameFromPhase($phase);
+        $stageName = $this->getStageNameFromPhaseByType($phase);
 
         // Verificar se já existe
         $existingStage = $this->stages()->where('stage', $stageName)->first();
@@ -960,7 +976,7 @@ public function getPhase5Progress(): float
 
     public function completePhase(int $phase): bool
     {
-        $stageName = $this->getStageNameFromPhase($phase);
+        $stageName = $this->getStageNameFromPhaseByType($phase);
         $stage = $this->stages()->where('stage', $stageName)->first();
 
         if (! $stage) {

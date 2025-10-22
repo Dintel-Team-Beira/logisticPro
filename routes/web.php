@@ -42,6 +42,15 @@ Route::get('/', function () {
 // DASHBOARD
 // ============================================================================
 Route::get('/dashboard', [DashboardController::class,'index'])->middleware(['auth', 'verified'])->name('dashboard');
+
+// ============================================================================
+// PESQUISA GLOBAL
+// ============================================================================
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/search', [App\Http\Controllers\SearchController::class, 'search'])->name('search');
+    Route::get('/api/quick-search', [App\Http\Controllers\SearchController::class, 'quickSearch'])->name('quick-search');
+});
+
 // ============================================================================
 // PROFILE
 // ============================================================================
@@ -581,7 +590,7 @@ Route::middleware(['auth'])->prefix('operations')->name('operations.')->group(fu
     // ====================================
 
     // FASE 1: Preparação de Documentos
-    Route::get('/export/preparacao', [OperationsController::class, 'exportPreparacao'])
+    Route::get('/export/preparacao/{preparacao?}', [OperationsController::class, 'exportPreparacao'])
         ->name('export.preparacao');
 
     // FASE 2: Booking
@@ -896,9 +905,9 @@ Route::middleware(['auth:sanctum'])->prefix('api')->name('api.')->group(function
     // Shipments API
     Route::apiResource('shipments', ShipmentController::class);
 
-    // Quick Search
-    Route::get('/search', [ShipmentController::class, 'quickSearch'])
-        ->name('search');
+    // NOTA: Quick Search movido para SearchController (linha 50)
+    // Route::get('/search', [ShipmentController::class, 'quickSearch'])
+    //     ->name('search');
 });
 
 // ============================================================================

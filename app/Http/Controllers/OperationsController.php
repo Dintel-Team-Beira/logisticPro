@@ -29,7 +29,7 @@ class OperationsController extends Controller
         // Query usando scope inStage
         $query = Shipment::with([
                 'client',
-                'shipping_line',
+                'shippingline',
                 'documents',
                 'stages' => function($q) {
                     $q->where('stage', 'coleta_dispersa');
@@ -92,7 +92,7 @@ class OperationsController extends Controller
     {
         $query = Shipment::with([
                 'client',
-                'shipping_line',
+                'shippingLine',
                 'documents',
                 'stages' => function($q) {
                     $q->where('stage', 'legalizacao');
@@ -152,7 +152,7 @@ class OperationsController extends Controller
     {
         $query = Shipment::with([
                 'client',
-                'shipping_line',
+                'shippingline',
                 'documents',
                 'stages' => function($q) {
                     $q->where('stage', 'alfandegas');
@@ -215,7 +215,7 @@ class OperationsController extends Controller
     {
         $query = Shipment::with([
                 'client',
-                'shipping_line',
+                'shippingline',
                 'documents',
                 'stages' => function($q) {
                     $q->where('stage', 'cornelder');
@@ -282,7 +282,7 @@ class OperationsController extends Controller
     {
         $query = Shipment::with([
                 'client',
-                'shipping_line',
+                'shippingline',
                 'documents',
                 'stages' => function($q) {
                     $q->where('stage', 'taxacao');
@@ -347,7 +347,7 @@ class OperationsController extends Controller
         // e estar em processo de faturação
         $query = Shipment::with([
                 'client',
-                'shipping_line',
+                'shippingline',
                 'documents',
                 'clientInvoice'
             ])
@@ -418,7 +418,7 @@ class OperationsController extends Controller
         // POD é identificado por ter invoice paga e aguardar devolução
         $query = Shipment::with([
                 'client',
-                'shipping_line',
+                'shippingline',
                 'documents'
             ])
             ->where('client_payment_status', 'paid')
@@ -475,8 +475,9 @@ class OperationsController extends Controller
     /**
      * EXPORTAÇÃO - FASE 1: Preparação de Documentos
      */
-    public function exportPreparacao(Request $request)
+    public function exportPreparacao(Request $request,$shipment)
     {
+
         $query = Shipment::with(['client', 'shippingLine', 'documents', 'stages'])
             ->where('type', 'export')
             ->inStage('preparacao_documentos');

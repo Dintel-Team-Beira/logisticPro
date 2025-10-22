@@ -3,6 +3,7 @@ import { Link, usePage, router } from '@inertiajs/react';
 import { motion, AnimatePresence } from 'framer-motion';
 import Logo  from '@/Components/Logo';
 import GlobalSearch from '@/Components/GlobalSearch';
+import GlobalSearchModal from '@/Components/Search/GlobalSearchModal';
 import {
     Home,
     Package,
@@ -40,12 +41,15 @@ export default function DashboardLayout({ children }) {
       const [searchOpen, setSearchOpen] = useState(false);
 
 
+    // Global Search Modal state
+    const [searchModalOpen, setSearchModalOpen] = useState(false);
+
      // Global Search Shortcut (Ctrl+K / Cmd+K)
     useEffect(() => {
         const handleKeyDown = (e) => {
             if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
                 e.preventDefault();
-                setSearchQuery(true);
+                setSearchModalOpen(true);
             }
         };
 
@@ -195,6 +199,12 @@ export default function DashboardLayout({ children }) {
 
     return (
         <div className="min-h-screen ">
+            {/* Global Search Modal */}
+            <GlobalSearchModal
+                isOpen={searchModalOpen}
+                onClose={() => setSearchModalOpen(false)}
+            />
+
             {/* Flash Messages */}
             <FlashMessages flash={flash} />
 
@@ -301,16 +311,23 @@ function Topbar({
 
                 {/* Center Section - Search */}
                 <div className="flex-1 hidden max-w-2xl mx-8 md:flex">
-                    <div className="relative w-full">
-                        <Search className="absolute w-5 h-5 text-gray-400 -translate-y-1/2 left-4 top-1/2" />
-                        <input
-                            type="text"
-                            placeholder="Buscar shipments, documentos..."
-                            value={searchQuery}
-                            onChange={(e) => setSearchQuery(e.target.value)}
-                            className="w-full pl-12 pr-4 py-2.5 bg-gray-100 border-0 rounded-xl focus:ring-2 focus:ring-[#358c9c] focus:bg-white transition-all"
-                        />
-                    </div>
+                    <button
+                        onClick={() => setSearchModalOpen(true)}
+                        className="relative w-full group"
+                    >
+                        <Search className="absolute w-5 h-5 text-gray-400 transition-colors -translate-y-1/2 left-4 top-1/2 group-hover:text-gray-600" />
+                        <div className="w-full pl-12 pr-20 py-2.5 bg-gray-100 border-0 rounded-xl text-left text-gray-500 group-hover:bg-gray-200 group-hover:text-gray-700 transition-all cursor-text">
+                            Pesquisar processos, clientes, documentos...
+                        </div>
+                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+                            <kbd className="px-2 py-1 text-xs font-semibold text-gray-500 bg-white border border-gray-300 rounded shadow-sm">
+                                {navigator.platform.indexOf('Mac') !== -1 ? '⌘' : 'Ctrl'}
+                            </kbd>
+                            <kbd className="px-2 py-1 text-xs font-semibold text-gray-500 bg-white border border-gray-300 rounded shadow-sm">
+                                K
+                            </kbd>
+                        </div>
+                    </button>
                 </div>
 
                 {/* Right Section */}

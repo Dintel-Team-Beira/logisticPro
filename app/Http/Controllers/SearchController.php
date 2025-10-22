@@ -122,7 +122,7 @@ class SearchController extends Controller
     {
         return Document::with(['shipment', 'uploader'])
             ->where(function($q) use ($query) {
-                $q->where('file_name', 'LIKE', "%{$query}%")
+                $q->where('name', 'LIKE', "%{$query}%")
                   ->orWhere('type', 'LIKE', "%{$query}%");
             })
             ->limit(5)
@@ -131,16 +131,19 @@ class SearchController extends Controller
                 return [
                     'id' => $document->id,
                     'type' => 'document',
-                    'title' => $document->file_name,
-                    'subtitle' => "Tipo: " . strtoupper($document->type),
-                    'description' => "Shipment: {$document->shipment->reference_number} • {$document->formatted_size}",
+                    'title' => $document->name,
+                    'subtitle' => "Tipo: " . strtoupper(str_replace('_', ' ', $document->type)),
+                    'description' => $document->shipment
+                        ? "Processo: {$document->shipment->reference_number}"
+                        : "Sem processo",
                     'status' => null,
-                    'url' => "/shipments/{$document->shipment_id}#documents",
+                    'url' => $document->shipment
+                        ? "/shipments/{$document->shipment_id}"
+                        : "#",
                     'meta' => [
-                        'stage' => $document->stage,
-                        'uploaded_by' => $document->uploader->name ?? null,
+                        'uploaded_by' => $document->uploader->name ?? 'Sistema',
                         'uploaded_at' => $document->created_at->format('d/m/Y H:i'),
-                        'file_url' => $document->url,
+                        'size' => number_format($document->size / 1024, 2) . ' KB',
                     ]
                 ];
             });

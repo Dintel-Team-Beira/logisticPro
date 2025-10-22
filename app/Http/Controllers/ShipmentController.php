@@ -77,7 +77,7 @@ class ShipmentController extends Controller
                 'type' => 'required|in:import,export',
                 'client_id' => 'required|exists:clients,id',
                 'shipping_line_id' => 'required|exists:shipping_lines,id',
-                'bl_number' => 'nullable|string|unique:shipments',
+                'bl_number' => 'nullable|string', // Removido unique: um BL pode ter múltiplos containers
                 'bl_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
                 'container_number' => 'nullable|string',
                 'container_type' => 'nullable|string',
@@ -95,13 +95,24 @@ class ShipmentController extends Controller
 
             Log::info('Validação passou');
 
-            // 2. Gerar número de referência
-            $referenceNumber = 'ALEK-' . date('Y') . '-' . str_pad(
-                Shipment::whereYear('created_at', date('Y'))->count() + 1,
-                4,
-                '0',
-                STR_PAD_LEFT
-            );
+            // 2. Gerar número de referência único
+            // Buscar o último shipment do ano para garantir sequência correta
+            $year = date('Y');
+
+            // Usar lockForUpdate no nível da transação para evitar race conditions
+            $lastShipment = Shipment::whereYear('created_at', $year)
+                ->where('reference_number', 'like', "ALEK-{$year}-%")
+                ->orderBy('id', 'desc') // Usar id ao invés de reference_number para melhor performance
+                ->lockForUpdate()
+                ->first();
+
+            if ($lastShipment && preg_match('/ALEK-\d{4}-(\d{4})/', $lastShipment->reference_number, $matches)) {
+                $nextNumber = intval($matches[1]) + 1;
+            } else {
+                $nextNumber = 1;
+            }
+
+            $referenceNumber = 'ALEK-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
             Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
 
@@ -161,9 +172,13 @@ class ShipmentController extends Controller
                 'reference' => $referenceNumber
             ]);
 
+            // Redirecionar para a página de detalhes do processo criado
             return redirect()
                 ->route('shipments.show', $shipment)
-                ->with('success', "Shipment {$referenceNumber} criado! Fase 1 iniciada.");
+                ->with('success', $shipment->type === 'export'
+                    ? "Processo de Exportação {$referenceNumber} criado com sucesso!"
+                    : "Processo de Importação {$referenceNumber} criado com sucesso!"
+                );
         } catch (\Exception $e) {
             DB::rollBack();
 
