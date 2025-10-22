@@ -905,9 +905,9 @@ Route::middleware(['auth:sanctum'])->prefix('api')->name('api.')->group(function
     // Shipments API
     Route::apiResource('shipments', ShipmentController::class);
 
-    // Quick Search
-    Route::get('/search', [ShipmentController::class, 'quickSearch'])
-        ->name('search');
+    // NOTA: Quick Search movido para SearchController (linha 50)
+    // Route::get('/search', [ShipmentController::class, 'quickSearch'])
+    //     ->name('search');
 });
 
 // ============================================================================
