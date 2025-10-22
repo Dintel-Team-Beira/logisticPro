@@ -26,6 +26,7 @@ class Shipment extends Model
 
     protected $fillable = [
         'reference_number',
+        'type', // NOVO: import ou export
         'client_id',
         'shipping_line_id',
         'bl_number',
@@ -50,7 +51,7 @@ class Shipment extends Model
         'requires_inspection', // NOVO
         'metadata',
         'created_by',
-        // Campos de status por fase (agora com mais granularidade)
+        // Campos de status por fase - IMPORTAÇÃO
         'quotation_status', // not_requested, requested, received, accepted, paid
         'payment_status',
         'customs_status',
@@ -61,6 +62,22 @@ class Shipment extends Model
         'client_invoice_id',
         'client_payment_status',
         'pod_status', // NOVO: awaiting, received, confirmed
+        // Campos de status por fase - EXPORTAÇÃO
+        'exp_document_prep_status',
+        'exp_booking_status',
+        'exp_booking_confirmation_id',
+        'exp_inspection_status',
+        'exp_inspection_date',
+        'exp_customs_status',
+        'exp_customs_declaration_number',
+        'exp_transport_status',
+        'exp_delivery_to_port_date',
+        'exp_loading_status',
+        'exp_actual_loading_date',
+        'exp_etd',
+        'exp_tracking_status',
+        'exp_eta_destination',
+        'exp_actual_arrival_date',
     ];
 
     protected $casts = [
@@ -81,6 +98,14 @@ class Shipment extends Model
         'customs_cost' => 'decimal:2',
         'cornelder_cost' => 'decimal:2',
         'other_costs' => 'decimal:2',
+
+        // Campos de exportação
+        'exp_inspection_date' => 'date',
+        'exp_delivery_to_port_date' => 'date',
+        'exp_actual_loading_date' => 'date',
+        'exp_etd' => 'date',
+        'exp_eta_destination' => 'date',
+        'exp_actual_arrival_date' => 'date',
     ];
 
     protected $appends = ['request_type_label'];
@@ -1184,5 +1209,216 @@ public function getPhase5Progress(): float
         }
 
         return 0;
+    }
+
+    // ========================================
+    // MÉTODOS PARA EXPORTAÇÃO
+    // ========================================
+
+    /**
+     * Verificar se é processo de exportação
+     */
+    public function isExport(): bool
+    {
+        return $this->type === 'export';
+    }
+
+    /**
+     * Verificar se é processo de importação
+     */
+    public function isImport(): bool
+    {
+        return $this->type === 'import' || $this->type === null;
+    }
+
+    /**
+     * Obter nome das fases baseado no tipo de processo
+     */
+    public function getStageNameFromPhaseByType(int $phase): string
+    {
+        if ($this->isExport()) {
+            return $this->getExportStageNameFromPhase($phase);
+        }
+
+        return self::getStageNameFromPhase($phase);
+    }
+
+    /**
+     * Obter nome da fase de exportação
+     */
+    public static function getExportStageNameFromPhase(int $phase): string
+    {
+        $phases = [
+            1 => 'preparacao_documentos',
+            2 => 'booking',
+            3 => 'inspecao_certificacao',
+            4 => 'despacho_aduaneiro',
+            5 => 'transporte_porto',
+            6 => 'embarque',
+            7 => 'acompanhamento',
+        ];
+
+        return $phases[$phase] ?? 'preparacao_documentos';
+    }
+
+    /**
+     * Calcular progresso real para exportação
+     */
+    public function getExportRealProgress(): float
+    {
+        $phases = [
+            1 => $this->getExportPhase1Progress(),
+            2 => $this->getExportPhase2Progress(),
+            3 => $this->getExportPhase3Progress(),
+            4 => $this->getExportPhase4Progress(),
+            5 => $this->getExportPhase5Progress(),
+            6 => $this->getExportPhase6Progress(),
+            7 => $this->getExportPhase7Progress(),
+        ];
+
+        return round(array_sum($phases) / 7, 2);
+    }
+
+    // ========================================
+    // MÉTODOS DE PROGRESSO POR FASE - EXPORTAÇÃO
+    // ========================================
+
+    /**
+     * Fase 1: Preparação de Documentos
+     * - Fatura comercial
+     * - Packing list
+     * - Certificados necessários
+     */
+    public function getExportPhase1Progress(): float
+    {
+        $hasRequests = $this->paymentRequests()->where('phase', 1)->exists();
+
+        if ($hasRequests) {
+            return $this->getPhaseProgressFromPaymentRequests(1);
+        }
+
+        // Documentos necessários
+        $requiredDocs = ['commercial_invoice', 'packing_list'];
+        $uploadedCount = $this->documents()
+            ->whereIn('type', $requiredDocs)
+            ->count();
+
+        $documentProgress = ($uploadedCount / count($requiredDocs)) * 100;
+
+        return min($documentProgress, 100);
+    }
+
+    /**
+     * Fase 2: Booking
+     * - Solicitar booking
+     * - Receber confirmação
+     * - Pagar booking fee
+     */
+    public function getExportPhase2Progress(): float
+    {
+        $steps = [
+            $this->exp_booking_status === 'requested' ? 33 : 0,
+            $this->exp_booking_status === 'confirmed' ? 34 : 0,
+            $this->exp_booking_status === 'paid' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 3: Inspeção e Certificação
+     * - Agendar inspeção
+     * - Realizar inspeção
+     * - Obter certificados
+     */
+    public function getExportPhase3Progress(): float
+    {
+        $steps = [
+            $this->exp_inspection_status === 'scheduled' ? 33 : 0,
+            $this->exp_inspection_date !== null ? 34 : 0,
+            $this->exp_inspection_status === 'completed' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 4: Despacho Aduaneiro
+     * - Submeter declaração
+     * - Aguardar liberação
+     * - Obter autorização de embarque
+     */
+    public function getExportPhase4Progress(): float
+    {
+        $steps = [
+            $this->exp_customs_status === 'submitted' ? 33 : 0,
+            $this->exp_customs_declaration_number !== null ? 34 : 0,
+            $this->exp_customs_status === 'cleared' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 5: Transporte ao Porto
+     * - Arranjar transporte
+     * - Transportar carga
+     * - Entregar no terminal
+     */
+    public function getExportPhase5Progress(): float
+    {
+        $steps = [
+            $this->exp_transport_status === 'scheduled' ? 33 : 0,
+            $this->exp_transport_status === 'in_transit' ? 34 : 0,
+            $this->exp_transport_status === 'delivered' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 6: Embarque
+     * - Carregar container
+     * - Emitir BL
+     * - Confirmar partida
+     */
+    public function getExportPhase6Progress(): float
+    {
+        $steps = [
+            $this->exp_loading_status === 'loading' ? 33 : 0,
+            $this->documents()->where('type', 'bl')->exists() ? 34 : 0,
+            $this->exp_loading_status === 'loaded' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 7: Acompanhamento
+     * - Tracking da carga
+     * - Confirmar chegada
+     * - Confirmar entrega
+     */
+    public function getExportPhase7Progress(): float
+    {
+        $steps = [
+            $this->exp_tracking_status === 'in_transit' ? 33 : 0,
+            $this->exp_tracking_status === 'arrived' ? 34 : 0,
+            $this->exp_tracking_status === 'delivered' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Obter progresso baseado no tipo (import/export)
+     */
+    public function getRealProgressByType(): float
+    {
+        if ($this->isExport()) {
+            return $this->getExportRealProgress();
+        }
+
+        return $this->getRealProgressAttribute();
     }
 }

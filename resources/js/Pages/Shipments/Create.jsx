@@ -27,6 +27,9 @@ export default function Create() {
     const [dataa, setDataa]=useState(shippingLines);
 
     const { data, setData, post, processing, errors } = useForm({
+        // Tipo de Processo
+        type: 'import',
+
         // Cliente
         client_id: '',
         new_client_name: '',
@@ -89,9 +92,9 @@ export default function Create() {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        // Validar BL file
-        if (!data.bl_file) {
-            alert('Por favor, anexe o BL Original');
+        // Validar BL file apenas para importação
+        if (data.type === 'import' && !data.bl_file) {
+            alert('Por favor, anexe o BL Original para processos de importação');
             return;
         }
 
@@ -116,7 +119,12 @@ export default function Create() {
     };
 
     const canProceedToStep3 = () => {
-        return data.shipping_line_id && data.bl_number && data.bl_file;
+        // Para importação: exige shipping_line_id, bl_number e bl_file
+        if (data.type === 'import') {
+            return data.shipping_line_id && data.bl_number && data.bl_file;
+        }
+        // Para exportação: apenas shipping_line_id é obrigatório
+        return data.shipping_line_id;
     };
 
     const novoCklinte = ()=>{
@@ -219,6 +227,46 @@ export default function Create() {
                                 </h2>
                             </div>
 
+                            {/* Toggle Tipo de Processo */}
+                            <div className="mb-6">
+                                <label className="block mb-2 text-sm font-medium text-slate-700">
+                                    Tipo de Processo *
+                                </label>
+                                <div className="flex gap-4">
+                                    <button
+                                        type="button"
+                                        onClick={() => setData('type', 'import')}
+                                        className={`
+                                            flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all
+                                            ${data.type === 'import'
+                                                ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
+                                                : 'bg-slate-50 text-slate-600 border border-slate-200'
+                                            }
+                                        `}
+                                    >
+                                        📦 Importação
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onClick={() => setData('type', 'export')}
+                                        className={`
+                                            flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all
+                                            ${data.type === 'export'
+                                                ? 'bg-emerald-50 text-emerald-700 border-2 border-emerald-500'
+                                                : 'bg-slate-50 text-slate-600 border border-slate-200'
+                                            }
+                                        `}
+                                    >
+                                        🚢 Exportação
+                                    </button>
+                                </div>
+                                <p className="mt-2 text-xs text-slate-500">
+                                    {data.type === 'import'
+                                        ? 'Processo de importação: mercadoria chegando do exterior'
+                                        : 'Processo de exportação: mercadoria saindo para o exterior'}
+                                </p>
+                            </div>
+
                             {/* Toggle Cliente Existente / Novo */}
                             <div className="flex gap-4 mb-6">
                                 <button
@@ -234,24 +282,19 @@ export default function Create() {
                                 >
                                     Cliente Existente
                                 </button>
-
-
-                            {/* <Link href='/clients/create'> */}
-                                 <button
+                                <button
                                     type="button"
-                                    // onClick={() => router.get('/clients/create/')  }
+                                    onClick={() => setShowNewClientForm(true)}
                                     className={`
                                         flex-1 px-4 py-3 text-sm font-medium rounded-lg transition-all
                                         ${showNewClientForm
-                                        ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
-                                        : 'bg-slate-50 text-slate-600 border border-slate-200'
+                                            ? 'bg-blue-50 text-blue-700 border-2 border-blue-500'
+                                            : 'bg-slate-50 text-slate-600 border border-slate-200'
                                         }
-                                        `}
-                                        >
-                                   Colocar opcoes de escolher entre importacao e exportacao
+                                    `}
+                                >
+                                    Novo Cliente
                                 </button>
-                           {/* </Link> */}
-
                             </div>
 
                             {!showNewClientForm ? (
@@ -329,7 +372,7 @@ export default function Create() {
                             <div className="flex items-center gap-2 mb-6">
                                 <FileText className="w-5 h-5 text-slate-600" />
                                 <h2 className="text-lg font-semibold text-slate-900">
-                                    Bill of Lading (BL)
+                                    {data.type === 'import' ? 'Bill of Lading (BL)' : 'Documentação Inicial'}
                                 </h2>
                             </div>
 
@@ -351,20 +394,22 @@ export default function Create() {
                                 </Select>
 
                                 <Input
-                                    label="Número do BL *"
+                                    label={data.type === 'import' ? 'Número do BL *' : 'Número do BL'}
                                     icon={FileText}
                                     value={data.bl_number}
                                     onChange={(e) => setData('bl_number', e.target.value)}
                                     error={errors.bl_number}
                                     placeholder="Ex: 253157188"
-                                    required
+                                    required={data.type === 'import'}
                                 />
                             </div>
 
                             {/* Upload BL Original */}
                             <div className="mt-6">
                                 <label className="block mb-2 text-sm font-medium text-slate-700">
-                                    Upload do BL Original * (PDF, JPG, PNG)
+                                    {data.type === 'import'
+                                        ? 'Upload do BL Original * (PDF, JPG, PNG)'
+                                        : 'Upload de Documentos (Opcional) (PDF, JPG, PNG)'}
                                 </label>
                                 <div className="flex items-center justify-center w-full">
                                     <label className={`
