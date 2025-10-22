@@ -331,10 +331,12 @@ Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.
 Route::get('/shipments/{shipment}/payment-requests', [ShipmentController::class, 'getPaymentRequests'])
     ->name('shipments.payment-requests');
 // ============================================================================
+
 // SHIPMENTS (Processos de Importação) - CRUD Completo
 // ============================================================================
 Route::middleware(['auth'])->group(function () {
     // CRUD
+
    // ============================================================================
 // SHIPMENTS - ADICIONAR ESTAS ROTAS AQUI 👇👇👇
 // ============================================================================
@@ -993,15 +995,15 @@ Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(functi
 
 
 // Exportacao rotas
-Route::prefix('operations/export')->group(function () {
-    Route::get('/preparacao', [OperationsController::class, 'exportPreparacao']);
-    Route::get('/booking', [OperationsController::class, 'exportBooking']);
-    Route::get('/inspecao', [OperationsController::class, 'exportInspecao']);
-    Route::get('/despacho', [OperationsController::class, 'exportDespacho']);
-    Route::get('/transporte', [OperationsController::class, 'exportTransporte']);
-    Route::get('/embarque', [OperationsController::class, 'exportEmbarque']);
-    Route::get('/acompanhamento', [OperationsController::class, 'exportAcompanhamento']);
-});
+// Route::prefix('operations/export')->group(function () {
+//     Route::get('/preparacao', [OperationsController::class, 'exportPreparacao']);
+//     Route::get('/booking', [OperationsController::class, 'exportBooking']);
+//     Route::get('/inspecao', [OperationsController::class, 'exportInspecao']);
+//     Route::get('/despacho', [OperationsController::class, 'exportDespacho']);
+//     Route::get('/transporte', [OperationsController::class, 'exportTransporte']);
+//     Route::get('/embarque', [OperationsController::class, 'exportEmbarque']);
+//     Route::get('/acompanhamento', [OperationsController::class, 'exportAcompanhamento']);
+// });
 
 // ============================================================================
 // API ROUTES - Para acesso externo
