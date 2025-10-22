@@ -77,7 +77,7 @@ class ShipmentController extends Controller
                 'type' => 'required|in:import,export',
                 'client_id' => 'required|exists:clients,id',
                 'shipping_line_id' => 'required|exists:shipping_lines,id',
-                'bl_number' => 'nullable|string|unique:shipments',
+                'bl_number' => 'nullable|string', // Removido unique: um BL pode ter múltiplos containers
                 'bl_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
                 'container_number' => 'nullable|string',
                 'container_type' => 'nullable|string',
