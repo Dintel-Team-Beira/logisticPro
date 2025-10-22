@@ -116,14 +116,8 @@ export default function Create() {
 
         post('/shipments', {
             forceFormData: true,
-            onSuccess: (response) => {
-                // Redirecionar baseado no tipo
-                if (data.type === 'export') {
-                    router.visit('/operations/export/preparacao');
-                } else {
-                    router.visit('/operations/coleta');
-                }
-            }
+            // O backend já redireciona automaticamente baseado no tipo
+            // Não precisa fazer redirect aqui
         });
     };
 

@@ -161,9 +161,16 @@ class ShipmentController extends Controller
                 'reference' => $referenceNumber
             ]);
 
-            return redirect()
-                ->route('shipments.show', $shipment)
-                ->with('success', "Shipment {$referenceNumber} criado! Fase 1 iniciada.");
+            // Redirecionar para a primeira fase de operações baseado no tipo
+            if ($shipment->type === 'export') {
+                return redirect()
+                    ->route('operations.export.preparacao')
+                    ->with('success', "Processo de Exportação {$referenceNumber} criado! Preparação de Documentos iniciada.");
+            } else {
+                return redirect()
+                    ->route('operations.coleta')
+                    ->with('success', "Processo de Importação {$referenceNumber} criado! Coleta Dispersa iniciada.");
+            }
         } catch (\Exception $e) {
             DB::rollBack();
 
