@@ -98,38 +98,23 @@ class ShipmentController extends Controller
             // 2. Gerar número de referência único
             // Buscar o último shipment do ano para garantir sequência correta
             $year = date('Y');
-            $referenceNumber = null;
-            $attempts = 0;
-            $maxAttempts = 5;
 
-            while (!$referenceNumber && $attempts < $maxAttempts) {
-                $attempts++;
+            // Usar lockForUpdate no nível da transação para evitar race conditions
+            $lastShipment = Shipment::whereYear('created_at', $year)
+                ->where('reference_number', 'like', "ALEK-{$year}-%")
+                ->orderBy('id', 'desc') // Usar id ao invés de reference_number para melhor performance
+                ->lockForUpdate()
+                ->first();
 
-                $lastShipment = Shipment::whereYear('created_at', $year)
-                    ->where('reference_number', 'like', "ALEK-{$year}-%")
-                    ->orderBy('reference_number', 'desc')
-                    ->lockForUpdate()
-                    ->first();
-
-                if ($lastShipment && preg_match('/ALEK-\d{4}-(\d{4})/', $lastShipment->reference_number, $matches)) {
-                    $nextNumber = intval($matches[1]) + 1;
-                } else {
-                    $nextNumber = 1;
-                }
-
-                $tempReference = 'ALEK-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
-
-                // Verificar se não existe
-                if (!Shipment::where('reference_number', $tempReference)->exists()) {
-                    $referenceNumber = $tempReference;
-                }
+            if ($lastShipment && preg_match('/ALEK-\d{4}-(\d{4})/', $lastShipment->reference_number, $matches)) {
+                $nextNumber = intval($matches[1]) + 1;
+            } else {
+                $nextNumber = 1;
             }
 
-            if (!$referenceNumber) {
-                throw new \Exception('Não foi possível gerar número de referência único após ' . $maxAttempts . ' tentativas');
-            }
+            $referenceNumber = 'ALEK-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-            Log::info('Número de referência gerado', ['reference' => $referenceNumber, 'attempts' => $attempts]);
+            Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
 
             // 3. Criar shipment
             $shipment = Shipment::create([
@@ -189,8 +174,8 @@ class ShipmentController extends Controller
 
             // Redirecionar para a primeira fase de operações baseado no tipo
             if ($shipment->type === 'export') {
-       Log::debug('Redirect parameters', ['shipment_id' => $shipment->id]);
-           return redirect()->route('operations.export.preparacao', ['preparacao' => $shipment->id])
+                return redirect()
+                    ->route('operations.export.preparacao')
                     ->with('success', "Processo de Exportação {$referenceNumber} criado! Preparação de Documentos iniciada.");
             } else {
                 return redirect()
