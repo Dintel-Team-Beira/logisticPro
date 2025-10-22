@@ -95,15 +95,41 @@ class ShipmentController extends Controller
 
             Log::info('Validação passou');
 
-            // 2. Gerar número de referência
-            $referenceNumber = 'ALEK-' . date('Y') . '-' . str_pad(
-                Shipment::whereYear('created_at', date('Y'))->count() + 1,
-                4,
-                '0',
-                STR_PAD_LEFT
-            );
+            // 2. Gerar número de referência único
+            // Buscar o último shipment do ano para garantir sequência correta
+            $year = date('Y');
+            $referenceNumber = null;
+            $attempts = 0;
+            $maxAttempts = 5;
 
-            Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
+            while (!$referenceNumber && $attempts < $maxAttempts) {
+                $attempts++;
+
+                $lastShipment = Shipment::whereYear('created_at', $year)
+                    ->where('reference_number', 'like', "ALEK-{$year}-%")
+                    ->orderBy('reference_number', 'desc')
+                    ->lockForUpdate()
+                    ->first();
+
+                if ($lastShipment && preg_match('/ALEK-\d{4}-(\d{4})/', $lastShipment->reference_number, $matches)) {
+                    $nextNumber = intval($matches[1]) + 1;
+                } else {
+                    $nextNumber = 1;
+                }
+
+                $tempReference = 'ALEK-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+
+                // Verificar se não existe
+                if (!Shipment::where('reference_number', $tempReference)->exists()) {
+                    $referenceNumber = $tempReference;
+                }
+            }
+
+            if (!$referenceNumber) {
+                throw new \Exception('Não foi possível gerar número de referência único após ' . $maxAttempts . ' tentativas');
+            }
+
+            Log::info('Número de referência gerado', ['reference' => $referenceNumber, 'attempts' => $attempts]);
 
             // 3. Criar shipment
             $shipment = Shipment::create([
