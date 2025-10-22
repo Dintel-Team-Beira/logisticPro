@@ -74,11 +74,12 @@ class ShipmentController extends Controller
         try {
             // 1. Validação
             $validated = $request->validate([
+                'type' => 'required|in:import,export',
                 'client_id' => 'required|exists:clients,id',
                 'shipping_line_id' => 'required|exists:shipping_lines,id',
-                'bl_number' => 'required|string|unique:shipments',
-                'bl_file' => 'required|file|mimes:pdf,jpg,jpeg,png|max:10240',
-                'container_number' => 'required|string',
+                'bl_number' => 'nullable|string|unique:shipments',
+                'bl_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+                'container_number' => 'nullable|string',
                 'container_type' => 'nullable|string',
                 'vessel_name' => 'nullable|string',
                 'arrival_date' => 'nullable|date',
@@ -107,9 +108,10 @@ class ShipmentController extends Controller
             // 3. Criar shipment
             $shipment = Shipment::create([
                 'reference_number' => $referenceNumber,
+                'type' => $validated['type'],
                 'client_id' => $validated['client_id'],
                 'shipping_line_id' => $validated['shipping_line_id'],
-                'bl_number' => $validated['bl_number'],
+                'bl_number' => $validated['bl_number'] ?? null,
                 'container_number' => $validated['container_number'],
                 'container_type' => $validated['container_type'] ?? null,
                 'vessel_name' => $validated['vessel_name'] ?? null,
@@ -128,24 +130,26 @@ class ShipmentController extends Controller
 
             Log::info('Shipment criado', ['id' => $shipment->id]);
 
-            // 4. Upload BL
-            $blFile = $request->file('bl_file');
-            $blPath = $blFile->store("documents/shipments/{$shipment->id}/bl", 'public');
+            // 4. Upload BL (se fornecido)
+            if ($request->hasFile('bl_file')) {
+                $blFile = $request->file('bl_file');
+                $blPath = $blFile->store("documents/shipments/{$shipment->id}/bl", 'public');
 
-            $shipment->documents()->create([
-                'type' => 'bl',
-                'name' => $blFile->getClientOriginalName(),
-                'path' => $blPath,
-                'size' => $blFile->getSize(),
-                'mime_type' => $blFile->getMimeType(),
-                'uploaded_by' => auth()->id(),
-                'metadata' => [
-                    'bl_number' => $validated['bl_number'],
-                    'uploaded_at_creation' => true,
-                ]
-            ]);
+                $shipment->documents()->create([
+                    'type' => 'bl',
+                    'name' => $blFile->getClientOriginalName(),
+                    'path' => $blPath,
+                    'size' => $blFile->getSize(),
+                    'mime_type' => $blFile->getMimeType(),
+                    'uploaded_by' => auth()->id(),
+                    'metadata' => [
+                        'bl_number' => $validated['bl_number'] ?? null,
+                        'uploaded_at_creation' => true,
+                    ]
+                ]);
 
-            Log::info('BL anexado', ['path' => $blPath]);
+                Log::info('BL anexado', ['path' => $blPath]);
+            }
 
             // 5. Iniciar Fase 1 automaticamente
             $shipment->startPhase(1, true);
