@@ -5,7 +5,10 @@ namespace App\Http\Controllers;
 use App\Models\Shipment;
 use App\Models\ShipmentStage;
 use App\Models\Activity;
+use App\Models\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\ShipmentStageChangedNotification;
 
 class StageController extends Controller
 {
@@ -44,6 +47,24 @@ class StageController extends Controller
                 'new_status' => $request->status
             ]
         ]);
+
+        // Enviar notificações sobre mudança de etapa
+        // Notificar admins, managers e operations
+        $usersToNotify = User::whereIn('role', ['admin', 'manager', 'operations'])->get();
+        Notification::send($usersToNotify, new ShipmentStageChangedNotification(
+            $shipment,
+            $stage->stage,
+            $oldStatus
+        ));
+
+        // Notificar também o criador do processo
+        if ($shipment->created_by && $shipment->created_by != auth()->id()) {
+            User::find($shipment->created_by)?->notify(new ShipmentStageChangedNotification(
+                $shipment,
+                $stage->stage,
+                $oldStatus
+            ));
+        }
 
         return back()->with('success', 'Status atualizado com sucesso!');
     }

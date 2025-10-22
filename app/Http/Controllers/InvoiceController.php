@@ -4,9 +4,13 @@ namespace App\Http\Controllers;
 
 use App\Models\Shipment;
 use App\Models\Invoice;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\InvoiceCreatedNotification;
+use App\Notifications\InvoicePaidNotification;
 use Inertia\Inertia;
 use Barryvdh\DomPDF\Facade\Pdf;
 
@@ -261,6 +265,16 @@ class InvoiceController extends Controller
 
             DB::commit();
 
+            // Enviar notificações
+            // Notificar admins, managers e finance
+            $usersToNotify = User::whereIn('role', ['admin', 'manager', 'finance'])->get();
+            Notification::send($usersToNotify, new InvoiceCreatedNotification($invoice));
+
+            // Notificar também o criador se não estiver na lista
+            if (!in_array(auth()->user()->role, ['admin', 'manager', 'finance'])) {
+                auth()->user()->notify(new InvoiceCreatedNotification($invoice));
+            }
+
             return back()->with('success', "Fatura {$invoiceNumber} gerada com sucesso!");
 
         } catch (\Exception $e) {
@@ -399,6 +413,16 @@ class InvoiceController extends Controller
             ]);
 
             DB::commit();
+
+            // Enviar notificações
+            // Notificar admins, managers e finance
+            $usersToNotify = User::whereIn('role', ['admin', 'manager', 'finance'])->get();
+            Notification::send($usersToNotify, new InvoicePaidNotification($invoice));
+
+            // Notificar também o criador da fatura
+            if ($invoice->created_by && $invoice->created_by != auth()->id()) {
+                User::find($invoice->created_by)?->notify(new InvoicePaidNotification($invoice));
+            }
 
             return back()->with('success', 'Pagamento registrado com sucesso! Fase 7 (POD) habilitada.');
 

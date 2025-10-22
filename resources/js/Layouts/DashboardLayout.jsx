@@ -101,20 +101,16 @@ export default function DashboardLayout({ children }) {
 
     // Menu items com permissões
     const menuItems = [
+        // ========== TODOS OS USUÁRIOS ==========
         {
             name: 'Dashboard',
             icon: Home,
             href: '/dashboard',
-            roles: ['admin', 'manager', 'operator', 'viewer'],
+            roles: ['admin', 'manager', 'operations', 'finance'],
             badge: null
         },
-        // {
-        //     name: 'Shipments',
-        //     icon: Package,
-        //     href: '/shipments',
-        //     roles: ['admin', 'manager', 'operator'],
-        //     badge: '12'
-        // },
+
+        // ========== PROCESSOS LOGÍSTICOS ==========
        {
             name: 'Processos',
             icon: Package,
@@ -122,6 +118,15 @@ export default function DashboardLayout({ children }) {
             roles: ['admin', 'manager', 'operations', 'finance'],
             badge: stats?.activeShipments || null,
         },
+        {
+            name: 'Documentos',
+            icon: FileText,
+            href: '/documents',
+            roles: ['admin', 'manager', 'operations', 'finance'],
+            badge: null
+        },
+
+        // ========== FINANÇAS ==========
         {
             name: 'Finanças',
             icon: DollarSign,
@@ -135,18 +140,11 @@ export default function DashboardLayout({ children }) {
                     icon: TrendingUp,
                     roles: ['admin', 'manager', 'finance'],
                 },
-                // {
-                //     name: 'Orçamento',
-                //     href: '/finance/budgets',
-                //     icon: Clock,
-                //     roles: ['admin', 'finance'],
-                //     badge: stats?.pending_payments || null,
-                // },
                 {
                     name: 'Pendentes',
                     href: '/finance/pending',
                     icon: Clock,
-                    roles: ['admin', 'finance'],
+                    roles: ['admin', 'manager', 'finance'],
                     badge: stats?.pending_payments || null,
                 },
                 {
@@ -159,10 +157,19 @@ export default function DashboardLayout({ children }) {
                     name: 'Relatórios',
                     href: '/finance/reports',
                     icon: BarChart3,
-                    roles: ['admin', 'manager'],
+                    roles: ['admin', 'manager', 'finance'],
                 },
             ]
         },
+        {
+            name: 'Facturas',
+            icon: DollarSign,
+            href: '/invoices',
+            roles: ['admin', 'manager', 'finance'],
+            badge: stats?.pendingInvoices || null,
+        },
+
+        // ========== APROVAÇÕES (ADMIN + MANAGER) ==========
         {
             name: 'Aprovações',
             icon: CheckCircle,
@@ -171,24 +178,21 @@ export default function DashboardLayout({ children }) {
             badge: stats?.peddingPayment || null,
             badgeColor: 'red',
         },
-        {
-            name: 'Documentos',
-            icon: FileText,
-            href: '/documents',
-            roles: ['admin', 'manager', 'operator', 'viewer'],
-            badge: null
-        },
-        {
-            name: 'Facturas',
-            icon: DollarSign,
-            href: '/invoices',
-            roles: ['admin', 'manager'],
-            badge: stats?.pendingInvoices || null,
-        },
+
+        // ========== RELATÓRIOS (ADMIN + MANAGER) ==========
         {
             name: 'Relatórios',
             icon: BarChart3,
             href: '/reports',
+            roles: ['admin', 'manager'],
+            badge: null
+        },
+
+        // ========== CADASTROS (ADMIN + MANAGER) ==========
+        {
+            name: 'Clientes',
+            icon: Users,
+            href: '/clients',
             roles: ['admin', 'manager'],
             badge: null
         },
@@ -199,6 +203,8 @@ export default function DashboardLayout({ children }) {
             roles: ['admin', 'manager'],
             badge: null
         },
+
+        // ========== ADMINISTRAÇÃO (APENAS ADMIN) ==========
         {
             name: 'Usuários',
             icon: User,
@@ -207,17 +213,10 @@ export default function DashboardLayout({ children }) {
             badge: null
         },
         {
-            name: 'Clientes',
-            icon: Users,
-            href: '/clients',
-            roles: ['admin'],
-            badge: null
-        },
-        {
             name: 'Configurações',
             icon: Settings,
             href: '/settings',
-            roles: ['admin', 'manager'],
+            roles: ['admin'],
             badge: null
         },
     ];

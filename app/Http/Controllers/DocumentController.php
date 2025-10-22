@@ -6,9 +6,12 @@ use App\Models\Document;
 use App\Models\Shipment;
 use App\Models\Activity;
 use App\Models\PaymentRequest;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\DocumentUploadedNotification;
 use Inertia\Inertia;
 
 class DocumentController extends Controller
@@ -188,6 +191,11 @@ class DocumentController extends Controller
                 'document_id' => $document->id,
                 'shipment_id' => $shipment->id,
             ]);
+
+            // Enviar notificações
+            // Notificar admins, managers e operations
+            $usersToNotify = User::whereIn('role', ['admin', 'manager', 'operations'])->get();
+            Notification::send($usersToNotify, new DocumentUploadedNotification($document));
 
             return back()->with('success', 'Documento enviado com sucesso!');
 
