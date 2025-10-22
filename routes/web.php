@@ -722,7 +722,7 @@ Route::middleware(['auth'])->group(function () {
 // RELATÓRIOS - RF-028, RF-029, RF-030
 // Restrito a admin e manager
 // ============================================================================
-Route::middleware(['auth', 'role:admin,manager'])->prefix('reports')->name('reports.')->group(function () {
+Route::middleware(['auth'])->prefix('reports')->name('reports.')->group(function () {
 
     // Dashboard de Relatórios
     Route::get('/', [ReportController::class, 'index'])
