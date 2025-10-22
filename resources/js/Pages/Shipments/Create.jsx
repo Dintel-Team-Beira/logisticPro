@@ -262,7 +262,7 @@ export default function Create() {
                                     error={errors.client_id}
                                     required
                                 >
-                                    <option value="">Selecione um cliente</option>
+                                    {/* <option value="">Selecione um cliente</option> */}
                                     {clients?.map((client) => (
                                         <option key={client.id} value={client.id}>
                                             {client.name} - {client.email}
@@ -456,7 +456,7 @@ export default function Create() {
                                     error={errors.container_type}
                                     required
                                 >
-                                    <option value="">Selecione o tipo</option>
+                                    {/* <option value="">Selecione o tipo</option> */}
                                     {containerTypes.map((type) => (
                                         <option key={type.value} value={type.value}>
                                             {type.label}
