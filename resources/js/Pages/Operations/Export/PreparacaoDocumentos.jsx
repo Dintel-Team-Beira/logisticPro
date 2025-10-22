@@ -90,7 +90,7 @@ export default function PreparacaoDocumentos({ shipments, stats, flash }) {
         <FilterBar onSearch={handleSearch} />
 
         {/* Grid de Processos */}
-        <div className="col">
+        <div className="space-y-6">
           {shipments?.data?.map((shipment) => (
             <ShipmentDetailedCard
               key={shipment.id}
