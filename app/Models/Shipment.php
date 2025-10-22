@@ -918,7 +918,7 @@ public function getPhase5Progress(): float
      */
     public function startPhase(int $phase, bool $force = false): ?ShipmentStage
     {
-        $stageName = $this->getStageNameFromPhase($phase);
+        $stageName = $this->getStageNameFromPhaseByType($phase);
 
         // Verificar se já existe
         $existingStage = $this->stages()->where('stage', $stageName)->first();
@@ -960,7 +960,7 @@ public function getPhase5Progress(): float
 
     public function completePhase(int $phase): bool
     {
-        $stageName = $this->getStageNameFromPhase($phase);
+        $stageName = $this->getStageNameFromPhaseByType($phase);
         $stage = $this->stages()->where('stage', $stageName)->first();
 
         if (! $stage) {
