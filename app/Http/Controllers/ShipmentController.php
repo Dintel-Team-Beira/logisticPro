@@ -174,8 +174,8 @@ class ShipmentController extends Controller
 
             // Redirecionar para a primeira fase de operações baseado no tipo
             if ($shipment->type === 'export') {
-                return redirect()
-                    ->route('operations.export.preparacao')
+                    Log::debug('Redirect parameters', ['shipment_id' => $shipment->id]);
+           return redirect()->route('operations.export.preparacao', ['preparacao' => $shipment->id])
                     ->with('success', "Processo de Exportação {$referenceNumber} criado! Preparação de Documentos iniciada.");
             } else {
                 return redirect()
