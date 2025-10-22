@@ -263,6 +263,7 @@ export default function DashboardLayout({ children }) {
                 notifications={notifications}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
+                handleMarkAllAsRead={handleMarkAllAsRead}
             />
 
             {/* Sidebar Desktop */}
@@ -311,7 +312,8 @@ function Topbar({
     unreadCount,
     notifications,
     searchQuery,
-    setSearchQuery
+    setSearchQuery,
+    handleMarkAllAsRead
 }) {
     return (
         <motion.header
