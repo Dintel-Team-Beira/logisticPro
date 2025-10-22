@@ -42,6 +42,15 @@ Route::get('/', function () {
 // DASHBOARD
 // ============================================================================
 Route::get('/dashboard', [DashboardController::class,'index'])->middleware(['auth', 'verified'])->name('dashboard');
+
+// ============================================================================
+// PESQUISA GLOBAL
+// ============================================================================
+Route::middleware(['auth'])->group(function () {
+    Route::get('/api/search', [App\Http\Controllers\SearchController::class, 'search'])->name('search');
+    Route::get('/api/quick-search', [App\Http\Controllers\SearchController::class, 'quickSearch'])->name('quick-search');
+});
+
 // ============================================================================
 // PROFILE
 // ============================================================================
