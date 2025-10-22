@@ -226,6 +226,22 @@ class Shipment extends Model
     }
 
     // ========================================
+    // SCOPES
+    // ========================================
+
+    /**
+     * Scope para filtrar shipments por stage atual
+     * Usado nos métodos do OperationsController
+     */
+    public function scopeInStage($query, $stageName)
+    {
+        return $query->whereHas('stages', function($q) use ($stageName) {
+            $q->where('stage', $stageName)
+              ->where('status', 'in_progress');
+        });
+    }
+
+    // ========================================
     // ACCESSORS - NOVOS
     // ========================================
 
