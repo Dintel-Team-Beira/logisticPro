@@ -331,10 +331,12 @@ Route::middleware(['auth'])->prefix('payment-requests')->name('payment-requests.
 Route::get('/shipments/{shipment}/payment-requests', [ShipmentController::class, 'getPaymentRequests'])
     ->name('shipments.payment-requests');
 // ============================================================================
+
 // SHIPMENTS (Processos de Importação) - CRUD Completo
 // ============================================================================
 Route::middleware(['auth'])->group(function () {
     // CRUD
+
    // ============================================================================
 // SHIPMENTS - ADICIONAR ESTAS ROTAS AQUI 👇👇👇
 // ============================================================================
