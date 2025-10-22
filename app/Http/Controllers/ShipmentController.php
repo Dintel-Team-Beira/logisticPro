@@ -6,10 +6,14 @@ use App\Models\Shipment;
 use App\Models\Client;
 use App\Models\PaymentRequest;
 use App\Models\ShippingLine;
+use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\ShipmentCreatedNotification;
+use App\Notifications\ShipmentStageChangedNotification;
 use Inertia\Inertia;
 
 /**
@@ -171,6 +175,10 @@ class ShipmentController extends Controller
                 'id' => $shipment->id,
                 'reference' => $referenceNumber
             ]);
+
+            // Enviar notificações para admins e managers
+            $adminsAndManagers = User::whereIn('role', ['admin', 'manager'])->get();
+            Notification::send($adminsAndManagers, new ShipmentCreatedNotification($shipment));
 
             // Redirecionar para a página de detalhes do processo criado...
             return redirect()

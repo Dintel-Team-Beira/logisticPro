@@ -30,16 +30,17 @@ import {
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
-    const { auth, flash, notifications,stats } = usePage().props;
+    const { auth, flash, stats } = usePage().props;
 
     console.log(stats);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
-     const [searchQuery, setSearchQuery] = useState('');
-      const [searchOpen, setSearchOpen] = useState(false);
-
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     // Global Search Modal state
     const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -56,6 +57,47 @@ export default function DashboardLayout({ children }) {
         document.addEventListener('keydown', handleKeyDown);
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, []);
+
+    // Fetch notifications from API
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                const response = await fetch('/notifications');
+                const data = await response.json();
+                setNotifications(data.notifications || []);
+                setUnreadCount(data.unread_count || 0);
+            } catch (error) {
+                console.error('Error fetching notifications:', error);
+            }
+        };
+
+        // Fetch immediately
+        fetchNotifications();
+
+        // Poll every 30 seconds for new notifications
+        const interval = setInterval(fetchNotifications, 30000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Mark all notifications as read
+    const handleMarkAllAsRead = async () => {
+        try {
+            await fetch('/notifications/read-all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+            });
+
+            // Update local state
+            setNotifications(notifications.map(n => ({ ...n, read: true })));
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Error marking notifications as read:', error);
+        }
+    };
 
     // Menu items com permissões
     const menuItems = [
@@ -185,8 +227,6 @@ export default function DashboardLayout({ children }) {
         item.roles.includes(auth.user?.role)
     );
 
-    const unreadNotifications = notifications.filter(n => !n.read).length;
-
     // Flash messages
     useEffect(() => {
         if (flash.success || flash.error || flash.warning || flash.info) {
@@ -219,7 +259,7 @@ export default function DashboardLayout({ children }) {
                 setProfileDropdownOpen={setProfileDropdownOpen}
                 notificationsOpen={notificationsOpen}
                 setNotificationsOpen={setNotificationsOpen}
-                unreadNotifications={unreadNotifications}
+                unreadNotifications={unreadCount}
                 notifications={notifications}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
@@ -268,7 +308,7 @@ function Topbar({
     setProfileDropdownOpen,
     notificationsOpen,
     setNotificationsOpen,
-    unreadNotifications,
+    unreadCount,
     notifications,
     searchQuery,
     setSearchQuery
@@ -341,13 +381,13 @@ function Topbar({
                             className="relative p-2 transition-colors rounded-xl hover:bg-gray-100"
                         >
                             <Bell className="w-6 h-6 text-gray-600" />
-                            {unreadNotifications > 0 && (
+                            {unreadCount > 0 && (
                                 <motion.span
                                     initial={{ scale: 0 }}
                                     animate={{ scale: 1 }}
                                     className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full top-1 right-1"
                                 >
-                                    {unreadNotifications}
+                                    {unreadCount}
                                 </motion.span>
                             )}
                         </motion.button>
@@ -358,6 +398,7 @@ function Topbar({
                                 <NotificationsDropdown
                                     notifications={notifications}
                                     onClose={() => setNotificationsOpen(false)}
+                                    onMarkAllAsRead={handleMarkAllAsRead}
                                 />
                             )}
                         </AnimatePresence>
@@ -629,7 +670,12 @@ function MobileSidebar({ mobileMenuOpen, setMobileMenuOpen, menuItems, userRole 
 }
 
 // Notifications Dropdown
-function NotificationsDropdown({ notifications, onClose }) {
+function NotificationsDropdown({ notifications, onClose, onMarkAllAsRead }) {
+    const handleMarkAllAsRead = async () => {
+        await onMarkAllAsRead();
+        // Don't close dropdown automatically
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -640,7 +686,7 @@ function NotificationsDropdown({ notifications, onClose }) {
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 <h3 className="font-bold text-gray-900">Notificações</h3>
                 <button
-                    onClick={onClose}
+                    onClick={handleMarkAllAsRead}
                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                 >
                     Marcar todas como lida
