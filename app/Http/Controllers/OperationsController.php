@@ -467,4 +467,199 @@ class OperationsController extends Controller
             'stats' => $stats
         ]);
     }
+
+    // ========================================
+    // OPERAÇÕES DE EXPORTAÇÃO (7 FASES)
+    // ========================================
+
+    /**
+     * EXPORTAÇÃO - FASE 1: Preparação de Documentos
+     */
+    public function exportPreparacao(Request $request)
+    {
+        $query = Shipment::with(['client', 'shippingLine', 'documents', 'stages'])
+            ->where('type', 'export')
+            ->inStage('preparacao_documentos');
+
+        if ($request->has('search')) {
+            $query->search($request->search);
+        }
+
+        $shipments = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => Shipment::where('type', 'export')->inStage('preparacao_documentos')->count(),
+            'awaiting_documents' => Shipment::where('type', 'export')
+                ->inStage('preparacao_documentos')
+                ->where('exp_document_prep_status', 'pending')->count(),
+            'documents_ready' => Shipment::where('type', 'export')
+                ->inStage('preparacao_documentos')
+                ->where('exp_document_prep_status', 'completed')->count(),
+            'ready_to_advance' => Shipment::where('type', 'export')
+                ->inStage('preparacao_documentos')
+                ->where('exp_document_prep_status', 'completed')->count(),
+        ];
+
+        return Inertia::render('Operations/Export/PreparacaoDocumentos', [
+            'shipments' => $shipments,
+            'stats' => $stats,
+            'filters' => $request->only(['search'])
+        ]);
+    }
+
+    /**
+     * EXPORTAÇÃO - FASE 2: Booking
+     */
+    public function exportBooking(Request $request)
+    {
+        $query = Shipment::with(['client', 'shippingLine', 'stages'])
+            ->where('type', 'export')
+            ->inStage('booking');
+
+        $shipments = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => Shipment::where('type', 'export')->inStage('booking')->count(),
+            'requested' => Shipment::where('type', 'export')->where('exp_booking_status', 'requested')->count(),
+            'confirmed' => Shipment::where('type', 'export')->where('exp_booking_status', 'confirmed')->count(),
+            'ready' => Shipment::where('type', 'export')->where('exp_booking_status', 'paid')->count(),
+        ];
+
+        return Inertia::render('Operations/Export/Booking', [
+            'shipments' => $shipments,
+            'stats' => $stats
+        ]);
+    }
+
+    /**
+     * EXPORTAÇÃO - FASE 3: Inspeção e Certificação
+     */
+    public function exportInspecao(Request $request)
+    {
+        $query = Shipment::with(['client', 'shippingLine', 'stages'])
+            ->where('type', 'export')
+            ->inStage('inspecao_certificacao');
+
+        $shipments = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => Shipment::where('type', 'export')->inStage('inspecao_certificacao')->count(),
+            'scheduled' => Shipment::where('type', 'export')->where('exp_inspection_status', 'scheduled')->count(),
+            'completed' => Shipment::where('type', 'export')->where('exp_inspection_status', 'completed')->count(),
+        ];
+
+        return Inertia::render('Operations/Export/InspecaoCertificacao', [
+            'shipments' => $shipments,
+            'stats' => $stats
+        ]);
+    }
+
+    /**
+     * EXPORTAÇÃO - FASE 4: Despacho Aduaneiro
+     */
+    public function exportDespacho(Request $request)
+    {
+        $query = Shipment::with(['client', 'shippingLine', 'stages'])
+            ->where('type', 'export')
+            ->inStage('despacho_aduaneiro');
+
+        $shipments = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => Shipment::where('type', 'export')->inStage('despacho_aduaneiro')->count(),
+            'submitted' => Shipment::where('type', 'export')->where('exp_customs_status', 'submitted')->count(),
+            'cleared' => Shipment::where('type', 'export')->where('exp_customs_status', 'cleared')->count(),
+        ];
+
+        return Inertia::render('Operations/Export/DespachoAduaneiro', [
+            'shipments' => $shipments,
+            'stats' => $stats
+        ]);
+    }
+
+    /**
+     * EXPORTAÇÃO - FASE 5: Transporte ao Porto
+     */
+    public function exportTransporte(Request $request)
+    {
+        $query = Shipment::with(['client', 'shippingLine', 'stages'])
+            ->where('type', 'export')
+            ->inStage('transporte_porto');
+
+        $shipments = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => Shipment::where('type', 'export')->inStage('transporte_porto')->count(),
+            'in_transit' => Shipment::where('type', 'export')->where('exp_transport_status', 'in_transit')->count(),
+            'delivered' => Shipment::where('type', 'export')->where('exp_transport_status', 'delivered')->count(),
+        ];
+
+        return Inertia::render('Operations/Export/TransportePorto', [
+            'shipments' => $shipments,
+            'stats' => $stats
+        ]);
+    }
+
+    /**
+     * EXPORTAÇÃO - FASE 6: Embarque
+     */
+    public function exportEmbarque(Request $request)
+    {
+        $query = Shipment::with(['client', 'shippingLine', 'stages'])
+            ->where('type', 'export')
+            ->inStage('embarque');
+
+        $shipments = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => Shipment::where('type', 'export')->inStage('embarque')->count(),
+            'loading' => Shipment::where('type', 'export')->where('exp_loading_status', 'loading')->count(),
+            'loaded' => Shipment::where('type', 'export')->where('exp_loading_status', 'loaded')->count(),
+        ];
+
+        return Inertia::render('Operations/Export/Embarque', [
+            'shipments' => $shipments,
+            'stats' => $stats
+        ]);
+    }
+
+    /**
+     * EXPORTAÇÃO - FASE 7: Acompanhamento
+     */
+    public function exportAcompanhamento(Request $request)
+    {
+        $query = Shipment::with(['client', 'shippingLine', 'stages'])
+            ->where('type', 'export')
+            ->inStage('acompanhamento');
+
+        $shipments = $query->latest()->paginate(15);
+
+        $stats = [
+            'total' => Shipment::where('type', 'export')->inStage('acompanhamento')->count(),
+            'in_transit' => Shipment::where('type', 'export')->where('exp_tracking_status', 'in_transit')->count(),
+            'delivered' => Shipment::where('type', 'export')->where('exp_tracking_status', 'delivered')->count(),
+        ];
+
+        return Inertia::render('Operations/Export/Acompanhamento', [
+            'shipments' => $shipments,
+            'stats' => $stats
+        ]);
+    }
+
+    /**
+     * Atualizar status de campo de exportação
+     */
+    public function updateExportStatus(Request $request, Shipment $shipment)
+    {
+        $validated = $request->validate([
+            'field' => 'required|string',
+            'value' => 'nullable',
+        ]);
+
+        $shipment->update([
+            $validated['field'] => $validated['value']
+        ]);
+
+        return back()->with('success', 'Status atualizado!');
+    }
 }

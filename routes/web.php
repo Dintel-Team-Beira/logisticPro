@@ -575,6 +575,42 @@ Route::middleware(['auth'])->prefix('operations')->name('operations.')->group(fu
     // Completar Processo
     Route::post('/shipments/{shipment}/complete', [ShipmentPhaseController::class, 'completeProcess'])
         ->name('shipments.complete');
+
+    // ====================================
+    // OPERAÇÕES DE EXPORTAÇÃO (7 FASES)
+    // ====================================
+
+    // FASE 1: Preparação de Documentos
+    Route::get('/export/preparacao', [OperationsController::class, 'exportPreparacao'])
+        ->name('export.preparacao');
+
+    // FASE 2: Booking
+    Route::get('/export/booking', [OperationsController::class, 'exportBooking'])
+        ->name('export.booking');
+
+    // FASE 3: Inspeção e Certificação
+    Route::get('/export/inspecao', [OperationsController::class, 'exportInspecao'])
+        ->name('export.inspecao');
+
+    // FASE 4: Despacho Aduaneiro
+    Route::get('/export/despacho', [OperationsController::class, 'exportDespacho'])
+        ->name('export.despacho');
+
+    // FASE 5: Transporte ao Porto
+    Route::get('/export/transporte', [OperationsController::class, 'exportTransporte'])
+        ->name('export.transporte');
+
+    // FASE 6: Embarque
+    Route::get('/export/embarque', [OperationsController::class, 'exportEmbarque'])
+        ->name('export.embarque');
+
+    // FASE 7: Acompanhamento
+    Route::get('/export/acompanhamento', [OperationsController::class, 'exportAcompanhamento'])
+        ->name('export.acompanhamento');
+
+    // Atualizar status de exportação
+    Route::post('/shipments/{shipment}/update-export-status', [OperationsController::class, 'updateExportStatus'])
+        ->name('shipments.update-export-status');
 });
 
 // ============================================================================
