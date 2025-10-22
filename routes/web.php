@@ -581,7 +581,7 @@ Route::middleware(['auth'])->prefix('operations')->name('operations.')->group(fu
     // ====================================
 
     // FASE 1: Preparação de Documentos
-    Route::get('/export/preparacao', [OperationsController::class, 'exportPreparacao'])
+    Route::get('/export/preparacao/{preparacao}', [OperationsController::class, 'exportPreparacao'])
         ->name('export.preparacao');
 
     // FASE 2: Booking
