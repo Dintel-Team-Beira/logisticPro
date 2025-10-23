@@ -114,7 +114,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
                 {/* Cards de Estatísticas Principais */}
                 <div className="grid grid-cols-1 gap-6 mb-8 md:grid-cols-2 lg:grid-cols-4">
                     {/* Total Shipments Ativos */}
-                    <div className="p-6 transition-shadow bg-white border shadow-sm rounded-xl border-slate-100 hover:shadow-md">
+                    <div className="p-6 transition-shadow border shadow-sm bg-white/50 rounded-xl border-slate-100 hover:shadow-md">
                         <div className="flex items-center justify-between mb-4">
                             <div className="p-3 rounded-lg bg-blue-50">
                                 <Package className="w-6 h-6 text-blue-600" />
@@ -133,7 +133,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
 
                     {/* Receita Total (Admin/Manager) */}
                     {canViewFinances && (
-                        <div className="p-6 transition-shadow bg-white border shadow-sm rounded-xl border-slate-100 hover:shadow-md">
+                        <div className="p-6 transition-shadow border shadow-sm bg-white/50 rounded-xl border-slate-100 hover:shadow-md">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="p-3 rounded-lg bg-green-50">
                                     <DollarSign className="w-6 h-6 text-green-600" />
@@ -154,7 +154,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
                     )}
 
                     {/* Documentos Pendentes */}
-                    <div className="p-6 transition-shadow bg-white border shadow-sm rounded-xl border-slate-100 hover:shadow-md">
+                    <div className="p-6 transition-shadow border shadow-sm bg-white/50 rounded-xl border-slate-100 hover:shadow-md">
                         <div className="flex items-center justify-between mb-4">
                             <div className="p-3 rounded-lg bg-purple-50">
                                 <FileText className="w-6 h-6 text-purple-600" />
@@ -172,7 +172,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
 
                     {/* Faturas Pendentes (Admin/Manager) */}
                     {canViewFinances && (
-                        <div className="p-6 transition-shadow bg-white border shadow-sm rounded-xl border-slate-100 hover:shadow-md">
+                        <div className="p-6 transition-shadow border shadow-sm bg-white/50 rounded-xl border-slate-100 hover:shadow-md">
                             <div className="flex items-center justify-between mb-4">
                                 <div className="p-3 rounded-lg bg-orange-50">
                                     <AlertCircle className="w-6 h-6 text-orange-600" />
@@ -193,7 +193,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
                 {/* Gráficos e Detalhes */}
                 <div className="grid grid-cols-1 gap-6 mb-8 lg:grid-cols-3">
                     {/* Distribuição por Fase (Pizza) */}
-                    <div className="p-6 bg-white border shadow-sm lg:col-span-1 rounded-xl border-slate-100">
+                    <div className="p-6 border shadow-sm bg-white/50 lg:col-span-1 rounded-xl border-slate-100">
                         <h2 className="mb-4 text-xl font-bold text-slate-900">Processos por Fase</h2>
                         <ResponsiveContainer width="100%" height={250}>
                             <PieChart>
@@ -232,7 +232,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
 
                     {/* Evolução Financeira (Admin/Manager) */}
                     {canViewFinances && (
-                        <div className="p-6 bg-white border shadow-sm lg:col-span-2 rounded-xl border-slate-100">
+                        <div className="p-6 border shadow-sm bg-white/50 lg:col-span-2 rounded-xl border-slate-100">
                             <div className="flex items-center justify-between mb-4">
                                 <h2 className="text-xl font-bold text-slate-900">Evolução Financeira</h2>
                                 <div className="flex gap-4 text-sm">
@@ -269,7 +269,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
 
                     {/* Evolução de Processos (Viewer/Operator) */}
                     {!canViewFinances && (
-                        <div className="p-6 bg-white border shadow-sm lg:col-span-2 rounded-xl border-slate-100">
+                        <div className="p-6 border shadow-sm bg-white/50 lg:col-span-2 rounded-xl border-slate-100">
                             <h2 className="mb-4 text-xl font-bold text-slate-900">Evolução de Processos</h2>
                             <ResponsiveContainer width="100%" height={250}>
                                 <BarChart data={stats?.monthlyShipments || []}>
@@ -289,7 +289,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
                 {/* Shipments Recentes e Atividades */}
                 <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                     {/* Processos Recentes */}
-                    <div className="p-6 bg-white border shadow-sm rounded-xl border-slate-100">
+                    <div className="p-6 border shadow-sm bg-white/50 rounded-xl border-slate-100">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold text-slate-900">Processos Recentes</h2>
                             <Link href="/shipments" className="text-sm font-medium text-blue-600 hover:text-blue-700">
@@ -328,7 +328,7 @@ export default function Dashboard({ auth, stats, recentShipments, financialSumma
                     </div>
 
                     {/* Atividades Recentes */}
-                    <div className="p-6 bg-white border shadow-sm rounded-xl border-slate-100">
+                    <div className="p-6 border shadow-sm bg-white/50 rounded-xl border-slate-100">
                         <div className="flex items-center justify-between mb-4">
                             <h2 className="text-xl font-bold text-slate-900">Atividades Recentes</h2>
                             {canViewDetailed && (
