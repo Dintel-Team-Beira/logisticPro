@@ -252,6 +252,14 @@ class User extends Authenticatable
         return $this->hasMany(PaymentRequest::class, 'paid_by');
     }
 
+    /**
+     * Atividades do usuário
+     */
+    public function activities()
+    {
+        return $this->hasMany(UserActivity::class);
+    }
+
     // ========================================
     // SCOPES ÚTEIS
     // ========================================

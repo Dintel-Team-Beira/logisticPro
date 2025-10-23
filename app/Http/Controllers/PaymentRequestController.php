@@ -9,7 +9,10 @@ use App\Models\Document;
 use App\Models\User;
 use Illuminate\Container\Attributes\Auth;
 use Illuminate\Http\Request;
-use Illuminate\Notifications\Notification;
+use Illuminate\Support\Facades\Notification;
+use App\Notifications\PaymentRequestCreatedNotification;
+use App\Notifications\PaymentRequestApprovedNotification;
+use App\Notifications\PaymentRequestRejectedNotification;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -380,6 +383,11 @@ class PaymentRequestController extends Controller
 
             DB::commit();
 
+            // Enviar notificações
+            // Notificar admins e managers (aprovadores)
+            $approvers = User::whereIn('role', ['admin', 'manager'])->get();
+            Notification::send($approvers, new PaymentRequestCreatedNotification($paymentRequest));
+
             return back()->with('success', 'Solicitação de pagamento enviada para aprovação!');
         } catch (\Exception $e) {
             DB::rollBack();
@@ -412,6 +420,17 @@ class PaymentRequestController extends Controller
         ]);
 
         if ($paymentRequest->approve(auth()->id(), $validated['notes'] ?? null)) {
+            // Enviar notificações
+            // Notificar o solicitante
+            $requester = User::find($paymentRequest->requested_by);
+            if ($requester) {
+                $requester->notify(new PaymentRequestApprovedNotification($paymentRequest));
+            }
+
+            // Notificar finance (próxima etapa)
+            $financeUsers = User::where('role', 'finance')->get();
+            Notification::send($financeUsers, new PaymentRequestApprovedNotification($paymentRequest));
+
             return back()->with('success', 'Solicitação aprovada! Finanças foi notificado.');
         }
 
@@ -436,6 +455,23 @@ public function reject(Request $request, PaymentRequest $paymentRequest)
         'approved_at' => now(),
         'rejection_reason' => $request->rejection_reason,
     ]);
+
+    // Enviar notificações
+    // Notificar o solicitante
+    $requester = User::find($paymentRequest->requested_by);
+    if ($requester) {
+        $requester->notify(new PaymentRequestRejectedNotification(
+            $paymentRequest,
+            $request->rejection_reason
+        ));
+    }
+
+    // Notificar admins
+    $admins = User::where('role', 'admin')->get();
+    Notification::send($admins, new PaymentRequestRejectedNotification(
+        $paymentRequest,
+        $request->rejection_reason
+    ));
 
     return back()->with('success', 'Solicitação rejeitada com sucesso.');
 }

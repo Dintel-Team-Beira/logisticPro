@@ -7,10 +7,14 @@ use App\Models\Invoice;
 use App\Models\ShippingLine;
 use App\Models\Document;
 use App\Models\Activity;
+use App\Models\Client;
+use App\Models\PaymentRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Inertia\Inertia;
 use Carbon\Carbon;
+use Barryvdh\DomPDF\Facade\Pdf;
+use Maatwebsite\Excel\Facades\Excel;
 
 class ReportController extends Controller
 {
@@ -64,19 +68,103 @@ class ReportController extends Controller
      */
     public function export(Request $request)
     {
-        $format = $request->get('format', 'pdf'); // pdf, excel, csv
+        $format = $request->get('format', 'pdf'); // pdf, excel
+        $type = $request->get('type', 'processes'); // processes, financial, performance
         $period = $request->get('period', 'month');
         $startDate = $this->getStartDate($period);
         $endDate = now();
 
-        // TODO: Implementar exportação usando Laravel Excel ou DomPDF
-        // Por enquanto, retorna JSON
-        $data = [
-            'shipments' => Shipment::whereBetween('created_at', [$startDate, $endDate])->get(),
-            'invoices' => Invoice::whereBetween('created_at', [$startDate, $endDate])->get(),
-        ];
+        $fileName = $this->generateFileName($type, $format, $startDate, $endDate);
 
-        return response()->json($data);
+        // Export based on format
+        if ($format === 'excel') {
+            return $this->exportExcel($type, $startDate, $endDate, $fileName);
+        } else {
+            return $this->exportPDF($type, $startDate, $endDate, $fileName);
+        }
+    }
+
+    /**
+     * Export to Excel
+     */
+    private function exportExcel($type, $startDate, $endDate, $fileName)
+    {
+        $export = match($type) {
+            'processes' => new \App\Exports\ProcessesExport($startDate, $endDate),
+            'financial' => new \App\Exports\FinancialExport($startDate, $endDate),
+            'performance' => new \App\Exports\PerformanceExport($startDate, $endDate),
+            default => new \App\Exports\ProcessesExport($startDate, $endDate),
+        };
+
+        return Excel::download($export, $fileName);
+    }
+
+    /**
+     * Export to PDF
+     */
+    private function exportPDF($type, $startDate, $endDate, $fileName)
+    {
+        $data = $this->getReportData($type, $startDate, $endDate);
+
+        $pdf = Pdf::loadView("reports.pdf.{$type}", [
+            'data' => $data,
+            'startDate' => $startDate,
+            'endDate' => $endDate,
+            'generatedAt' => now(),
+        ]);
+
+        $pdf->setPaper('a4', 'landscape');
+
+        return $pdf->download($fileName);
+    }
+
+    /**
+     * Get report data based on type
+     */
+    private function getReportData($type, $startDate, $endDate)
+    {
+        return match($type) {
+            'processes' => [
+                'shipments' => Shipment::with(['client', 'shippingLine', 'invoices'])
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->get(),
+                'summary' => $this->getSummaryCards($startDate, $endDate),
+                'by_status' => $this->getShipmentsByStatus($startDate, $endDate),
+                'by_stage' => $this->getShipmentsByStage($startDate, $endDate),
+            ],
+            'financial' => [
+                'invoices' => Invoice::with(['shipment'])
+                    ->whereBetween('created_at', [$startDate, $endDate])
+                    ->get(),
+                'summary' => $this->getRevenueSummary($startDate, $endDate),
+                'by_month' => $this->getRevenueByMonth($startDate, $endDate),
+                'invoices_summary' => $this->getInvoicesSummary($startDate, $endDate),
+            ],
+            'performance' => [
+                'shipping_lines' => $this->getShippingLinesPerformance($startDate, $endDate),
+                'stage_completion' => $this->getStageCompletionRates($startDate, $endDate),
+                'avg_processing_time' => $this->getAverageProcessingTime($startDate, $endDate),
+                'documents_stats' => $this->getDocumentsStatistics($startDate, $endDate),
+            ],
+            default => [],
+        };
+    }
+
+    /**
+     * Generate file name for export
+     */
+    private function generateFileName($type, $format, $startDate, $endDate)
+    {
+        $typeName = match($type) {
+            'processes' => 'processos',
+            'financial' => 'financeiro',
+            'performance' => 'desempenho',
+            default => 'relatorio',
+        };
+
+        $dateRange = $startDate->format('Ymd') . '_' . $endDate->format('Ymd');
+
+        return "relatorio_{$typeName}_{$dateRange}.{$format}";
     }
 
     /**

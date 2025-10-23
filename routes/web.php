@@ -720,6 +720,7 @@ Route::middleware(['auth'])->group(function () {
     ->name('settings.invoices.update');
 // ============================================================================
 // RELATÓRIOS - RF-028, RF-029, RF-030
+// Restrito a admin e manager
 // ============================================================================
 Route::middleware(['auth'])->prefix('reports')->name('reports.')->group(function () {
 
@@ -727,29 +728,12 @@ Route::middleware(['auth'])->prefix('reports')->name('reports.')->group(function
     Route::get('/', [ReportController::class, 'index'])
         ->name('index');
 
-    // RF-028: Relatório de Processos
-    Route::get('/processes', [ReportController::class, 'processesReport'])
-        ->name('processes');
-    Route::post('/processes/export', [ReportController::class, 'exportProcesses'])
-        ->name('processes.export');
-
-    // RF-029: Relatório Financeiro
-    Route::get('/financial', [ReportController::class, 'financialReport'])
-        ->name('financial');
-    Route::post('/financial/export', [ReportController::class, 'exportFinancial'])
-        ->name('financial.export');
-
-    // RF-030: Relatório de Performance Operacional
-    Route::get('/performance', [ReportController::class, 'performanceReport'])
-        ->name('performance');
-    Route::post('/performance/export', [ReportController::class, 'exportPerformance'])
-        ->name('performance.export');
-
-    // Exportação Geral
-    Route::post('/export', [ReportController::class, 'export'])
+    // Exportação unificada (PDF e Excel)
+    // Params: ?period=month&format=pdf&type=processes
+    Route::get('/export', [ReportController::class, 'export'])
         ->name('export');
 
-    // Relatório Customizado
+    // Custom date range
     Route::post('/custom-range', [ReportController::class, 'customRange'])
         ->name('custom-range');
 });

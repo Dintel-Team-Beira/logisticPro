@@ -20,6 +20,8 @@ class Invoice extends Model
         'shipment_id',
         'client_id',
         'invoice_number',
+        'invoice_type',
+        'quote_id',
         'type',
         'issuer',
         'amount',
@@ -30,12 +32,25 @@ class Invoice extends Model
         'payment_date',
         'payment_reference',
         'notes',
+        'description',
+        'discount_percentage',
+        'discount_amount',
+        'subtotal',
+        'tax_amount',
+        'terms',
+        'customer_notes',
+        'payment_terms',
         'file_path',
-        'metadata'
+        'metadata',
+        'created_by'
     ];
 
     protected $casts = [
         'amount' => 'decimal:2',
+        'discount_percentage' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
+        'subtotal' => 'decimal:2',
+        'tax_amount' => 'decimal:2',
         'issue_date' => 'date',
         'due_date' => 'date',
         'payment_date' => 'date',
@@ -54,6 +69,21 @@ class Invoice extends Model
     public function client()
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function quote()
+    {
+        return $this->belongsTo(Quote::class);
+    }
+
+    public function items()
+    {
+        return $this->hasMany(InvoiceItem::class)->orderBy('sort_order');
+    }
+
+    public function createdBy()
+    {
+        return $this->belongsTo(User::class, 'created_by');
     }
 
     // ========================================

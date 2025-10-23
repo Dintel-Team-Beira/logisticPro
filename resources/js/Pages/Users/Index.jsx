@@ -8,6 +8,7 @@ import {
     Trash2,
     Shield,
     User,
+    Eye,
 } from 'lucide-react';
 
 export default function Index({ users }) {
@@ -167,14 +168,26 @@ export default function Index({ users }) {
                                         </td>
                                         <td className="px-4 py-3">
                                             <div className="flex items-center justify-end gap-2">
+                                                <Link href={`/users/${user.id}`}>
+                                                    <button
+                                                        className="p-1.5 text-blue-600 hover:text-blue-700 hover:bg-blue-50 rounded-md transition-colors"
+                                                        title="Ver Perfil"
+                                                    >
+                                                        <Eye className="w-4 h-4" />
+                                                    </button>
+                                                </Link>
                                                 <Link href={`/users/${user.id}/edit`}>
-                                                    <button className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors">
+                                                    <button
+                                                        className="p-1.5 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-md transition-colors"
+                                                        title="Editar"
+                                                    >
                                                         <Edit className="w-4 h-4" />
                                                     </button>
                                                 </Link>
                                                 <button
                                                     onClick={() => handleDelete(user.id)}
                                                     className="p-1.5 text-red-600 hover:text-red-700 hover:bg-red-50 rounded-md transition-colors"
+                                                    title="Excluir"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>

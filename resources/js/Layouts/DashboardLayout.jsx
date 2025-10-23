@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Logo  from '@/Components/Logo';
 import GlobalSearch from '@/Components/GlobalSearch';
 import GlobalSearchModal from '@/Components/Search/GlobalSearchModal';
+import NotificationToasts from '@/Components/NotificationToasts';
 import {
     Home,
     Package,
@@ -30,16 +31,17 @@ import {
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
-    const { auth, flash, notifications,stats } = usePage().props;
+    const { auth, flash, stats } = usePage().props;
 
     console.log(stats);
     const [sidebarOpen, setSidebarOpen] = useState(true);
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
     const [notificationsOpen, setNotificationsOpen] = useState(false);
-     const [searchQuery, setSearchQuery] = useState('');
-      const [searchOpen, setSearchOpen] = useState(false);
-
+    const [searchQuery, setSearchQuery] = useState('');
+    const [searchOpen, setSearchOpen] = useState(false);
+    const [notifications, setNotifications] = useState([]);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     // Global Search Modal state
     const [searchModalOpen, setSearchModalOpen] = useState(false);
@@ -57,22 +59,59 @@ export default function DashboardLayout({ children }) {
         return () => document.removeEventListener('keydown', handleKeyDown);
     }, []);
 
+    // Fetch notifications from API
+    useEffect(() => {
+        const fetchNotifications = async () => {
+            try {
+                const response = await fetch('/notifications');
+                const data = await response.json();
+                setNotifications(data.notifications || []);
+                setUnreadCount(data.unread_count || 0);
+            } catch (error) {
+                console.error('Error fetching notifications:', error);
+            }
+        };
+
+        // Fetch immediately
+        fetchNotifications();
+
+        // Poll every 10 seconds for new notifications (tempo real)
+        const interval = setInterval(fetchNotifications, 10000);
+
+        return () => clearInterval(interval);
+    }, []);
+
+    // Mark all notifications as read
+    const handleMarkAllAsRead = async () => {
+        try {
+            await fetch('/notifications/read-all', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                },
+            });
+
+            // Update local state
+            setNotifications(notifications.map(n => ({ ...n, read: true })));
+            setUnreadCount(0);
+        } catch (error) {
+            console.error('Error marking notifications as read:', error);
+        }
+    };
+
     // Menu items com permissões
     const menuItems = [
+        // ========== TODOS OS USUÁRIOS ==========
         {
             name: 'Dashboard',
             icon: Home,
             href: '/dashboard',
-            roles: ['admin', 'manager', 'operator', 'viewer'],
+            roles: ['admin', 'manager', 'operations', 'finance'],
             badge: null
         },
-        // {
-        //     name: 'Shipments',
-        //     icon: Package,
-        //     href: '/shipments',
-        //     roles: ['admin', 'manager', 'operator'],
-        //     badge: '12'
-        // },
+
+        // ========== PROCESSOS LOGÍSTICOS ==========
        {
             name: 'Processos',
             icon: Package,
@@ -80,6 +119,15 @@ export default function DashboardLayout({ children }) {
             roles: ['admin', 'manager', 'operations', 'finance'],
             badge: stats?.activeShipments || null,
         },
+        {
+            name: 'Documentos',
+            icon: FileText,
+            href: '/documents',
+            roles: ['admin', 'manager', 'operations', 'finance'],
+            badge: null
+        },
+
+        // ========== FINANÇAS ==========
         {
             name: 'Finanças',
             icon: DollarSign,
@@ -93,18 +141,11 @@ export default function DashboardLayout({ children }) {
                     icon: TrendingUp,
                     roles: ['admin', 'manager', 'finance'],
                 },
-                // {
-                //     name: 'Orçamento',
-                //     href: '/finance/budgets',
-                //     icon: Clock,
-                //     roles: ['admin', 'finance'],
-                //     badge: stats?.pending_payments || null,
-                // },
                 {
                     name: 'Pendentes',
                     href: '/finance/pending',
                     icon: Clock,
-                    roles: ['admin', 'finance'],
+                    roles: ['admin', 'manager', 'finance'],
                     badge: stats?.pending_payments || null,
                 },
                 {
@@ -117,10 +158,19 @@ export default function DashboardLayout({ children }) {
                     name: 'Relatórios',
                     href: '/finance/reports',
                     icon: BarChart3,
-                    roles: ['admin', 'manager'],
+                    roles: ['admin', 'manager', 'finance'],
                 },
             ]
         },
+        {
+            name: 'Facturas',
+            icon: DollarSign,
+            href: '/invoices',
+            roles: ['admin', 'manager', 'finance'],
+            badge: stats?.pendingInvoices || null,
+        },
+
+        // ========== APROVAÇÕES (ADMIN + MANAGER) ==========
         {
             name: 'Aprovações',
             icon: CheckCircle,
@@ -129,24 +179,21 @@ export default function DashboardLayout({ children }) {
             badge: stats?.peddingPayment || null,
             badgeColor: 'red',
         },
-        {
-            name: 'Documentos',
-            icon: FileText,
-            href: '/documents',
-            roles: ['admin', 'manager', 'operator', 'viewer'],
-            badge: null
-        },
-        {
-            name: 'Facturas',
-            icon: DollarSign,
-            href: '/invoices',
-            roles: ['admin', 'manager'],
-            badge: stats?.pendingInvoices || null,
-        },
+
+        // ========== RELATÓRIOS (ADMIN + MANAGER) ==========
         {
             name: 'Relatórios',
             icon: BarChart3,
             href: '/reports',
+            roles: ['admin', 'manager'],
+            badge: null
+        },
+
+        // ========== CADASTROS (ADMIN + MANAGER) ==========
+        {
+            name: 'Clientes',
+            icon: Users,
+            href: '/clients',
             roles: ['admin', 'manager'],
             badge: null
         },
@@ -157,6 +204,8 @@ export default function DashboardLayout({ children }) {
             roles: ['admin', 'manager'],
             badge: null
         },
+
+        // ========== ADMINISTRAÇÃO (APENAS ADMIN) ==========
         {
             name: 'Usuários',
             icon: User,
@@ -165,17 +214,10 @@ export default function DashboardLayout({ children }) {
             badge: null
         },
         {
-            name: 'Clientes',
-            icon: Users,
-            href: '/clients',
-            roles: ['admin'],
-            badge: null
-        },
-        {
             name: 'Configurações',
             icon: Settings,
             href: '/settings',
-            roles: ['admin', 'manager'],
+            roles: ['admin'],
             badge: null
         },
     ];
@@ -184,8 +226,6 @@ export default function DashboardLayout({ children }) {
     const filteredMenu = menuItems.filter(item =>
         item.roles.includes(auth.user?.role)
     );
-
-    const unreadNotifications = notifications.filter(n => !n.read).length;
 
     // Flash messages
     useEffect(() => {
@@ -205,6 +245,13 @@ export default function DashboardLayout({ children }) {
                 onClose={() => setSearchModalOpen(false)}
             />
 
+            {/* Notification Toasts - Aparecem automaticamente */}
+            <NotificationToasts
+                notifications={notifications}
+                // Não marcar como lida ao fechar toast - apenas esconder
+                // Usuário deve marcar como lida no dropdown
+            />
+
             {/* Flash Messages */}
             <FlashMessages flash={flash} />
 
@@ -219,10 +266,11 @@ export default function DashboardLayout({ children }) {
                 setProfileDropdownOpen={setProfileDropdownOpen}
                 notificationsOpen={notificationsOpen}
                 setNotificationsOpen={setNotificationsOpen}
-                unreadNotifications={unreadNotifications}
+                unreadNotifications={unreadCount}
                 notifications={notifications}
                 searchQuery={searchQuery}
                 setSearchQuery={setSearchQuery}
+                handleMarkAllAsRead={handleMarkAllAsRead}
             />
 
             {/* Sidebar Desktop */}
@@ -268,10 +316,11 @@ function Topbar({
     setProfileDropdownOpen,
     notificationsOpen,
     setNotificationsOpen,
-    unreadNotifications,
+    unreadCount,
     notifications,
     searchQuery,
-    setSearchQuery
+    setSearchQuery,
+    handleMarkAllAsRead
 }) {
     return (
         <motion.header
@@ -337,18 +386,49 @@ function Topbar({
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
+                            animate={unreadCount > 0 ? {
+                                rotate: [-10, 10, -10, 10, 0],
+                            } : {}}
+                            transition={{
+                                duration: 0.5,
+                                repeat: unreadCount > 0 ? Infinity : 0,
+                                repeatDelay: 2
+                            }}
                             onClick={() => setNotificationsOpen(!notificationsOpen)}
                             className="relative p-2 transition-colors rounded-xl hover:bg-gray-100"
                         >
-                            <Bell className="w-6 h-6 text-gray-600" />
-                            {unreadNotifications > 0 && (
-                                <motion.span
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full top-1 right-1"
-                                >
-                                    {unreadNotifications}
-                                </motion.span>
+                            <Bell className={`w-6 h-6 ${unreadCount > 0 ? 'text-red-500' : 'text-gray-600'}`} />
+                            {unreadCount > 0 && (
+                                <>
+                                    {/* Pulse effect background */}
+                                    <motion.span
+                                        animate={{
+                                            scale: [1, 1.5, 1],
+                                            opacity: [0.7, 0, 0.7],
+                                        }}
+                                        transition={{
+                                            duration: 1.5,
+                                            repeat: Infinity,
+                                            ease: "easeInOut"
+                                        }}
+                                        className="absolute w-5 h-5 bg-red-500 rounded-full top-1 right-1"
+                                    />
+                                    {/* Badge */}
+                                    <motion.span
+                                        initial={{ scale: 0 }}
+                                        animate={{
+                                            scale: [1, 1.2, 1],
+                                        }}
+                                        transition={{
+                                            duration: 0.8,
+                                            repeat: Infinity,
+                                            ease: "easeInOut"
+                                        }}
+                                        className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full shadow-lg top-1 right-1"
+                                    >
+                                        {unreadCount}
+                                    </motion.span>
+                                </>
                             )}
                         </motion.button>
 
@@ -358,6 +438,7 @@ function Topbar({
                                 <NotificationsDropdown
                                     notifications={notifications}
                                     onClose={() => setNotificationsOpen(false)}
+                                    onMarkAllAsRead={handleMarkAllAsRead}
                                 />
                             )}
                         </AnimatePresence>
@@ -629,7 +710,12 @@ function MobileSidebar({ mobileMenuOpen, setMobileMenuOpen, menuItems, userRole 
 }
 
 // Notifications Dropdown
-function NotificationsDropdown({ notifications, onClose }) {
+function NotificationsDropdown({ notifications, onClose, onMarkAllAsRead }) {
+    const handleMarkAllAsRead = async () => {
+        await onMarkAllAsRead();
+        // Don't close dropdown automatically
+    };
+
     return (
         <motion.div
             initial={{ opacity: 0, y: -10, scale: 0.95 }}
@@ -640,7 +726,7 @@ function NotificationsDropdown({ notifications, onClose }) {
             <div className="flex items-center justify-between p-4 border-b border-gray-200">
                 <h3 className="font-bold text-gray-900">Notificações</h3>
                 <button
-                    onClick={onClose}
+                    onClick={handleMarkAllAsRead}
                     className="text-sm font-medium text-blue-600 hover:text-blue-700"
                 >
                     Marcar todas como lida
