@@ -54,7 +54,7 @@ function LayoutContent({
   isMobile
 }) {
   return (
-    <div className="min-h-screen transition-colors duration-300 bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
+    <div style='zoom: 90%;' className="min-h-screen transition-colors duration-300 bg-gradient-to-br from-gray-50 via-gray-100 to-gray-50 dark:from-gray-900 dark:via-gray-900 dark:to-gray-800">
       {title && <Head title={title} />}
 
       {/* Flash Messages */}

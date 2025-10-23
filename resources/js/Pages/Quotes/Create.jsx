@@ -1,0 +1,581 @@
+import { Head, Link, useForm } from '@inertiajs/react';
+import DashboardLayout from '@/Layouts/DashboardLayout';
+import { ArrowLeft, Save, Plus, Trash2, Calculator } from 'lucide-react';
+import { motion } from 'framer-motion';
+import { useState, useEffect } from 'react';
+
+export default function Create({ nextQuoteNumber, clients, shipments }) {
+    const [services, setServices] = useState([]);
+    const [items, setItems] = useState([]);
+    const [servicesError, setServicesError] = useState(null);
+    const [loadingServices, setLoadingServices] = useState(true);
+
+    const { data, setData, post, processing, errors } = useForm({
+        client_id: '',
+        shipment_id: '',
+        title: '',
+        description: '',
+        quote_date: new Date().toISOString().split('T')[0],
+        valid_until: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
+        discount_percentage: 0,
+        payment_terms: '30 dias',
+        currency: 'MZN',
+        terms: '',
+        customer_notes: '',
+        items: [],
+    });
+
+    // Fetch active services
+    useEffect(() => {
+        setLoadingServices(true);
+        fetch('/services/active')
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`Erro HTTP ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.length === 0) {
+                    setServicesError('Nenhum serviço ativo encontrado. Execute: php artisan db:seed --class=ServiceCatalogSeeder');
+                }
+                setServices(data);
+                setLoadingServices(false);
+            })
+            .catch(err => {
+                console.error('Erro ao carregar serviços:', err);
+                setServicesError('Erro ao carregar serviços. Verifique se o backend está rodando.');
+                setLoadingServices(false);
+            });
+    }, []);
+
+    // Sincronizar items com data.items SEMPRE que items mudar
+    useEffect(() => {
+        setData('items', items.map(item => ({
+            service_id: parseInt(item.service_id) || 0,
+            quantity: parseFloat(item.quantity) || 0,
+            unit_price: parseFloat(item.unit_price) || 0,
+        })));
+    }, [items]);
+
+    // Calculate totals
+    const calculateTotals = (currentItems) => {
+        const subtotal = currentItems.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0);
+        const discountAmount = subtotal * (parseFloat(data.discount_percentage) || 0) / 100;
+        const taxAmount = currentItems.reduce((sum, item) => sum + (parseFloat(item.tax_amount) || 0), 0);
+        const total = subtotal - discountAmount + taxAmount;
+
+        return { subtotal, discountAmount, taxAmount, total };
+    };
+
+    const addItem = () => {
+        setItems([...items, {
+            service_id: '',
+            service_name: '',
+            quantity: 1,
+            unit: 'unit',
+            unit_price: 0,
+            tax_type: 'excluded',
+            tax_rate: 17,
+            subtotal: 0,
+            tax_amount: 0,
+            total: 0,
+        }]);
+    };
+
+    const removeItem = (index) => {
+        const newItems = items.filter((_, i) => i !== index);
+        setItems(newItems);
+    };
+
+    const updateItem = (index, field, value) => {
+        const newItems = [...items];
+        newItems[index][field] = value;
+
+        // If service selected, populate fields
+        if (field === 'service_id') {
+            const service = services.find(s => s.id === parseInt(value));
+            if (service) {
+                newItems[index].service_name = service.name;
+                newItems[index].unit = service.unit;
+                newItems[index].unit_price = service.unit_price;
+                newItems[index].tax_type = service.tax_type;
+                newItems[index].tax_rate = service.tax_rate;
+            }
+        }
+
+        // Recalculate item totals
+        const quantity = parseFloat(newItems[index].quantity) || 0;
+        const unitPrice = parseFloat(newItems[index].unit_price) || 0;
+        const taxRate = parseFloat(newItems[index].tax_rate) || 0;
+        const taxType = newItems[index].tax_type;
+
+        newItems[index].subtotal = quantity * unitPrice;
+
+        if (taxType === 'exempt') {
+            newItems[index].tax_amount = 0;
+            newItems[index].total = newItems[index].subtotal;
+        } else if (taxType === 'included') {
+            newItems[index].tax_amount = newItems[index].subtotal - (newItems[index].subtotal / (1 + (taxRate / 100)));
+            newItems[index].total = newItems[index].subtotal;
+        } else {
+            newItems[index].tax_amount = newItems[index].subtotal * (taxRate / 100);
+            newItems[index].total = newItems[index].subtotal + newItems[index].tax_amount;
+        }
+
+        setItems(newItems);
+    };
+
+    const handleSubmit = (e) => {
+        e.preventDefault();
+
+        // Validar se há items
+        if (items.length === 0) {
+            alert('❌ Adicione pelo menos um item à cotação!');
+            return;
+        }
+
+        // Validar cada item
+        const invalidItems = items.filter(item => !item.service_id || item.service_id === '');
+        if (invalidItems.length > 0) {
+            alert('❌ Todos os itens devem ter um serviço selecionado!');
+            return;
+        }
+
+        const invalidQuantities = items.filter(item => !item.quantity || parseFloat(item.quantity) <= 0);
+        if (invalidQuantities.length > 0) {
+            alert('❌ Todos os itens devem ter uma quantidade válida!');
+            return;
+        }
+
+        // data.items já está sincronizado via useEffect, apenas enviar
+        console.log('Enviando cotação com items:', data.items);
+        post('/quotes');
+    };
+
+    const totals = calculateTotals(items);
+
+    return (
+        <DashboardLayout>
+            <Head title="Criar Cotação" />
+
+            <div className="p-6 ml-5 -mt-3 space-y-6">
+                {/* Header */}
+                <div className="flex items-center gap-4">
+                    <Link href="/quotes">
+                        <motion.button
+                            whileHover={{ scale: 1.05 }}
+                            whileTap={{ scale: 0.95 }}
+                            className="p-2 transition-colors rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100"
+                        >
+                            <ArrowLeft className="w-5 h-5" />
+                        </motion.button>
+                    </Link>
+                    <div>
+                        <h1 className="text-2xl font-semibold text-slate-900">
+                            Criar Nova Cotação
+                        </h1>
+                        <p className="mt-1 text-sm text-slate-500">
+                            {nextQuoteNumber}
+                        </p>
+                    </div>
+                </div>
+
+                {/* Service Error Alert */}
+                {servicesError && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 border border-red-200 rounded-lg bg-red-50"
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-sm font-semibold text-red-800">Erro ao Carregar Serviços</h3>
+                                <p className="mt-1 text-sm text-red-700">{servicesError}</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* Basic Info */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-6 bg-white border rounded-lg border-slate-200"
+                    >
+                        <h3 className="mb-4 text-lg font-semibold text-slate-900">
+                            Informações Básicas
+                        </h3>
+
+                        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Cliente *
+                                </label>
+                                <select
+                                    value={data.client_id}
+                                    onChange={(e) => setData('client_id', e.target.value)}
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    required
+                                >
+                                    <option value="">Selecione um cliente</option>
+                                    {clients.map((client) => (
+                                        <option key={client.id} value={client.id}>
+                                            {client.name}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.client_id && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.client_id}</p>
+                                )}
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Processo (Opcional)
+                                </label>
+                                <select
+                                    value={data.shipment_id}
+                                    onChange={(e) => setData('shipment_id', e.target.value)}
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                >
+                                    <option value="">Nenhum processo vinculado</option>
+                                    {/* {console.log("client",shipments?.client?.name)} */}
+                                    {shipments.map((shipment) => (
+                                        <option key={shipment.id} value={shipment.id}>
+                                            {shipment.reference_number} - {shipment.client?.name}
+                                        </option>
+                                    ))}
+                                </select>
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Título *
+                                </label>
+                                <select
+                                    value={data.title}
+                                    onChange={(e) => setData('title', e.target.value)}
+                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    required
+                                >
+                                    <option value="">Selecione um título</option>
+                                    <option value="Proposta Comercial - Frete Marítimo">Proposta Comercial - Frete Marítimo</option>
+                                    <option value="Proposta Comercial - Frete Aéreo">Proposta Comercial - Frete Aéreo</option>
+                                    <option value="Proposta Comercial - Transporte Rodoviário">Proposta Comercial - Transporte Rodoviário</option>
+                                    <option value="Cotação - Desembaraço Aduaneiro">Cotação - Desembaraço Aduaneiro</option>
+                                    <option value="Cotação - Serviços de Armazenagem">Cotação - Serviços de Armazenagem</option>
+                                    <option value="Cotação - Serviços Logísticos Completos">Cotação - Serviços Logísticos Completos</option>
+                                    <option value="Orçamento - Importação Completa">Orçamento - Importação Completa</option>
+                                    <option value="Orçamento - Exportação Completa">Orçamento - Exportação Completa</option>
+                                    <option value="Proposta - Consultoria Logística">Proposta - Consultoria Logística</option>
+                                    <option value="Cotação - Serviços de Manuseio">Cotação - Serviços de Manuseio</option>
+                                </select>
+                                {errors.title && (
+                                    <p className="mt-1 text-sm text-red-600">{errors.title}</p>
+                                )}
+                            </div>
+
+                            <div className="md:col-span-2">
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Descrição
+                                </label>
+                                <textarea
+                                    value={data.description}
+                                    onChange={(e) => setData('description', e.target.value)}
+                                    rows="3"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    placeholder="Descrição detalhada da cotação..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Data da Cotação *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={data.quote_date}
+                                    onChange={(e) => setData('quote_date', e.target.value)}
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Válido Até *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={data.valid_until}
+                                    onChange={(e) => setData('valid_until', e.target.value)}
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    required
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Condições de Pagamento
+                                </label>
+                                <input
+                                    type="text"
+                                    value={data.payment_terms}
+                                    onChange={(e) => setData('payment_terms', e.target.value)}
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    placeholder="Ex: 30 dias, À vista"
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Moeda *
+                                </label>
+                                <select
+                                    value={data.currency}
+                                    onChange={(e) => setData('currency', e.target.value)}
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    required
+                                >
+                                    <option value="MZN">MZN - Metical</option>
+                                    <option value="USD">USD - Dólar</option>
+                                    <option value="EUR">EUR - Euro</option>
+                                </select>
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Items */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.1 }}
+                        className="overflow-hidden bg-white border rounded-lg border-slate-200"
+                    >
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
+                            <h3 className="text-lg font-semibold text-slate-900">
+                                Itens da Cotação
+                            </h3>
+                            <motion.button
+                                whileHover={{ scale: 1.05 }}
+                                whileTap={{ scale: 0.95 }}
+                                type="button"
+                                onClick={addItem}
+                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+                            >
+                                <Plus className="w-4 h-4" />
+                                Adicionar Item
+                            </motion.button>
+                        </div>
+
+                        {items.length === 0 ? (
+                            <div className="px-6 py-12 text-center">
+                                <Calculator className="w-12 h-12 mx-auto text-slate-300" />
+                                <h3 className="mt-2 text-sm font-medium text-slate-900">
+                                    Nenhum item adicionado
+                                </h3>
+                                <p className="mt-1 text-sm text-slate-500">
+                                    Clique em "Adicionar Item" para começar
+                                </p>
+                            </div>
+                        ) : (
+                            <div className="overflow-x-auto">
+                                <table className="w-full">
+                                    <thead className="bg-slate-50">
+                                        <tr>
+                                            <th className="px-4 py-3 text-xs font-medium text-left text-slate-600 uppercase w-[30%]">Serviço</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-center text-slate-600 uppercase w-[12%]">Qtd</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-right text-slate-600 uppercase w-[15%]">Preço Unit.</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-right text-slate-600 uppercase w-[15%]">Subtotal</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-right text-slate-600 uppercase w-[13%]">IVA</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-right text-slate-600 uppercase w-[13%]">Total</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-center text-slate-600 uppercase w-[2%]"></th>
+                                        </tr>
+                                    </thead>
+                                    <tbody className="divide-y divide-slate-200">
+                                        {items.map((item, index) => (
+                                            <tr key={index}>
+                                                <td className="px-4 py-3">
+                                                    <select
+                                                        value={item.service_id}
+                                                        onChange={(e) => updateItem(index, 'service_id', e.target.value)}
+                                                        className="block w-full text-sm rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                                        required
+                                                    >
+                                                        <option value="">Selecione...</option>
+                                                        {services.map((service) => (
+                                                            <option key={service.id} value={service.id}>
+                                                                {service.name}
+                                                            </option>
+                                                        ))}
+                                                    </select>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0.01"
+                                                        value={item.quantity}
+                                                        onChange={(e) => updateItem(index, 'quantity', e.target.value)}
+                                                        className="block w-full text-sm text-center rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                                        required
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <input
+                                                        type="number"
+                                                        step="0.01"
+                                                        min="0"
+                                                        value={item.unit_price}
+                                                        onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
+                                                        className="block w-full text-sm text-right rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                                        required
+                                                    />
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-right text-slate-900">
+                                                    {item.subtotal.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm text-right text-slate-600">
+                                                    {item.tax_amount.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="px-4 py-3 text-sm font-semibold text-right text-slate-900">
+                                                    {item.total.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })}
+                                                </td>
+                                                <td className="px-4 py-3 text-center">
+                                                    <button
+                                                        type="button"
+                                                        onClick={() => removeItem(index)}
+                                                        className="p-1 text-red-600 transition-colors rounded hover:text-red-700 hover:bg-red-50"
+                                                    >
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        )}
+
+                        {/* Totals */}
+                        {items.length > 0 && (
+                            <div className="px-6 py-4 border-t border-slate-200 bg-slate-50">
+                                <div className="max-w-md ml-auto space-y-3">
+                                    <div className="flex justify-between text-sm">
+                                        <dt className="text-slate-600">Subtotal</dt>
+                                        <dd className="font-medium text-slate-900">
+                                            {totals.subtotal.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} {data.currency}
+                                        </dd>
+                                    </div>
+
+                                    <div className="flex items-center justify-between gap-4 text-sm">
+                                        <dt className="text-slate-600">Desconto</dt>
+                                        <dd className="flex items-center gap-2">
+                                            <input
+                                                type="number"
+                                                step="0.01"
+                                                min="0"
+                                                max="100"
+                                                value={data.discount_percentage}
+                                                onChange={(e) => setData('discount_percentage', e.target.value)}
+                                                className="w-20 text-sm text-right rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                            />
+                                            <span className="text-slate-600">%</span>
+                                            <span className="font-medium text-red-600 min-w-[100px] text-right">
+                                                - {totals.discountAmount.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} {data.currency}
+                                            </span>
+                                        </dd>
+                                    </div>
+
+                                    <div className="flex justify-between text-sm">
+                                        <dt className="text-slate-600">IVA Total</dt>
+                                        <dd className="font-medium text-slate-900">
+                                            {totals.taxAmount.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} {data.currency}
+                                        </dd>
+                                    </div>
+
+                                    <div className="flex justify-between pt-3 text-base border-t border-slate-300">
+                                        <dt className="font-semibold text-slate-900">Total</dt>
+                                        <dd className="text-2xl font-bold text-slate-900">
+                                            {totals.total.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} {data.currency}
+                                        </dd>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+                    </motion.div>
+
+                    {/* Terms and Notes */}
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="p-6 bg-white border rounded-lg border-slate-200"
+                    >
+                        <h3 className="mb-4 text-lg font-semibold text-slate-900">
+                            Termos e Observações
+                        </h3>
+
+                        <div className="space-y-4">
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Termos e Condições
+                                </label>
+                                <textarea
+                                    value={data.terms}
+                                    onChange={(e) => setData('terms', e.target.value)}
+                                    rows="4"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    placeholder="Ex: Preços válidos conforme cotação. Sujeito a alteração sem aviso prévio..."
+                                />
+                            </div>
+
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700">
+                                    Notas para o Cliente
+                                </label>
+                                <textarea
+                                    value={data.customer_notes}
+                                    onChange={(e) => setData('customer_notes', e.target.value)}
+                                    rows="3"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
+                                    placeholder="Observações adicionais visíveis ao cliente..."
+                                />
+                            </div>
+                        </div>
+                    </motion.div>
+
+                    {/* Actions */}
+                    <div className="flex items-center justify-end gap-3 pt-6">
+                        <Link href="/quotes">
+                            <button
+                                type="button"
+                                className="px-4 py-2 text-sm font-medium transition-colors bg-white border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
+                            >
+                                Cancelar
+                            </button>
+                        </Link>
+                        <motion.button
+                            whileHover={{ scale: 1.02 }}
+                            whileTap={{ scale: 0.98 }}
+                            type="submit"
+                            disabled={processing || items.length === 0 || loadingServices || servicesError}
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
+                            title={servicesError ? 'Corrija o erro de serviços antes de continuar' : items.length === 0 ? 'Adicione pelo menos um item' : ''}
+                        >
+                            <Save className="w-4 h-4" />
+                            {processing ? 'Criando...' : loadingServices ? 'Carregando...' : 'Criar Cotação'}
+                        </motion.button>
+                    </div>
+                </form>
+            </div>
+        </DashboardLayout>
+    );
+}

@@ -468,6 +468,30 @@ class InvoiceController extends Controller
     /**
      * Preview da fatura em PDF
      */
+    public function show(Invoice $invoice)
+    {
+        $invoice->load(['client', 'shipment', 'items', 'createdBy', 'quote']);
+
+        return Inertia::render('Invoices/Show', [
+            'invoice' => $invoice,
+        ]);
+    }
+
+    public function markAsPaid(Invoice $invoice)
+    {
+        if ($invoice->status === 'paid') {
+            return back()->with('info', 'Esta fatura já está marcada como paga.');
+        }
+
+        $invoice->update([
+            'status' => 'paid',
+            'paid_date' => now(),
+            'updated_by' => auth()->id(),
+        ]);
+
+        return back()->with('success', 'Fatura marcada como paga com sucesso!');
+    }
+
     public function preview(Shipment $shipment)
     {
         \Log::info('Preview invoice requested', ['shipment_id' => $shipment->id]);
@@ -489,7 +513,7 @@ class InvoiceController extends Controller
 
         if (!Storage::disk('public')->exists($invoice->file_path)) {
             \Log::error('Invoice file not found', ['file_path' => $invoice->file_path]);
-            abort(404, 'Arquivo da fatura não encontrado');
+            abort(404, 'Arquivo da fatura não encontrada');
         }
 
         return response()->file(Storage::disk('public')->path($invoice->file_path));

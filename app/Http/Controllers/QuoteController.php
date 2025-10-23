@@ -9,9 +9,12 @@ use App\Models\InvoiceItem;
 use App\Models\Client;
 use App\Models\Shipment;
 use App\Models\ServiceCatalog;
+use App\Mail\QuoteMail;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Mail;
+use Barryvdh\DomPDF\Facade\Pdf;
 
 class QuoteController extends Controller
 {
@@ -39,7 +42,7 @@ class QuoteController extends Controller
     public function create()
     {
         $clients = Client::active()->orderBy('name')->get();
-        $shipments = Shipment::whereNotIn('status', ['completed', 'cancelled'])
+        $shipments = Shipment::with('client')->whereNotIn('status', ['completed', 'cancelled'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -52,6 +55,8 @@ class QuoteController extends Controller
 
     public function store(Request $request)
     {
+
+        // dd($request->all());
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
             'shipment_id' => 'nullable|exists:shipments,id',
@@ -97,6 +102,7 @@ class QuoteController extends Controller
                 $service = ServiceCatalog::find($itemData['service_id']);
 
                 $item = new QuoteItem([
+                    'quote_id' => $quote->id,
                     'service_id' => $service->id,
                     'service_code' => $service->code,
                     'service_name' => $service->name,
@@ -335,7 +341,39 @@ class QuoteController extends Controller
      */
     public function exportPdf(Quote $quote)
     {
-        // TODO: Implement PDF generation
-        return back()->with('info', 'Exportação de PDF será implementada em breve.');
+        $quote->load(['client', 'items', 'createdBy']);
+
+        $pdf = Pdf::loadView('pdfs.quote', compact('quote'));
+        $pdf->setPaper('a4', 'portrait');
+
+        return $pdf->download("{$quote->quote_number}.pdf");
+    }
+
+    /**
+     * Send quote by email
+     */
+    public function sendEmail(Quote $quote)
+    {
+        $quote->load(['client', 'items']);
+
+        if (!$quote->client->email) {
+            return back()->with('error', 'Cliente não possui email cadastrado.');
+        }
+
+        try {
+            Mail::to($quote->client->email)->send(new QuoteMail($quote));
+
+            // Update status if it's a draft
+            if ($quote->status === 'draft') {
+                $quote->update([
+                    'status' => 'sent',
+                    'updated_by' => auth()->id(),
+                ]);
+            }
+
+            return back()->with('success', "Cotação enviada para {$quote->client->email} com sucesso!");
+        } catch (\Exception $e) {
+            return back()->with('error', 'Erro ao enviar email: ' . $e->getMessage());
+        }
     }
 }

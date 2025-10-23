@@ -43,8 +43,8 @@
         <script src="resources/js/app.jsx"></script>
         @inertiaHead
     </head>
-    <body class="font-sans popins bg-[url('/background.min.svg')] bg-cover bg-center bg-fixed bg-no-repeat">
+    <body style='zoom: 90%;' class="font-sans popins bg-[url('/background.min.svg')] bg-cover bg-center bg-fixed bg-no-repeat">
 
         @inertia
-    </body>
+    </body >
 </html>

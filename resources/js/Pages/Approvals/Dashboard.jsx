@@ -600,7 +600,7 @@ function StatCard ({ title, value, icon: Icon, subtitle, color = 'blue' }) {
     }
 
     return (
-        <div className='p-6 bg-white border rounded-xl border-slate-200'>
+        <div className='p-6 border bg-white/50 rounded-xl backdrop-blur-xl border-slate-200'>
             <div className='flex items-center justify-between mb-4'>
                 <div className={`p-3 rounded-lg ${colorClasses[color]}`}>
                     <Icon className='w-6 h-6' />

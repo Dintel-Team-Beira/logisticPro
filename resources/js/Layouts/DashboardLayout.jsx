@@ -27,8 +27,10 @@ import {
     Info,
     XCircle,
     TrendingUp,
-    Clock
+    Clock,
+    RefreshCcw
 } from 'lucide-react';
+import axios from 'axios';
 
 export default function DashboardLayout({ children }) {
     const { auth, flash, stats } = usePage().props;
@@ -169,6 +171,20 @@ export default function DashboardLayout({ children }) {
             roles: ['admin', 'manager', 'finance'],
             badge: stats?.pendingInvoices || null,
         },
+        {
+            name: 'Cotações',
+            icon: FileText,
+            href: '/quotes',
+            roles: ['admin', 'manager', 'finance'],
+            badge: null
+        },
+        {
+            name: 'Serviços',
+            icon: Settings,
+            href: '/services',
+            roles: ['admin', 'manager'],
+            badge: null
+        },
 
         // ========== APROVAÇÕES (ADMIN + MANAGER) ==========
         {
@@ -238,7 +254,7 @@ export default function DashboardLayout({ children }) {
     }, [flash]);
 
     return (
-        <div className="min-h-screen ">
+        <div  className="min-h-screen ">
             {/* Global Search Modal */}
             <GlobalSearchModal
                 isOpen={searchModalOpen}
@@ -368,7 +384,7 @@ function Topbar({
                         <div className="w-full pl-12 pr-20 py-2.5 bg-gray-100 border-0 rounded-xl text-left text-gray-500 group-hover:bg-gray-200 group-hover:text-gray-700 transition-all cursor-text">
                             Pesquisar processos, clientes, documentos...
                         </div>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+                        <div className="absolute flex items-center gap-1 -translate-y-1/2 pointer-events-none right-4 top-1/2">
                             <kbd className="px-2 py-1 text-xs font-semibold text-gray-500 bg-white border border-gray-300 rounded shadow-sm">
                                 {navigator.platform.indexOf('Mac') !== -1 ? '⌘' : 'Ctrl'}
                             </kbd>
@@ -492,14 +508,47 @@ function Topbar({
 // Sidebar Component
 function Sidebar({ sidebarOpen, menuItems, userRole }) {
     const [expandedItems, setExpandedItems] = useState([]);
+    const [exchangeRates, setExchangeRates] = useState({
+        USD_MZN: 63.85,
+        EUR_MZN: 69.23,
+        ZAR_MZN: 3.54,
+        updated_at: new Date().toISOString(),
+    });
     const currentPath = window.location.pathname;
 
     const toggleSubmenu = (itemName) => {
-        setExpandedItems(prev =>
+        setExpandedItems((prev) =>
             prev.includes(itemName)
-                ? prev.filter(i => i !== itemName)
+                ? prev.filter((i) => i !== itemName)
                 : [...prev, itemName]
         );
+    };
+
+    // Fetch exchange rates from the API
+    useEffect(() => {
+        const fetchExchangeRates = async () => {
+            try {
+                const response = await axios.get('/api/exchange-rates');
+                setExchangeRates(response.data);
+            } catch (error) {
+                console.error('Error fetching exchange rates:', error);
+            }
+        };
+
+        fetchExchangeRates();
+        // Optionally, poll for updates every 5 minutes
+        const interval = setInterval(fetchExchangeRates, 5 * 60 * 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    // Calculate time since last update
+    const getTimeSinceUpdate = () => {
+        const updatedAt = new Date(exchangeRates.updated_at);
+        const now = new Date();
+        const diffMinutes = Math.floor((now - updatedAt) / (1000 * 60));
+        return diffMinutes < 60
+            ? `Atualizado há ${diffMinutes} min`
+            : `Atualizado há ${Math.floor(diffMinutes / 60)} h`;
     };
 
     return (
@@ -524,23 +573,78 @@ function Sidebar({ sidebarOpen, menuItems, userRole }) {
                     ))}
                 </nav>
 
-                {/* User Card at Bottom */}
+                {/* User Card with Exchange Rates */}
                 {sidebarOpen && (
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
                         className="p-4 border-t border-gray-200"
                     >
-                        <div className="p-4 bg-gradient-to-br from-blue-50 to-purple-50 rounded-xl">
-                            <p className="mb-1 text-sm font-semibold text-gray-900">
-                                Plano Pro
-                            </p>
-                            <p className="mb-3 text-xs text-gray-600">
-                                Shipments ilimitados
-                            </p>
-                            <button className="w-full px-3 py-2 text-sm font-semibold text-white transition-all rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700">
-                                Upgrade
-                            </button>
+                        <div className="p-2 rounded-xl">
+                            <div className="flex items-center justify-between mb-3">
+                                <p className="text-sm font-semibold text-gray-900">
+                                    💱 {getTimeSinceUpdate()}
+                                </p>
+                            </div>
+
+                            <div className="mb-3 space-y-2">
+                                {/* USD → MZN */}
+                                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">🇺🇸</span>
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-700">USD → MZN</p>
+                                            <p className="text-xs text-gray-500">Dólar</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-gray-900">
+                                            {exchangeRates.USD_MZN.toFixed(2)}
+                                        </p>
+                                        <p className="flex items-center gap-1 text-xs text-green-600">
+                                            <span>↗</span> +0.12%
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* EUR → MZN */}
+                                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">🇪🇺</span>
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-700">EUR → MZN</p>
+                                            <p className="text-xs text-gray-500">Euro</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-gray-900">
+                                            {exchangeRates.EUR_MZN.toFixed(2)}
+                                        </p>
+                                        <p className="flex items-center gap-1 text-xs text-red-600">
+                                            <span>↘</span> -0.08%
+                                        </p>
+                                    </div>
+                                </div>
+
+                                {/* ZAR → MZN */}
+                                <div className="flex items-center justify-between p-2 bg-white rounded-lg">
+                                    <div className="flex items-center gap-2">
+                                        <span className="text-lg">🇿🇦</span>
+                                        <div>
+                                            <p className="text-xs font-medium text-gray-700">ZAR → MZN</p>
+                                            <p className="text-xs text-gray-500">Rand</p>
+                                        </div>
+                                    </div>
+                                    <div className="text-right">
+                                        <p className="text-sm font-bold text-gray-900">
+                                            {exchangeRates.ZAR_MZN.toFixed(2)}
+                                        </p>
+                                        <p className="flex items-center gap-1 text-xs text-green-600">
+                                            <span>↗</span> +0.05%
+                                        </p>
+                                    </div>
+                                </div>
+                            </div>
                         </div>
                     </motion.div>
                 )}

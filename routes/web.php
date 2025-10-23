@@ -691,6 +691,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/invoices', [App\Http\Controllers\InvoiceController::class, 'index'])
         ->name('invoices.index');
 
+    // Ver fatura específica
+    Route::get('/invoices/{invoice}/show', [App\Http\Controllers\InvoiceController::class, 'show'])
+        ->name('invoices.show');
+
+    // Marcar fatura como paga
+    Route::post('/invoices/{invoice}/mark-as-paid', [App\Http\Controllers\InvoiceController::class, 'markAsPaid'])
+        ->name('invoices.mark-as-paid');
+
     // API: Calcular custos e preview (RF-020)
     Route::get('/invoices/{shipment}/calculate', [App\Http\Controllers\InvoiceController::class, 'calculateCosts'])
         ->name('invoices.calculate');
@@ -718,6 +726,81 @@ Route::middleware(['auth'])->group(function () {
 
     Route::put('/invoices', [SettingsController::class, 'updateInvoiceSettings'])
     ->name('settings.invoices.update');
+
+// ============================================================================
+// COTAÇÕES - Sistema de Orçamentos/Quotations
+// ============================================================================
+Route::middleware(['auth'])->prefix('quotes')->name('quotes.')->group(function () {
+
+    // CRUD de Cotações
+    Route::get('/', [App\Http\Controllers\QuoteController::class, 'index'])
+        ->name('index');
+
+    Route::get('/create', [App\Http\Controllers\QuoteController::class, 'create'])
+        ->name('create');
+
+    Route::post('/', [App\Http\Controllers\QuoteController::class, 'store'])
+        ->name('store');
+
+    Route::get('/{quote}', [App\Http\Controllers\QuoteController::class, 'show'])
+        ->name('show');
+
+    Route::get('/{quote}/edit', [App\Http\Controllers\QuoteController::class, 'edit'])
+        ->name('edit');
+
+    Route::put('/{quote}', [App\Http\Controllers\QuoteController::class, 'update'])
+        ->name('update');
+
+    Route::delete('/{quote}', [App\Http\Controllers\QuoteController::class, 'destroy'])
+        ->name('destroy');
+
+    // Ações especiais
+    Route::post('/{quote}/update-status', [App\Http\Controllers\QuoteController::class, 'updateStatus'])
+        ->name('update-status');
+
+    Route::post('/{quote}/convert-to-invoice', [App\Http\Controllers\QuoteController::class, 'convertToInvoice'])
+        ->name('convert-to-invoice');
+
+    Route::get('/{quote}/pdf', [App\Http\Controllers\QuoteController::class, 'exportPdf'])
+        ->name('pdf');
+
+    Route::post('/{quote}/send-email', [App\Http\Controllers\QuoteController::class, 'sendEmail'])
+        ->name('send-email');
+});
+
+// ============================================================================
+// CATÁLOGO DE SERVIÇOS - Gestão de Serviços para Cotações
+// ============================================================================
+Route::middleware(['auth'])->prefix('services')->name('services.')->group(function () {
+
+    // CRUD de Serviços
+    Route::get('/', [App\Http\Controllers\ServiceCatalogController::class, 'index'])
+        ->name('index');
+
+    Route::get('/create', [App\Http\Controllers\ServiceCatalogController::class, 'create'])
+        ->name('create');
+
+    Route::post('/', [App\Http\Controllers\ServiceCatalogController::class, 'store'])
+        ->name('store');
+
+    Route::get('/{service}/edit', [App\Http\Controllers\ServiceCatalogController::class, 'edit'])
+        ->name('edit');
+
+    Route::put('/{service}', [App\Http\Controllers\ServiceCatalogController::class, 'update'])
+        ->name('update');
+
+    Route::delete('/{service}', [App\Http\Controllers\ServiceCatalogController::class, 'destroy'])
+        ->name('destroy');
+
+    // Ações especiais
+    Route::post('/{service}/toggle', [App\Http\Controllers\ServiceCatalogController::class, 'toggle'])
+        ->name('toggle');
+
+    // API: Buscar serviços ativos (para seleção)
+    Route::get('/active', [App\Http\Controllers\ServiceCatalogController::class, 'getActive'])
+        ->name('active');
+});
+
 // ============================================================================
 // RELATÓRIOS - RF-028, RF-029, RF-030
 // Restrito a admin e manager
