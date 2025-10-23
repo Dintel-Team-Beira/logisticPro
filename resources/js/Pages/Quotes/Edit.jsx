@@ -68,6 +68,15 @@ export default function Edit({ quote, clients, shipments }) {
         }
     }, [quote]);
 
+    // Sincronizar items com data.items SEMPRE que items mudar
+    useEffect(() => {
+        setData('items', items.map(item => ({
+            service_id: parseInt(item.service_id) || 0,
+            quantity: parseFloat(item.quantity) || 0,
+            unit_price: parseFloat(item.unit_price) || 0,
+        })));
+    }, [items]);
+
     // Calculate totals
     const calculateTotals = (currentItems) => {
         const subtotal = currentItems.reduce((sum, item) => sum + (parseFloat(item.subtotal) || 0), 0);
@@ -158,16 +167,9 @@ export default function Edit({ quote, clients, shipments }) {
             return;
         }
 
-        const formData = {
-            ...data,
-            items: items.map(item => ({
-                service_id: parseInt(item.service_id),
-                quantity: parseFloat(item.quantity),
-                unit_price: parseFloat(item.unit_price),
-            })),
-        };
-
-        put(`/quotes/${quote.id}`, formData);
+        // data.items já está sincronizado via useEffect, apenas enviar
+        console.log('Atualizando cotação com items:', data.items);
+        put(`/quotes/${quote.id}`);
     };
 
     const totals = calculateTotals(items);
@@ -275,14 +277,24 @@ export default function Edit({ quote, clients, shipments }) {
                                 <label className="block text-sm font-medium text-slate-700">
                                     Título *
                                 </label>
-                                <input
-                                    type="text"
+                                <select
                                     value={data.title}
                                     onChange={(e) => setData('title', e.target.value)}
                                     className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
-                                    placeholder="Ex: Proposta Comercial - Frete Internacional"
                                     required
-                                />
+                                >
+                                    <option value="">Selecione um título</option>
+                                    <option value="Proposta Comercial - Frete Marítimo">Proposta Comercial - Frete Marítimo</option>
+                                    <option value="Proposta Comercial - Frete Aéreo">Proposta Comercial - Frete Aéreo</option>
+                                    <option value="Proposta Comercial - Transporte Rodoviário">Proposta Comercial - Transporte Rodoviário</option>
+                                    <option value="Cotação - Desembaraço Aduaneiro">Cotação - Desembaraço Aduaneiro</option>
+                                    <option value="Cotação - Serviços de Armazenagem">Cotação - Serviços de Armazenagem</option>
+                                    <option value="Cotação - Serviços Logísticos Completos">Cotação - Serviços Logísticos Completos</option>
+                                    <option value="Orçamento - Importação Completa">Orçamento - Importação Completa</option>
+                                    <option value="Orçamento - Exportação Completa">Orçamento - Exportação Completa</option>
+                                    <option value="Proposta - Consultoria Logística">Proposta - Consultoria Logística</option>
+                                    <option value="Cotação - Serviços de Manuseio">Cotação - Serviços de Manuseio</option>
+                                </select>
                                 {errors.title && (
                                     <p className="mt-1 text-sm text-red-600">{errors.title}</p>
                                 )}
