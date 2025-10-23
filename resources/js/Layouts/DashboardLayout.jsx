@@ -248,15 +248,8 @@ export default function DashboardLayout({ children }) {
             {/* Notification Toasts - Aparecem automaticamente */}
             <NotificationToasts
                 notifications={notifications}
-                onDismiss={(id) => {
-                    // Marcar como lida quando fechar
-                    fetch(`/notifications/${id}/read`, {
-                        method: 'POST',
-                        headers: {
-                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
-                        },
-                    });
-                }}
+                // Não marcar como lida ao fechar toast - apenas esconder
+                // Usuário deve marcar como lida no dropdown
             />
 
             {/* Flash Messages */}

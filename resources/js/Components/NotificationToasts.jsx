@@ -6,54 +6,95 @@ import { router } from '@inertiajs/react';
 export default function NotificationToasts({ notifications, onDismiss }) {
     const [visible, setVisible] = useState([]);
 
-    useEffect(() => {
-        // Quando novas notificações chegarem, mostrar as não lidas
-        const unreadNotifications = notifications
-            .filter(n => !n.read)
-            .slice(0, 3); // Máximo 3 toasts por vez
+    // Obter IDs de notificações já mostradas do localStorage
+    const getShownNotifications = () => {
+        try {
+            const shown = localStorage.getItem('shown_notifications');
+            return shown ? JSON.parse(shown) : [];
+        } catch {
+            return [];
+        }
+    };
 
-        // Verificar se há novas notificações
-        const newNotifications = unreadNotifications.filter(
-            newNotif => !visible.some(v => v.id === newNotif.id)
-        );
+    // Adicionar notificação como "já mostrada"
+    const markAsShown = (id) => {
+        try {
+            const shown = getShownNotifications();
+            if (!shown.includes(id)) {
+                shown.push(id);
+                // Manter apenas últimas 100 notificações no histórico
+                const recentShown = shown.slice(-100);
+                localStorage.setItem('shown_notifications', JSON.stringify(recentShown));
+            }
+        } catch (error) {
+            console.error('Erro ao salvar notificação mostrada:', error);
+        }
+    };
+
+    useEffect(() => {
+        // Obter lista de notificações já mostradas
+        const shownIds = getShownNotifications();
+
+        // Filtrar apenas notificações não lidas E que NUNCA foram mostradas
+        const newNotifications = notifications
+            .filter(n => !n.read && !shownIds.includes(n.id))
+            .slice(0, 3); // Máximo 3 toasts por vez
 
         if (newNotifications.length > 0) {
             // Tocar som para cada nova notificação
-            newNotifications.forEach(() => playNotificationSound());
+            newNotifications.forEach((notif) => {
+                playNotificationSound();
+                // Marcar como "já mostrada" imediatamente
+                markAsShown(notif.id);
+            });
 
-            // Adicionar às visíveis
-            setVisible(prev => [...newNotifications, ...prev].slice(0, 3));
+            // Adicionar às visíveis (sem duplicar)
+            setVisible(prev => {
+                const existingIds = prev.map(v => v.id);
+                const toAdd = newNotifications.filter(n => !existingIds.includes(n.id));
+                return [...toAdd, ...prev].slice(0, 3);
+            });
         }
     }, [notifications]);
 
     const playNotificationSound = () => {
-        // Som de notificação irritante/longo
-        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        try {
+            // Som de notificação irritante/longo
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
 
-        // Criar oscilador para som mais irritante
-        const oscillator = audioContext.createOscillator();
-        const gainNode = audioContext.createGain();
+            // Criar oscilador para som mais irritante
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
 
-        oscillator.connect(gainNode);
-        gainNode.connect(audioContext.destination);
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
 
-        // Frequências para som mais irritante (tipo alarme)
-        oscillator.type = 'sine';
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
-        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
-        oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
-        oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.3);
+            // Frequências para som mais irritante (tipo alarme)
+            oscillator.type = 'sine';
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.1);
+            oscillator.frequency.setValueAtTime(800, audioContext.currentTime + 0.2);
+            oscillator.frequency.setValueAtTime(1000, audioContext.currentTime + 0.3);
 
-        // Volume
-        gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
-        gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
+            // Volume
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.8);
 
-        oscillator.start(audioContext.currentTime);
-        oscillator.stop(audioContext.currentTime + 0.8);
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + 0.8);
+        } catch (error) {
+            console.error('Erro ao tocar som:', error);
+        }
     };
 
     const handleDismiss = (id) => {
+        // Remover do estado de visíveis
         setVisible(prev => prev.filter(n => n.id !== id));
+
+        // Garantir que está marcada como mostrada
+        markAsShown(id);
+
+        // Callback opcional (pode marcar como lida se necessário)
         if (onDismiss) {
             onDismiss(id);
         }
@@ -69,13 +110,13 @@ export default function NotificationToasts({ notifications, onDismiss }) {
     const getIcon = (type) => {
         switch (type) {
             case 'success':
-                return <CheckCircle className="w-6 h-6 text-green-500" />;
+                return <CheckCircle className="w-5 h-5 text-green-600" />;
             case 'warning':
-                return <AlertCircle className="w-6 h-6 text-yellow-500" />;
+                return <AlertCircle className="w-5 h-5 text-yellow-600" />;
             case 'error':
-                return <XCircle className="w-6 h-6 text-red-500" />;
+                return <XCircle className="w-5 h-5 text-red-600" />;
             default:
-                return <Info className="w-6 h-6 text-blue-500" />;
+                return <Info className="w-5 h-5 text-blue-600" />;
         }
     };
 
@@ -127,9 +168,7 @@ export default function NotificationToasts({ notifications, onDismiss }) {
                                 relative w-96 p-4 rounded-xl border-2
                                 bg-gradient-to-br ${getBackgroundColor(notification.type)}
                                 shadow-2xl backdrop-blur-xl
-                                cursor-pointer hover:scale-105 transition-transform
                             `}
-                            onClick={() => handleClick(notification)}
                         >
                             {/* Pulse Animation Background */}
                             <motion.div
@@ -146,7 +185,7 @@ export default function NotificationToasts({ notifications, onDismiss }) {
                             />
 
                             <div className="relative flex items-start gap-3">
-                                {/* Icon */}
+                                {/* Icon Tipo de Notificação */}
                                 <motion.div
                                     animate={{
                                         rotate: [0, 10, -10, 0],
@@ -163,22 +202,29 @@ export default function NotificationToasts({ notifications, onDismiss }) {
                                 </motion.div>
 
                                 {/* Content */}
-                                <div className="flex-1 min-w-0">
+                                <div
+                                    className="flex-1 min-w-0 cursor-pointer"
+                                    onClick={() => handleClick(notification)}
+                                >
                                     <div className="flex items-start justify-between gap-2">
-                                        <h4 className="text-sm font-bold text-gray-900">
-                                            {notification.title}
-                                        </h4>
-                                        <motion.button
-                                            whileHover={{ scale: 1.2, rotate: 90 }}
-                                            whileTap={{ scale: 0.9 }}
-                                            onClick={(e) => {
-                                                e.stopPropagation();
-                                                handleDismiss(notification.id);
-                                            }}
-                                            className="flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
-                                        >
-                                            <X className="w-4 h-4" />
-                                        </motion.button>
+                                        <div className="flex items-center gap-2">
+                                            <h4 className="text-sm font-bold text-gray-900">
+                                                {notification.title}
+                                            </h4>
+                                            {/* Bell Icon ao lado do título */}
+                                            <motion.div
+                                                animate={{
+                                                    rotate: [-15, 15, -15],
+                                                }}
+                                                transition={{
+                                                    duration: 0.4,
+                                                    repeat: Infinity,
+                                                    repeatDelay: 1.5
+                                                }}
+                                            >
+                                                <Bell className="w-4 h-4 text-blue-600 fill-blue-500" />
+                                            </motion.div>
+                                        </div>
                                     </div>
                                     <p className="mt-1 text-xs text-gray-700 line-clamp-2">
                                         {notification.message}
@@ -188,30 +234,19 @@ export default function NotificationToasts({ notifications, onDismiss }) {
                                     </p>
                                 </div>
 
-                                {/* Bell Icon animado */}
-                                <motion.div
-                                    animate={{
-                                        rotate: [-10, 10, -10],
+                                {/* Close Button */}
+                                <motion.button
+                                    whileHover={{ scale: 1.2, rotate: 90 }}
+                                    whileTap={{ scale: 0.9 }}
+                                    onClick={(e) => {
+                                        e.stopPropagation();
+                                        handleDismiss(notification.id);
                                     }}
-                                    transition={{
-                                        duration: 0.3,
-                                        repeat: Infinity,
-                                        repeatDelay: 1.5
-                                    }}
-                                    className="absolute -top-1 -right-1"
+                                    className="flex-shrink-0 p-1 text-gray-400 hover:text-gray-600 hover:bg-white/50 rounded-full transition-colors"
                                 >
-                                    <Bell className="w-4 h-4 text-blue-500 fill-blue-500" />
-                                </motion.div>
+                                    <X className="w-4 h-4" />
+                                </motion.button>
                             </div>
-
-                            {/* Progress bar (auto-dismiss após 10 segundos) */}
-                            <motion.div
-                                className="absolute bottom-0 left-0 h-1 bg-blue-500 rounded-b-xl"
-                                initial={{ width: "100%" }}
-                                animate={{ width: "0%" }}
-                                transition={{ duration: 10, ease: "linear" }}
-                                onAnimationComplete={() => handleDismiss(notification.id)}
-                            />
                         </motion.div>
                     </motion.div>
                 ))}
