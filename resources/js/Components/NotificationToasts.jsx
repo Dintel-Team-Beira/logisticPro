@@ -5,8 +5,36 @@ import { router } from '@inertiajs/react';
 
 export default function NotificationToasts({ notifications, onDismiss }) {
     const [visible, setVisible] = useState([]);
+    const [initialized, setInitialized] = useState(false);
 
-    // Obter IDs de notificações já mostradas do localStorage
+    // ============================================
+    // GESTÃO DE TOASTS VISÍVEIS (PERSISTENTES)
+    // ============================================
+
+    // Obter IDs de toasts que devem estar visíveis (persistem em reload/logout)
+    const getVisibleToastIds = () => {
+        try {
+            const visibleIds = localStorage.getItem('visible_toast_ids');
+            return visibleIds ? JSON.parse(visibleIds) : [];
+        } catch {
+            return [];
+        }
+    };
+
+    // Salvar IDs de toasts visíveis
+    const saveVisibleToastIds = (ids) => {
+        try {
+            localStorage.setItem('visible_toast_ids', JSON.stringify(ids));
+        } catch (error) {
+            console.error('Erro ao salvar toasts visíveis:', error);
+        }
+    };
+
+    // ============================================
+    // GESTÃO DE NOTIFICAÇÕES JÁ MOSTRADAS
+    // ============================================
+
+    // Obter IDs de notificações já mostradas (para não tocar som novamente)
     const getShownNotifications = () => {
         try {
             const shown = localStorage.getItem('shown_notifications');
@@ -31,9 +59,40 @@ export default function NotificationToasts({ notifications, onDismiss }) {
         }
     };
 
+    // ============================================
+    // INICIALIZAÇÃO - RESTAURAR TOASTS AO CARREGAR
+    // ============================================
+
     useEffect(() => {
-        // Obter lista de notificações já mostradas
+        if (!initialized && notifications.length > 0) {
+            // Restaurar toasts que estavam visíveis antes do reload
+            const visibleIds = getVisibleToastIds();
+
+            if (visibleIds.length > 0) {
+                // Encontrar notificações que ainda existem e devem estar visíveis
+                const toastsToRestore = notifications.filter(n =>
+                    visibleIds.includes(n.id) && !n.read
+                );
+
+                if (toastsToRestore.length > 0) {
+                    setVisible(toastsToRestore.slice(0, 3));
+                }
+            }
+
+            setInitialized(true);
+        }
+    }, [notifications, initialized]);
+
+    // ============================================
+    // DETECTAR NOVAS NOTIFICAÇÕES
+    // ============================================
+
+    useEffect(() => {
+        if (!initialized) return; // Esperar inicialização
+
+        // Obter lista de notificações já mostradas (para não tocar som)
         const shownIds = getShownNotifications();
+        const visibleIds = getVisibleToastIds();
 
         // Filtrar apenas notificações não lidas E que NUNCA foram mostradas
         const newNotifications = notifications
@@ -41,10 +100,10 @@ export default function NotificationToasts({ notifications, onDismiss }) {
             .slice(0, 3); // Máximo 3 toasts por vez
 
         if (newNotifications.length > 0) {
-            // Tocar som para cada nova notificação
+            // Tocar som APENAS para notificações NOVAS
             newNotifications.forEach((notif) => {
                 playNotificationSound();
-                // Marcar como "já mostrada" imediatamente
+                // Marcar como "já mostrada" para não tocar som novamente
                 markAsShown(notif.id);
             });
 
@@ -52,10 +111,20 @@ export default function NotificationToasts({ notifications, onDismiss }) {
             setVisible(prev => {
                 const existingIds = prev.map(v => v.id);
                 const toAdd = newNotifications.filter(n => !existingIds.includes(n.id));
-                return [...toAdd, ...prev].slice(0, 3);
+                const newVisible = [...toAdd, ...prev].slice(0, 3);
+
+                // Salvar IDs dos toasts visíveis no localStorage
+                const newVisibleIds = newVisible.map(v => v.id);
+                saveVisibleToastIds(newVisibleIds);
+
+                return newVisible;
             });
         }
-    }, [notifications]);
+    }, [notifications, initialized]);
+
+    // ============================================
+    // SOM DE NOTIFICAÇÃO
+    // ============================================
 
     const playNotificationSound = () => {
         try {
@@ -87,9 +156,21 @@ export default function NotificationToasts({ notifications, onDismiss }) {
         }
     };
 
+    // ============================================
+    // FECHAR TOAST
+    // ============================================
+
     const handleDismiss = (id) => {
         // Remover do estado de visíveis
-        setVisible(prev => prev.filter(n => n.id !== id));
+        setVisible(prev => {
+            const newVisible = prev.filter(n => n.id !== id);
+
+            // Atualizar localStorage - remover este toast dos visíveis
+            const newVisibleIds = newVisible.map(v => v.id);
+            saveVisibleToastIds(newVisibleIds);
+
+            return newVisible;
+        });
 
         // Garantir que está marcada como mostrada
         markAsShown(id);
@@ -100,12 +181,20 @@ export default function NotificationToasts({ notifications, onDismiss }) {
         }
     };
 
+    // ============================================
+    // CLICK NO TOAST
+    // ============================================
+
     const handleClick = (notification) => {
         if (notification.action_url) {
             router.visit(notification.action_url);
             handleDismiss(notification.id);
         }
     };
+
+    // ============================================
+    // HELPERS DE UI
+    // ============================================
 
     const getIcon = (type) => {
         switch (type) {
