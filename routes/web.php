@@ -691,6 +691,14 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/invoices', [App\Http\Controllers\InvoiceController::class, 'index'])
         ->name('invoices.index');
 
+    // Ver fatura específica
+    Route::get('/invoices/{invoice}/show', [App\Http\Controllers\InvoiceController::class, 'show'])
+        ->name('invoices.show');
+
+    // Marcar fatura como paga
+    Route::post('/invoices/{invoice}/mark-as-paid', [App\Http\Controllers\InvoiceController::class, 'markAsPaid'])
+        ->name('invoices.mark-as-paid');
+
     // API: Calcular custos e preview (RF-020)
     Route::get('/invoices/{shipment}/calculate', [App\Http\Controllers\InvoiceController::class, 'calculateCosts'])
         ->name('invoices.calculate');
@@ -755,6 +763,9 @@ Route::middleware(['auth'])->prefix('quotes')->name('quotes.')->group(function (
 
     Route::get('/{quote}/pdf', [App\Http\Controllers\QuoteController::class, 'exportPdf'])
         ->name('pdf');
+
+    Route::post('/{quote}/send-email', [App\Http\Controllers\QuoteController::class, 'sendEmail'])
+        ->name('send-email');
 });
 
 // ============================================================================
