@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import Logo  from '@/Components/Logo';
 import GlobalSearch from '@/Components/GlobalSearch';
 import GlobalSearchModal from '@/Components/Search/GlobalSearchModal';
+import NotificationToasts from '@/Components/NotificationToasts';
 import {
     Home,
     Package,
@@ -74,8 +75,8 @@ export default function DashboardLayout({ children }) {
         // Fetch immediately
         fetchNotifications();
 
-        // Poll every 30 seconds for new notifications
-        const interval = setInterval(fetchNotifications, 30000);
+        // Poll every 10 seconds for new notifications (tempo real)
+        const interval = setInterval(fetchNotifications, 10000);
 
         return () => clearInterval(interval);
     }, []);
@@ -244,6 +245,20 @@ export default function DashboardLayout({ children }) {
                 onClose={() => setSearchModalOpen(false)}
             />
 
+            {/* Notification Toasts - Aparecem automaticamente */}
+            <NotificationToasts
+                notifications={notifications}
+                onDismiss={(id) => {
+                    // Marcar como lida quando fechar
+                    fetch(`/notifications/${id}/read`, {
+                        method: 'POST',
+                        headers: {
+                            'X-CSRF-TOKEN': document.querySelector('meta[name="csrf-token"]').content,
+                        },
+                    });
+                }}
+            />
+
             {/* Flash Messages */}
             <FlashMessages flash={flash} />
 
@@ -378,18 +393,49 @@ function Topbar({
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
+                            animate={unreadCount > 0 ? {
+                                rotate: [-10, 10, -10, 10, 0],
+                            } : {}}
+                            transition={{
+                                duration: 0.5,
+                                repeat: unreadCount > 0 ? Infinity : 0,
+                                repeatDelay: 2
+                            }}
                             onClick={() => setNotificationsOpen(!notificationsOpen)}
                             className="relative p-2 transition-colors rounded-xl hover:bg-gray-100"
                         >
-                            <Bell className="w-6 h-6 text-gray-600" />
+                            <Bell className={`w-6 h-6 ${unreadCount > 0 ? 'text-red-500' : 'text-gray-600'}`} />
                             {unreadCount > 0 && (
-                                <motion.span
-                                    initial={{ scale: 0 }}
-                                    animate={{ scale: 1 }}
-                                    className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full top-1 right-1"
-                                >
-                                    {unreadCount}
-                                </motion.span>
+                                <>
+                                    {/* Pulse effect background */}
+                                    <motion.span
+                                        animate={{
+                                            scale: [1, 1.5, 1],
+                                            opacity: [0.7, 0, 0.7],
+                                        }}
+                                        transition={{
+                                            duration: 1.5,
+                                            repeat: Infinity,
+                                            ease: "easeInOut"
+                                        }}
+                                        className="absolute w-5 h-5 bg-red-500 rounded-full top-1 right-1"
+                                    />
+                                    {/* Badge */}
+                                    <motion.span
+                                        initial={{ scale: 0 }}
+                                        animate={{
+                                            scale: [1, 1.2, 1],
+                                        }}
+                                        transition={{
+                                            duration: 0.8,
+                                            repeat: Infinity,
+                                            ease: "easeInOut"
+                                        }}
+                                        className="absolute flex items-center justify-center w-5 h-5 text-xs font-bold text-white bg-red-500 rounded-full shadow-lg top-1 right-1"
+                                    >
+                                        {unreadCount}
+                                    </motion.span>
+                                </>
                             )}
                         </motion.button>
 
