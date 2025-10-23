@@ -238,7 +238,7 @@ export default function DashboardLayout({ children }) {
     }, [flash]);
 
     return (
-        <div className="min-h-screen ">
+        <div  className="min-h-screen ">
             {/* Global Search Modal */}
             <GlobalSearchModal
                 isOpen={searchModalOpen}
@@ -368,7 +368,7 @@ function Topbar({
                         <div className="w-full pl-12 pr-20 py-2.5 bg-gray-100 border-0 rounded-xl text-left text-gray-500 group-hover:bg-gray-200 group-hover:text-gray-700 transition-all cursor-text">
                             Pesquisar processos, clientes, documentos...
                         </div>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 flex items-center gap-1 pointer-events-none">
+                        <div className="absolute flex items-center gap-1 -translate-y-1/2 pointer-events-none right-4 top-1/2">
                             <kbd className="px-2 py-1 text-xs font-semibold text-gray-500 bg-white border border-gray-300 rounded shadow-sm">
                                 {navigator.platform.indexOf('Mac') !== -1 ? '⌘' : 'Ctrl'}
                             </kbd>
