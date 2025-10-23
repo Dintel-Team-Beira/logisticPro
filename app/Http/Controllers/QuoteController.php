@@ -53,6 +53,7 @@ class QuoteController extends Controller
     public function store(Request $request)
     {
 
+        // dd($request->all());
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
             'shipment_id' => 'nullable|exists:shipments,id',
@@ -98,6 +99,7 @@ class QuoteController extends Controller
                 $service = ServiceCatalog::find($itemData['service_id']);
 
                 $item = new QuoteItem([
+                    'quote_id' => $quote->id,
                     'service_id' => $service->id,
                     'service_code' => $service->code,
                     'service_name' => $service->name,
