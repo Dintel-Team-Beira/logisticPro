@@ -7,6 +7,8 @@ import { useState, useEffect } from 'react';
 export default function Create({ nextQuoteNumber, clients, shipments }) {
     const [services, setServices] = useState([]);
     const [items, setItems] = useState([]);
+    const [servicesError, setServicesError] = useState(null);
+    const [loadingServices, setLoadingServices] = useState(true);
 
     const { data, setData, post, processing, errors } = useForm({
         client_id: '',
@@ -25,10 +27,26 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
 
     // Fetch active services
     useEffect(() => {
+        setLoadingServices(true);
         fetch('/services/active')
-            .then(res => res.json())
-            .then(data => setServices(data))
-            .catch(err => console.error('Erro ao carregar serviços:', err));
+            .then(res => {
+                if (!res.ok) {
+                    throw new Error(`Erro HTTP ${res.status}`);
+                }
+                return res.json();
+            })
+            .then(data => {
+                if (data.length === 0) {
+                    setServicesError('Nenhum serviço ativo encontrado. Execute: php artisan db:seed --class=ServiceCatalogSeeder');
+                }
+                setServices(data);
+                setLoadingServices(false);
+            })
+            .catch(err => {
+                console.error('Erro ao carregar serviços:', err);
+                setServicesError('Erro ao carregar serviços. Verifique se o backend está rodando.');
+                setLoadingServices(false);
+            });
     }, []);
 
     // Calculate totals
@@ -102,17 +120,31 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
     const handleSubmit = (e) => {
         e.preventDefault();
 
+        // Validar se há items
         if (items.length === 0) {
-            alert('Adicione pelo menos um item à cotação!');
+            alert('❌ Adicione pelo menos um item à cotação!');
+            return;
+        }
+
+        // Validar cada item
+        const invalidItems = items.filter(item => !item.service_id || item.service_id === '');
+        if (invalidItems.length > 0) {
+            alert('❌ Todos os itens devem ter um serviço selecionado!');
+            return;
+        }
+
+        const invalidQuantities = items.filter(item => !item.quantity || parseFloat(item.quantity) <= 0);
+        if (invalidQuantities.length > 0) {
+            alert('❌ Todos os itens devem ter uma quantidade válida!');
             return;
         }
 
         const formData = {
             ...data,
             items: items.map(item => ({
-                service_id: item.service_id,
-                quantity: item.quantity,
-                unit_price: item.unit_price,
+                service_id: parseInt(item.service_id),
+                quantity: parseFloat(item.quantity),
+                unit_price: parseFloat(item.unit_price),
             })),
         };
 
@@ -146,6 +178,27 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                         </p>
                     </div>
                 </div>
+
+                {/* Service Error Alert */}
+                {servicesError && (
+                    <motion.div
+                        initial={{ opacity: 0, y: -10 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        className="p-4 bg-red-50 border border-red-200 rounded-lg"
+                    >
+                        <div className="flex items-start gap-3">
+                            <div className="flex-shrink-0">
+                                <svg className="w-5 h-5 text-red-600" fill="currentColor" viewBox="0 0 20 20">
+                                    <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                                </svg>
+                            </div>
+                            <div className="flex-1">
+                                <h3 className="text-sm font-semibold text-red-800">Erro ao Carregar Serviços</h3>
+                                <p className="mt-1 text-sm text-red-700">{servicesError}</p>
+                            </div>
+                        </div>
+                    </motion.div>
+                )}
 
                 <form onSubmit={handleSubmit} className="space-y-6">
                     {/* Basic Info */}
@@ -500,11 +553,12 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
                             type="submit"
-                            disabled={processing || items.length === 0}
+                            disabled={processing || items.length === 0 || loadingServices || servicesError}
                             className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            title={servicesError ? 'Corrija o erro de serviços antes de continuar' : items.length === 0 ? 'Adicione pelo menos um item' : ''}
                         >
                             <Save className="w-4 h-4" />
-                            {processing ? 'Criando...' : 'Criar Cotação'}
+                            {processing ? 'Criando...' : loadingServices ? 'Carregando...' : 'Criar Cotação'}
                         </motion.button>
                     </div>
                 </form>
