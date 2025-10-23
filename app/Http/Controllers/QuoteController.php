@@ -39,7 +39,7 @@ class QuoteController extends Controller
     public function create()
     {
         $clients = Client::active()->orderBy('name')->get();
-        $shipments = Shipment::whereNotIn('status', ['completed', 'cancelled'])
+        $shipments = Shipment::with('client')->whereNotIn('status', ['completed', 'cancelled'])
             ->orderBy('created_at', 'desc')
             ->get();
 
@@ -52,6 +52,7 @@ class QuoteController extends Controller
 
     public function store(Request $request)
     {
+
         $validated = $request->validate([
             'client_id' => 'required|exists:clients,id',
             'shipment_id' => 'nullable|exists:shipments,id',

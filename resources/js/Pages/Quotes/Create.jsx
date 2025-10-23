@@ -164,7 +164,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                         <motion.button
                             whileHover={{ scale: 1.05 }}
                             whileTap={{ scale: 0.95 }}
-                            className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                            className="p-2 transition-colors rounded-lg text-slate-600 hover:text-slate-900 hover:bg-slate-100"
                         >
                             <ArrowLeft className="w-5 h-5" />
                         </motion.button>
@@ -184,7 +184,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                     <motion.div
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="p-4 bg-red-50 border border-red-200 rounded-lg"
+                        className="p-4 border border-red-200 rounded-lg bg-red-50"
                     >
                         <div className="flex items-start gap-3">
                             <div className="flex-shrink-0">
@@ -207,7 +207,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                         animate={{ opacity: 1, y: 0 }}
                         className="p-6 bg-white border rounded-lg border-slate-200"
                     >
-                        <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                        <h3 className="mb-4 text-lg font-semibold text-slate-900">
                             Informações Básicas
                         </h3>
 
@@ -219,7 +219,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                 <select
                                     value={data.client_id}
                                     onChange={(e) => setData('client_id', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                     required
                                 >
                                     <option value="">Selecione um cliente</option>
@@ -241,12 +241,13 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                 <select
                                     value={data.shipment_id}
                                     onChange={(e) => setData('shipment_id', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                 >
                                     <option value="">Nenhum processo vinculado</option>
+                                    {/* {console.log("client",shipments?.client?.name)} */}
                                     {shipments.map((shipment) => (
                                         <option key={shipment.id} value={shipment.id}>
-                                            {shipment.shipment_number} - {shipment.client?.name}
+                                            {shipment.reference_number} - {shipment.client?.name}
                                         </option>
                                     ))}
                                 </select>
@@ -260,7 +261,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                     type="text"
                                     value={data.title}
                                     onChange={(e) => setData('title', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                     placeholder="Ex: Proposta Comercial - Frete Internacional"
                                     required
                                 />
@@ -277,7 +278,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                     value={data.description}
                                     onChange={(e) => setData('description', e.target.value)}
                                     rows="3"
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                     placeholder="Descrição detalhada da cotação..."
                                 />
                             </div>
@@ -290,7 +291,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                     type="date"
                                     value={data.quote_date}
                                     onChange={(e) => setData('quote_date', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                     required
                                 />
                             </div>
@@ -303,7 +304,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                     type="date"
                                     value={data.valid_until}
                                     onChange={(e) => setData('valid_until', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                     required
                                 />
                             </div>
@@ -316,7 +317,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                     type="text"
                                     value={data.payment_terms}
                                     onChange={(e) => setData('payment_terms', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                     placeholder="Ex: 30 dias, À vista"
                                 />
                             </div>
@@ -328,7 +329,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                 <select
                                     value={data.currency}
                                     onChange={(e) => setData('currency', e.target.value)}
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                     required
                                 >
                                     <option value="MZN">MZN - Metical</option>
@@ -344,9 +345,9 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1 }}
-                        className="bg-white border rounded-lg border-slate-200 overflow-hidden"
+                        className="overflow-hidden bg-white border rounded-lg border-slate-200"
                     >
-                        <div className="px-6 py-4 border-b border-slate-200 flex items-center justify-between">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200">
                             <h3 className="text-lg font-semibold text-slate-900">
                                 Itens da Cotação
                             </h3>
@@ -355,7 +356,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                 whileTap={{ scale: 0.95 }}
                                 type="button"
                                 onClick={addItem}
-                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
                             >
                                 <Plus className="w-4 h-4" />
                                 Adicionar Item
@@ -393,7 +394,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                                     <select
                                                         value={item.service_id}
                                                         onChange={(e) => updateItem(index, 'service_id', e.target.value)}
-                                                        className="block w-full text-sm rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                        className="block w-full text-sm rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                                         required
                                                     >
                                                         <option value="">Selecione...</option>
@@ -411,7 +412,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                                         min="0.01"
                                                         value={item.quantity}
                                                         onChange={(e) => updateItem(index, 'quantity', e.target.value)}
-                                                        className="block w-full text-sm text-center rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                        className="block w-full text-sm text-center rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                                         required
                                                     />
                                                 </td>
@@ -422,7 +423,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                                         min="0"
                                                         value={item.unit_price}
                                                         onChange={(e) => updateItem(index, 'unit_price', e.target.value)}
-                                                        className="block w-full text-sm text-right rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                        className="block w-full text-sm text-right rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                                         required
                                                     />
                                                 </td>
@@ -439,7 +440,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                                     <button
                                                         type="button"
                                                         onClick={() => removeItem(index)}
-                                                        className="p-1 text-red-600 hover:text-red-700 hover:bg-red-50 rounded transition-colors"
+                                                        className="p-1 text-red-600 transition-colors rounded hover:text-red-700 hover:bg-red-50"
                                                     >
                                                         <Trash2 className="w-4 h-4" />
                                                     </button>
@@ -462,7 +463,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                         </dd>
                                     </div>
 
-                                    <div className="flex justify-between items-center text-sm gap-4">
+                                    <div className="flex items-center justify-between gap-4 text-sm">
                                         <dt className="text-slate-600">Desconto</dt>
                                         <dd className="flex items-center gap-2">
                                             <input
@@ -472,7 +473,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                                 max="100"
                                                 value={data.discount_percentage}
                                                 onChange={(e) => setData('discount_percentage', e.target.value)}
-                                                className="w-20 text-sm text-right rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                                className="w-20 text-sm text-right rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                             />
                                             <span className="text-slate-600">%</span>
                                             <span className="font-medium text-red-600 min-w-[100px] text-right">
@@ -506,7 +507,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                         transition={{ delay: 0.2 }}
                         className="p-6 bg-white border rounded-lg border-slate-200"
                     >
-                        <h3 className="text-lg font-semibold text-slate-900 mb-4">
+                        <h3 className="mb-4 text-lg font-semibold text-slate-900">
                             Termos e Observações
                         </h3>
 
@@ -519,7 +520,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                     value={data.terms}
                                     onChange={(e) => setData('terms', e.target.value)}
                                     rows="4"
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                     placeholder="Ex: Preços válidos conforme cotação. Sujeito a alteração sem aviso prévio..."
                                 />
                             </div>
@@ -532,7 +533,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                                     value={data.customer_notes}
                                     onChange={(e) => setData('customer_notes', e.target.value)}
                                     rows="3"
-                                    className="mt-1 block w-full rounded-md border-slate-300 shadow-sm focus:border-blue-500 focus:ring-blue-500"
+                                    className="block w-full mt-1 rounded-md shadow-sm border-slate-300 focus:border-blue-500 focus:ring-blue-500"
                                     placeholder="Observações adicionais visíveis ao cliente..."
                                 />
                             </div>
@@ -544,7 +545,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                         <Link href="/quotes">
                             <button
                                 type="button"
-                                className="px-4 py-2 text-sm font-medium text-slate-700 bg-white border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors"
+                                className="px-4 py-2 text-sm font-medium transition-colors bg-white border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
                             >
                                 Cancelar
                             </button>
@@ -554,7 +555,7 @@ export default function Create({ nextQuoteNumber, clients, shipments }) {
                             whileTap={{ scale: 0.98 }}
                             type="submit"
                             disabled={processing || items.length === 0 || loadingServices || servicesError}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-slate-900 rounded-lg hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-slate-900 hover:bg-slate-800 disabled:opacity-50 disabled:cursor-not-allowed"
                             title={servicesError ? 'Corrija o erro de serviços antes de continuar' : items.length === 0 ? 'Adicione pelo menos um item' : ''}
                         >
                             <Save className="w-4 h-4" />
