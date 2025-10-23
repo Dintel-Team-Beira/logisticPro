@@ -169,6 +169,20 @@ export default function DashboardLayout({ children }) {
             roles: ['admin', 'manager', 'finance'],
             badge: stats?.pendingInvoices || null,
         },
+        {
+            name: 'Cotações',
+            icon: FileText,
+            href: '/quotes',
+            roles: ['admin', 'manager', 'finance'],
+            badge: null
+        },
+        {
+            name: 'Serviços',
+            icon: Settings,
+            href: '/services',
+            roles: ['admin', 'manager'],
+            badge: null
+        },
 
         // ========== APROVAÇÕES (ADMIN + MANAGER) ==========
         {
