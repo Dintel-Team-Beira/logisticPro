@@ -14,6 +14,25 @@ export default function Show({ quote }) {
         window.open(`/quotes/${quote.id}/pdf`, '_blank');
     };
 
+    const handleSendEmail = () => {
+        if (confirm(`Deseja enviar esta cotação para ${quote.client?.email || 'o cliente'}?`)) {
+            router.post(`/quotes/${quote.id}/send-email`);
+        }
+    };
+
+    const handleUpdateStatus = (newStatus) => {
+        const statusLabels = {
+            sent: 'Enviada',
+            accepted: 'Aceita',
+            rejected: 'Rejeitada',
+            expired: 'Expirada',
+        };
+
+        if (confirm(`Deseja marcar esta cotação como ${statusLabels[newStatus]}?`)) {
+            router.post(`/quotes/${quote.id}/update-status`, { status: newStatus });
+        }
+    };
+
     const getStatusBadge = (status) => {
         const statuses = {
             draft: { label: 'Rascunho', color: 'bg-gray-100 text-gray-700' },
@@ -71,6 +90,7 @@ export default function Show({ quote }) {
                     </div>
 
                     <div className="flex items-center gap-2">
+                        {/* Botão Baixar PDF */}
                         <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
@@ -81,6 +101,20 @@ export default function Show({ quote }) {
                             PDF
                         </motion.button>
 
+                        {/* Botão Enviar Email */}
+                        {!['converted'].includes(quote.status) && (
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={handleSendEmail}
+                                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-blue-700 bg-blue-50 border border-blue-300 rounded-lg hover:bg-blue-100 transition-colors"
+                            >
+                                <Send className="w-4 h-4" />
+                                Enviar Email
+                            </motion.button>
+                        )}
+
+                        {/* Botão Editar */}
                         {['draft', 'sent'].includes(quote.status) && (
                             <Link href={`/quotes/${quote.id}/edit`}>
                                 <motion.button
@@ -94,12 +128,39 @@ export default function Show({ quote }) {
                             </Link>
                         )}
 
+                        {/* Botão Aceitar (quando enviada) */}
+                        {['sent', 'viewed'].includes(quote.status) && !isExpired && (
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleUpdateStatus('accepted')}
+                                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                            >
+                                <CheckCircle className="w-4 h-4" />
+                                Aceitar
+                            </motion.button>
+                        )}
+
+                        {/* Botão Rejeitar (quando enviada) */}
+                        {['sent', 'viewed'].includes(quote.status) && !isExpired && (
+                            <motion.button
+                                whileHover={{ scale: 1.02 }}
+                                whileTap={{ scale: 0.98 }}
+                                onClick={() => handleUpdateStatus('rejected')}
+                                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-red-600 rounded-lg hover:bg-red-700 transition-colors"
+                            >
+                                <XCircle className="w-4 h-4" />
+                                Rejeitar
+                            </motion.button>
+                        )}
+
+                        {/* Botão Converter em Fatura (quando aceita) */}
                         {canConvert && (
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
                                 onClick={handleConvertToInvoice}
-                                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-green-600 rounded-lg hover:bg-green-700 transition-colors"
+                                className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-purple-600 rounded-lg hover:bg-purple-700 transition-colors"
                             >
                                 <RefreshCw className="w-4 h-4" />
                                 Converter em Fatura
