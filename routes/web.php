@@ -52,6 +52,23 @@ Route::middleware(['auth'])->group(function () {
 });
 
 // ============================================================================
+// EXCHANGE RATES - Taxas de Câmbio em Tempo Real
+// ============================================================================
+Route::middleware(['auth'])->prefix('api/exchange-rates')->name('exchange-rates.')->group(function () {
+    Route::get('/current', [App\Http\Controllers\ExchangeRateController::class, 'getCurrent'])
+        ->name('current');
+
+    Route::post('/convert', [App\Http\Controllers\ExchangeRateController::class, 'convert'])
+        ->name('convert');
+
+    Route::get('/{currency}/history', [App\Http\Controllers\ExchangeRateController::class, 'getHistory'])
+        ->name('history');
+
+    Route::post('/force-update', [App\Http\Controllers\ExchangeRateController::class, 'forceUpdate'])
+        ->name('force-update');
+});
+
+// ============================================================================
 // PROFILE
 // ============================================================================
 Route::middleware('auth')->group(function () {

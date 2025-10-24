@@ -18,3 +18,14 @@ Schedule::command('invoices:check-overdue')
     ->onFailure(function () {
         \Log::error('Overdue invoices check failed');
     });
+
+// Schedule to update exchange rates every 30 minutes
+Schedule::command('exchange:update')
+    ->everyThirtyMinutes()
+    ->timezone('Africa/Maputo')
+    ->onSuccess(function () {
+        \Log::info('Exchange rates updated successfully');
+    })
+    ->onFailure(function () {
+        \Log::error('Exchange rates update failed');
+    });
