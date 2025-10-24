@@ -1119,31 +1119,19 @@ use App\Http\Controllers\Client\ClientPortalController;
 // Client Authentication Routes (public)
 Route::prefix('client')->name('client.')->group(function () {
     // Login
-    Route::get('/login', [ClientAuthController::class, 'showLogin'])
-        ->middleware('guest:client')
-        ->name('login');
-    Route::post('/login', [ClientAuthController::class, 'login'])
-        ->middleware('guest:client');
+    Route::get('/login', [ClientAuthController::class, 'showLogin'])->name('login');
+    Route::post('/login', [ClientAuthController::class, 'login']);
 
     // Initial Setup (first access with token)
-    Route::get('/setup', [ClientAuthController::class, 'showInitialSetup'])
-        ->middleware('guest:client')
-        ->name('initial-setup.show');
-    Route::post('/setup', [ClientAuthController::class, 'initialSetup'])
-        ->middleware('guest:client')
-        ->name('initial-setup');
+    Route::get('/setup', [ClientAuthController::class, 'showInitialSetup'])->name('initial-setup.show');
+    Route::post('/setup', [ClientAuthController::class, 'initialSetup'])->name('initial-setup');
 
     // Forgot Password
-    Route::get('/forgot-password', [ClientAuthController::class, 'showForgotPassword'])
-        ->middleware('guest:client')
-        ->name('forgot-password');
-    Route::post('/forgot-password', [ClientAuthController::class, 'forgotPassword'])
-        ->middleware('guest:client');
+    Route::get('/forgot-password', [ClientAuthController::class, 'showForgotPassword'])->name('forgot-password');
+    Route::post('/forgot-password', [ClientAuthController::class, 'forgotPassword']);
 
     // Logout
-    Route::post('/logout', [ClientAuthController::class, 'logout'])
-        ->middleware('auth:client')
-        ->name('logout');
+    Route::post('/logout', [ClientAuthController::class, 'logout'])->middleware('auth:client')->name('logout');
 });
 
 // Client Portal Routes (authenticated)

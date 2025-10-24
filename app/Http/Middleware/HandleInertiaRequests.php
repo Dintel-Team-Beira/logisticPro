@@ -29,11 +29,22 @@ class HandleInertiaRequests extends Middleware
      */
     public function share(Request $request): array
     {
+        // Detect which guard is active
+        $user = null;
+        $client = null;
+
+        if (auth()->guard('web')->check()) {
+            $user = auth()->guard('web')->user();
+        } elseif (auth()->guard('client')->check()) {
+            $client = auth()->guard('client')->user();
+        }
+
         return [
             ...parent::share($request),
             'auth' => [
-                'user' => $request->user(),
+                'user' => $user,
             ],
+            'client' => $client,
             'flash' => [
                 'success' => $request->session()->get('success'),
                 'error' => $request->session()->get('error'),

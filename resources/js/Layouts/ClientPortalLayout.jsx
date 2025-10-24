@@ -16,7 +16,7 @@ import {
 } from 'lucide-react';
 
 export default function ClientPortalLayout({ children }) {
-    const { client, auth } = usePage().props;
+    const { client } = usePage().props;
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [profileDropdownOpen, setProfileDropdownOpen] = useState(false);
 
