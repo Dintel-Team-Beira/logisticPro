@@ -56,6 +56,8 @@ class ClientAuthController extends Controller
 
         $request->session()->regenerate();
 
+        // dd($request);
+
         return redirect()->intended(route('client.dashboard'));
     }
 
