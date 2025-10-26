@@ -29,7 +29,7 @@ export default function Create() {
         { value: 'admin', label: 'Administrador' },
         { value: 'manager', label: 'Gerente' },
         { value: 'operator', label: 'Operador' },
-        { value: 'viewer', label: 'Visualizador' },
+        { value: 'finance', label: 'Finança' },
     ];
 
     return (
