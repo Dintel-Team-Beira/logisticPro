@@ -550,7 +550,7 @@ export default function ClientShow({ client, stats }) {
 
               {client.invoices && client.invoices.length > 0 ? (
                 <div className="space-y-3">
-                    {console.log("Clinet Debugs",client.invoices)}
+                    {/* {console.log("Clinet Debugs",client.invoices)} */}
                   {client.invoices.map((invoice) => (
                     <Link
                       key={invoice.id}
