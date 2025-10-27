@@ -78,6 +78,21 @@ class Shipment extends Model
         'exp_tracking_status',
         'exp_eta_destination',
         'exp_actual_arrival_date',
+        // Campos de status por fase - TRÂNSITO
+        'tra_reception_status',
+        'tra_reception_date',
+        'tra_documentation_status',
+        'tra_customs_clearance_status',
+        'tra_customs_declaration_number',
+        'tra_storage_status',
+        'tra_warehouse_location',
+        'tra_departure_prep_status',
+        'tra_departure_date',
+        'tra_outbound_transport_status',
+        'tra_actual_departure_date',
+        'tra_delivery_status',
+        'tra_delivery_date',
+        'tra_final_destination',
     ];
 
     protected $casts = [
@@ -106,6 +121,12 @@ class Shipment extends Model
         'exp_etd' => 'date',
         'exp_eta_destination' => 'date',
         'exp_actual_arrival_date' => 'date',
+
+        // Campos de trânsito
+        'tra_reception_date' => 'date',
+        'tra_departure_date' => 'date',
+        'tra_actual_departure_date' => 'date',
+        'tra_delivery_date' => 'date',
     ];
 
     protected $appends = ['request_type_label'];
@@ -1248,12 +1269,24 @@ public function getPhase5Progress(): float
     }
 
     /**
+     * Verificar se é processo de trânsito
+     */
+    public function isTransit(): bool
+    {
+        return $this->type === 'transit';
+    }
+
+    /**
      * Obter nome das fases baseado no tipo de processo
      */
     public function getStageNameFromPhaseByType(int $phase): string
     {
         if ($this->isExport()) {
             return $this->getExportStageNameFromPhase($phase);
+        }
+
+        if ($this->isTransit()) {
+            return $this->getTransitStageNameFromPhase($phase);
         }
 
         return self::getStageNameFromPhase($phase);
@@ -1427,7 +1460,7 @@ public function getPhase5Progress(): float
     }
 
     /**
-     * Obter progresso baseado no tipo (import/export)
+     * Obter progresso baseado no tipo (import/export/transit)
      */
     public function getRealProgressByType(): float
     {
@@ -1435,6 +1468,173 @@ public function getPhase5Progress(): float
             return $this->getExportRealProgress();
         }
 
+        if ($this->isTransit()) {
+            return $this->getTransitRealProgress();
+        }
+
         return $this->getRealProgressAttribute();
+    }
+
+    // ========================================
+    // MÉTODOS PARA TRÂNSITO
+    // ========================================
+
+    /**
+     * Obter nome da fase de trânsito
+     */
+    public static function getTransitStageNameFromPhase(int $phase): string
+    {
+        $phases = [
+            1 => 'recepcao',
+            2 => 'documentacao_transito',
+            3 => 'desembaraco_aduaneiro',
+            4 => 'armazenamento',
+            5 => 'preparacao_partida',
+            6 => 'transporte_saida',
+            7 => 'entrega_final',
+        ];
+
+        return $phases[$phase] ?? 'recepcao';
+    }
+
+    /**
+     * Calcular progresso real para trânsito
+     */
+    public function getTransitRealProgress(): float
+    {
+        $phases = [
+            1 => $this->getTransitPhase1Progress(),
+            2 => $this->getTransitPhase2Progress(),
+            3 => $this->getTransitPhase3Progress(),
+            4 => $this->getTransitPhase4Progress(),
+            5 => $this->getTransitPhase5Progress(),
+            6 => $this->getTransitPhase6Progress(),
+            7 => $this->getTransitPhase7Progress(),
+        ];
+
+        return round(array_sum($phases) / 7, 2);
+    }
+
+    // ========================================
+    // MÉTODOS DE PROGRESSO POR FASE - TRÂNSITO
+    // ========================================
+
+    /**
+     * Fase 1: Recepção
+     * - Receber carga
+     * - Verificar documentos
+     * - Confirmar recepção
+     */
+    public function getTransitPhase1Progress(): float
+    {
+        $steps = [
+            $this->tra_reception_status === 'pending' ? 33 : 0,
+            $this->tra_reception_status === 'received' ? 34 : 0,
+            $this->tra_reception_status === 'verified' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 2: Documentação
+     * - Preparar documentos de trânsito
+     * - Verificar conformidade
+     * - Completar documentação
+     */
+    public function getTransitPhase2Progress(): float
+    {
+        $steps = [
+            $this->tra_documentation_status === 'pending' ? 33 : 0,
+            $this->tra_documentation_status === 'in_progress' ? 34 : 0,
+            $this->tra_documentation_status === 'completed' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 3: Desembaraço Aduaneiro
+     * - Submeter declaração
+     * - Aguardar aprovação
+     * - Obter liberação
+     */
+    public function getTransitPhase3Progress(): float
+    {
+        $steps = [
+            $this->tra_customs_clearance_status === 'pending' ? 33 : 0,
+            $this->tra_customs_declaration_number !== null ? 34 : 0,
+            $this->tra_customs_clearance_status === 'cleared' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 4: Armazenamento
+     * - Armazenar carga
+     * - Manter condições adequadas
+     * - Preparar para saída
+     */
+    public function getTransitPhase4Progress(): float
+    {
+        $steps = [
+            $this->tra_storage_status === 'stored' ? 50 : 0,
+            $this->tra_warehouse_location !== null ? 25 : 0,
+            $this->tra_storage_status === 'ready_for_departure' ? 25 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 5: Preparação de Partida
+     * - Verificar carga
+     * - Preparar documentos de saída
+     * - Agendar transporte
+     */
+    public function getTransitPhase5Progress(): float
+    {
+        $steps = [
+            $this->tra_departure_prep_status === 'pending' ? 33 : 0,
+            $this->tra_departure_prep_status === 'in_progress' ? 34 : 0,
+            $this->tra_departure_prep_status === 'ready' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 6: Transporte de Saída
+     * - Carregar carga
+     * - Transportar
+     * - Entregar no destino intermediário
+     */
+    public function getTransitPhase6Progress(): float
+    {
+        $steps = [
+            $this->tra_outbound_transport_status === 'pending' ? 33 : 0,
+            $this->tra_outbound_transport_status === 'in_transit' ? 34 : 0,
+            $this->tra_outbound_transport_status === 'delivered' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
+    }
+
+    /**
+     * Fase 7: Entrega Final
+     * - Confirmar chegada
+     * - Entregar ao destinatário
+     * - Obter confirmação de recebimento
+     */
+    public function getTransitPhase7Progress(): float
+    {
+        $steps = [
+            $this->tra_delivery_status === 'pending' ? 33 : 0,
+            $this->tra_delivery_status === 'delivered' ? 34 : 0,
+            $this->tra_delivery_status === 'confirmed' ? 33 : 0,
+        ];
+
+        return array_sum($steps);
     }
 }
