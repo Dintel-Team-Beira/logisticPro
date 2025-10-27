@@ -1090,6 +1090,51 @@ Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(functi
 // });
 
 // ============================================================================
+// TRANSIT OPERATIONS ROUTES - Operações de Trânsito
+// ============================================================================
+use App\Http\Controllers\Operations\TransitOperationsController;
+
+Route::middleware(['auth'])->prefix('operations/transit')->name('operations.transit.')->group(function () {
+    // Fase 1: Recepção
+    Route::get('/recepcao', [TransitOperationsController::class, 'recepcao'])->name('recepcao');
+    Route::post('/recepcao/{shipment}/update-status', [TransitOperationsController::class, 'updateRecepcaoStatus']);
+
+    // Fase 2: Documentação
+    Route::get('/documentacao', [TransitOperationsController::class, 'documentacao'])->name('documentacao');
+    Route::post('/documentacao/{shipment}/update-status', [TransitOperationsController::class, 'updateDocumentacaoStatus']);
+
+    // Fase 3: Desembaraço Aduaneiro
+    Route::get('/desembaraco', [TransitOperationsController::class, 'desembaraco'])->name('desembaraco');
+    Route::post('/desembaraco/{shipment}/update-status', [TransitOperationsController::class, 'updateDesembaracoStatus']);
+    Route::post('/desembaraco/{shipment}/update-declaration', [TransitOperationsController::class, 'updateDeclaration']);
+
+    // Fase 4: Armazenamento
+    Route::get('/armazenamento', [TransitOperationsController::class, 'armazenamento'])->name('armazenamento');
+    Route::post('/armazenamento/{shipment}/update-status', [TransitOperationsController::class, 'updateArmazenamentoStatus']);
+    Route::post('/armazenamento/{shipment}/update-location', [TransitOperationsController::class, 'updateWarehouseLocation']);
+
+    // Fase 5: Preparação de Partida
+    Route::get('/preparacao-partida', [TransitOperationsController::class, 'preparacaoPartida'])->name('preparacao-partida');
+    Route::post('/preparacao-partida/{shipment}/update-status', [TransitOperationsController::class, 'updatePreparacaoStatus']);
+    Route::post('/preparacao-partida/{shipment}/update-date', [TransitOperationsController::class, 'updateDepartureDate']);
+
+    // Fase 6: Transporte de Saída
+    Route::get('/transporte-saida', [TransitOperationsController::class, 'transporteSaida'])->name('transporte-saida');
+    Route::post('/transporte-saida/{shipment}/update-status', [TransitOperationsController::class, 'updateTransporteStatus']);
+    Route::post('/transporte-saida/{shipment}/update-actual-departure', [TransitOperationsController::class, 'updateActualDeparture']);
+
+    // Fase 7: Entrega Final
+    Route::get('/entrega-final', [TransitOperationsController::class, 'entregaFinal'])->name('entrega-final');
+    Route::post('/entrega-final/{shipment}/update-status', [TransitOperationsController::class, 'updateEntregaStatus']);
+    Route::post('/entrega-final/{shipment}/update-delivery-date', [TransitOperationsController::class, 'updateDeliveryDate']);
+    Route::post('/entrega-final/{shipment}/update-final-destination', [TransitOperationsController::class, 'updateFinalDestination']);
+
+    // Avançar fase e finalizar
+    Route::post('/{shipment}/advance-phase', [TransitOperationsController::class, 'advancePhase'])->name('advance-phase');
+    Route::post('/{shipment}/complete', [TransitOperationsController::class, 'complete'])->name('complete');
+});
+
+// ============================================================================
 // API ROUTES - Para acesso externo
 // ============================================================================
 Route::middleware(['auth:sanctum'])->prefix('api/v1')->group(function () {
