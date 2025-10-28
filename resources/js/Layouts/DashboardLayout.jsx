@@ -210,10 +210,19 @@ export default function DashboardLayout({ children }) {
             icon: Users,
             href: '/clients',
             roles: ['admin', 'manager'],
-            badge: null
-        },
+            badge: null,
+
+        submenu:[
+            {
+                name: 'Fornecedores',
+                icon: Ship,
+                href: '/shipping-lines',
+                roles: ['admin', 'manager'],
+                badge: null
+            }
+        ]},
         {
-            name: 'Linhas Navegação',
+            name: 'Consignatários',
             icon: Ship,
             href: '/shipping-lines',
             roles: ['admin', 'manager'],
