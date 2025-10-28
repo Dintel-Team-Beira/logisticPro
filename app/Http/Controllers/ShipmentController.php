@@ -182,13 +182,18 @@ class ShipmentController extends Controller
             $adminsAndManagers = User::whereIn('role', ['admin', 'manager'])->get();
             Notification::send($adminsAndManagers, new ShipmentCreatedNotification($shipment));
 
-            // Redirecionar para a página de detalhes do processo criado...
-            return redirect()
-                ->route('shipments.show', $shipment)
-                ->with('success', $shipment->type === 'export'
-                    ? "Processo de Exportação {$referenceNumber} criado com sucesso!"
-                    : "Processo de Importação {$referenceNumber} criado com sucesso!"
-                );
+            // Redirecionar para a tela específica baseado no tipo
+            if ($shipment->type === 'export') {
+                // Para exportação: ir para a tela de preparação de documentos
+                return redirect()
+                    ->route('export.preparacao', ['preparacao' => $shipment->id])
+                    ->with('success', "Processo de Exportação {$referenceNumber} criado com sucesso!");
+            } else {
+                // Para importação: ir para a tela de coleta dispersa (fase 1)
+                return redirect()
+                    ->route('shipments.show', $shipment)
+                    ->with('success', "Processo de Importação {$referenceNumber} criado com sucesso!");
+            }
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -521,7 +526,30 @@ class ShipmentController extends Controller
 
             DB::commit();
 
-            return back()->with('success', "Fase {$phase} iniciada com sucesso!");
+            // Redirecionar para a página da próxima fase
+            if ($shipment->type === 'export') {
+                // Mapear fases de exportação para rotas
+                $exportRoutes = [
+                    1 => 'export.preparacao',
+                    2 => 'export.booking',
+                    3 => 'export.inspecao',
+                    4 => 'export.despacho',
+                    5 => 'export.transporte',
+                    6 => 'export.embarque',
+                    7 => 'export.acompanhamento',
+                ];
+
+                if (isset($exportRoutes[$phase])) {
+                    return redirect()
+                        ->route($exportRoutes[$phase], $phase == 1 ? ['preparacao' => $shipment->id] : [])
+                        ->with('success', "Avançado para Fase {$phase}: " . $this->getPhaseName($phase));
+                }
+            }
+
+            // Para importação ou fallback
+            return redirect()
+                ->route('shipments.show', $shipment)
+                ->with('success', "Fase {$phase} iniciada com sucesso!");
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao avançar fase', [
