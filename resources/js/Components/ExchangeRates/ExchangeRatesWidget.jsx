@@ -73,7 +73,7 @@ export default function ExchangeRatesWidget({ sidebarOpen }) {
                     <div className="flex items-center gap-2">
                         <DollarSign className="w-4 h-4 text-green-600" />
                         <p className="text-sm font-semibold text-gray-900">
-                            💱 Câmbio ao Vivo
+                            💱 Câmbio
                         </p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -83,7 +83,7 @@ export default function ExchangeRatesWidget({ sidebarOpen }) {
                         <button
                             onClick={handleRefresh}
                             disabled={refreshing}
-                            className="p-1 text-green-600 hover:text-green-700 hover:bg-green-100 rounded transition-colors disabled:opacity-50"
+                            className="p-1 text-green-600 transition-colors rounded hover:text-green-700 hover:bg-green-100 disabled:opacity-50"
                             title="Atualizar"
                         >
                             <RefreshCw className={`w-3.5 h-3.5 ${refreshing ? 'animate-spin' : ''}`} />
@@ -94,22 +94,22 @@ export default function ExchangeRatesWidget({ sidebarOpen }) {
                 {loading ? (
                     <div className="space-y-2">
                         {[1, 2, 3].map(i => (
-                            <div key={i} className="h-14 bg-white/50 rounded-lg animate-pulse" />
+                            <div key={i} className="rounded-lg h-14 bg-white/50 animate-pulse" />
                         ))}
                     </div>
                 ) : error ? (
-                    <div className="p-3 bg-red-50 border border-red-200 rounded-lg">
+                    <div className="p-3 border border-red-200 rounded-lg bg-red-50">
                         <p className="text-xs text-red-700">{error}</p>
-                        <p className="text-xs text-red-600 mt-1">
-                            Execute: <code className="bg-red-100 px-1 rounded">php artisan exchange:update</code>
+                        <p className="mt-1 text-xs text-red-600">
+                            Execute: <code className="px-1 bg-red-100 rounded">php artisan exchange:update</code>
                         </p>
                     </div>
                 ) : rates.length === 0 ? (
-                    <div className="p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
+                    <div className="p-3 border border-yellow-200 rounded-lg bg-yellow-50">
                         <p className="text-xs text-yellow-700">Nenhuma taxa disponível</p>
                     </div>
                 ) : (
-                    <div className="space-y-2 mb-3">
+                    <div className="mb-3 space-y-2">
                         <AnimatePresence>
                             {rates.map((rate, index) => (
                                 <motion.div
@@ -118,7 +118,7 @@ export default function ExchangeRatesWidget({ sidebarOpen }) {
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -10 }}
                                     transition={{ delay: index * 0.05 }}
-                                    className="flex items-center justify-between p-2 bg-white rounded-lg hover:shadow-sm transition-shadow"
+                                    className="flex items-center justify-between p-2 transition-shadow bg-white rounded-lg hover:shadow-sm"
                                 >
                                     <div className="flex items-center gap-2">
                                         <span className="text-lg">{rate.flag}</span>
@@ -154,7 +154,7 @@ export default function ExchangeRatesWidget({ sidebarOpen }) {
                 )}
 
                 {!loading && !error && rates.length > 0 && (
-                    <div className="text-xs text-gray-600 p-2 bg-blue-50 rounded-lg">
+                    <div className="p-2 text-xs text-gray-600 rounded-lg bg-blue-50">
                         <span className="font-medium">💡 Dica:</span> Taxas atualizadas automaticamente a cada 30 min
                     </div>
                 )}
