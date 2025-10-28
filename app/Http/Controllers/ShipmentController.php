@@ -80,7 +80,7 @@ class ShipmentController extends Controller
         try {
             // 1. Validação
             $validated = $request->validate([
-                'type' => 'required|in:import,export,transit',
+                'type' => 'required|in:import,export,transit,transport',
                 'client_id' => 'required|exists:clients,id',
                 'shipping_line_id' => 'required|exists:shipping_lines,id',
                 'bl_number' => 'nullable|string', // Removido unique: um BL pode ter múltiplos containers
@@ -195,6 +195,12 @@ class ShipmentController extends Controller
                     return redirect()
                         ->route('operations.transit.recepcao')
                         ->with('success', "Processo de Trânsito {$referenceNumber} criado com sucesso!");
+
+                case 'transport':
+                    // Para transporte: ir para a primeira tela de transporte
+                    return redirect()
+                        ->route('operations.transport.coleta')
+                        ->with('success', "Processo de Transporte {$referenceNumber} criado com sucesso!");
 
                 case 'import':
                 default:
@@ -571,6 +577,20 @@ class ShipmentController extends Controller
                     if (isset($transitRoutes[$phase])) {
                         return redirect()
                             ->route($transitRoutes[$phase])
+                            ->with('success', "Avançado para Fase {$phase}: " . $this->getPhaseName($phase));
+                    }
+                    break;
+
+                case 'transport':
+                    // Mapear fases de transporte para rotas (simplificado - 2 fases)
+                    $transportRoutes = [
+                        1 => 'operations.transport.coleta',
+                        2 => 'operations.transport.entrega',
+                    ];
+
+                    if (isset($transportRoutes[$phase])) {
+                        return redirect()
+                            ->route($transportRoutes[$phase])
                             ->with('success', "Avançado para Fase {$phase}: " . $this->getPhaseName($phase));
                     }
                     break;

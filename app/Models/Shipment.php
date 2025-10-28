@@ -1091,15 +1091,43 @@ public function getPhase5Progress(): float
             return 1;
         }
 
-        $stageMap = [
-            'coleta_dispersa' => 1,
-            'legalizacao' => 2,
-            'alfandegas' => 3,
-            'cornelder' => 4,
-            'taxacao' => 5,
-            'faturacao' => 6,
-            'pod' => 7,
+        // Mapeamento baseado no tipo do shipment
+        $stageMaps = [
+            'import' => [
+                'coleta_dispersa' => 1,
+                'legalizacao' => 2,
+                'alfandegas' => 3,
+                'cornelder' => 4,
+                'taxacao' => 5,
+                'faturacao' => 6,
+                'pod' => 7,
+            ],
+            'export' => [
+                'preparacao_documentos' => 1,
+                'booking' => 2,
+                'inspecao_certificacao' => 3,
+                'despacho_aduaneiro' => 4,
+                'transporte_porto' => 5,
+                'embarque' => 6,
+                'acompanhamento' => 7,
+            ],
+            'transit' => [
+                'recepcao' => 1,
+                'documentacao' => 2,
+                'desembaraco' => 3,
+                'armazenamento' => 4,
+                'preparacao_partida' => 5,
+                'transporte_saida' => 6,
+                'acompanhamento' => 7,
+            ],
+            'transport' => [
+                'coleta' => 1,
+                'entrega' => 2,
+            ],
         ];
+
+        $type = $this->type ?? 'import';
+        $stageMap = $stageMaps[$type] ?? $stageMaps['import'];
 
         return $stageMap[$currentStage->stage] ?? 1;
     }

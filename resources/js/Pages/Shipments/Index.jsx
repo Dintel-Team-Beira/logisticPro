@@ -4,7 +4,7 @@ import DashboardLayout from '@/Layouts/DashboardLayout';
 import {
     Plus, Search, Filter, Eye, Edit2, Trash2,
     Ship, Package, Clock, CheckCircle2, AlertCircle,
-    TrendingUp, Globe, ArrowRight, MapPin
+    TrendingUp, Globe, ArrowRight, MapPin, Truck, Navigation
 } from 'lucide-react';
 
 export default function Index({ shipments, filters }) {
@@ -39,10 +39,18 @@ export default function Index({ shipments, filters }) {
 
     // Redirecionar para a tela correta baseado no tipo
     const handleViewDetails = (shipment) => {
-        if (shipment.type === 'export') {
-            router.visit(`/operations/export/preparacao/${shipment.id}`);
-        } else {
-            router.visit(`/shipments/${shipment.id}`);
+        switch (shipment.type) {
+            case 'export':
+                router.visit(`/operations/export/preparacao/${shipment.id}`);
+                break;
+            case 'transit':
+                router.visit(`/operations/transit/recepcao`);
+                break;
+            case 'transport':
+                router.visit(`/operations/transport/coleta`);
+                break;
+            default: // import
+                router.visit(`/shipments/${shipment.id}`);
         }
     };
 
@@ -60,34 +68,57 @@ export default function Index({ shipments, filters }) {
     };
 
     const getPhaseName = (shipment, phase) => {
-        if (shipment.type === 'export') {
-            const names = {
-                1: 'Prep. Documentos',
-                2: 'Booking',
-                3: 'Inspeção',
-                4: 'Despacho',
-                5: 'Transporte',
-                6: 'Embarque',
-                7: 'Acompanhamento',
-            };
-            return names[phase] || 'Fase ' + phase;
-        }
+        switch (shipment.type) {
+            case 'export':
+                const exportNames = {
+                    1: 'Prep. Documentos',
+                    2: 'Booking',
+                    3: 'Inspeção',
+                    4: 'Despacho',
+                    5: 'Transporte',
+                    6: 'Embarque',
+                    7: 'Acompanhamento',
+                };
+                return exportNames[phase] || 'Fase ' + phase;
 
-        const names = {
-            1: 'Coleta Dispesas',
-            2: 'Legalização',
-            3: 'Alfândegas',
-            4: 'Cornelder',
-            5: 'Taxação',
-            6: 'Faturação',
-            7: 'POD',
-        };
-        return names[phase] || 'Fase ' + phase;
+            case 'transit':
+                const transitNames = {
+                    1: 'Recepção',
+                    2: 'Documentação',
+                    3: 'Desembaraço',
+                    4: 'Armazenamento',
+                    5: 'Prep. Partida',
+                    6: 'Transp. Saída',
+                    7: 'Acompanhamento',
+                };
+                return transitNames[phase] || 'Fase ' + phase;
+
+            case 'transport':
+                const transportNames = {
+                    1: 'Coleta',
+                    2: 'Entrega',
+                };
+                return transportNames[phase] || 'Fase ' + phase;
+
+            default: // import
+                const importNames = {
+                    1: 'Coleta Dispersa',
+                    2: 'Legalização',
+                    3: 'Alfândegas',
+                    4: 'Cornelder',
+                    5: 'Taxação',
+                    6: 'Faturação',
+                    7: 'POD',
+                };
+                return importNames[phase] || 'Fase ' + phase;
+        }
     };
 
     // Calcular estatísticas
     const importCount = shipments.data?.filter(s => s.type === 'import' || !s.type).length || 0;
     const exportCount = shipments.data?.filter(s => s.type === 'export').length || 0;
+    const transitCount = shipments.data?.filter(s => s.type === 'transit').length || 0;
+    const transportCount = shipments.data?.filter(s => s.type === 'transport').length || 0;
 
     return (
         <DashboardLayout>
@@ -101,7 +132,7 @@ export default function Index({ shipments, filters }) {
                             Processos Logísticos
                         </h1>
                         <p className="text-sm text-slate-500">
-                            Gerencie processos de importação e exportação
+                            Gerencie processos de importação, exportação, trânsito e transporte
                         </p>
                     </div>
                     <Link
@@ -139,6 +170,8 @@ export default function Index({ shipments, filters }) {
                             <option value="">Todos os Tipos</option>
                             <option value="import">📦 Importação</option>
                             <option value="export">🚢 Exportação</option>
+                            <option value="transit">🔄 Trânsito</option>
+                            <option value="transport">🚚 Transporte</option>
                         </select>
 
                         {/* Status Filter */}
@@ -174,7 +207,7 @@ export default function Index({ shipments, filters }) {
                 </div>
 
                 {/* Estatísticas Rápidas */}
-                <div className="grid grid-cols-5 gap-4">
+                <div className="grid grid-cols-6 gap-4">
                     <StatCard
                         title="Total Processos"
                         value={shipments.total}
@@ -196,10 +229,18 @@ export default function Index({ shipments, filters }) {
                         badge="🚢"
                     />
                     <StatCard
-                        title="Ativos"
-                        value={shipments.data?.filter(s => s.status === 'active').length || 0}
-                        icon={Clock}
+                        title="Trânsitos"
+                        value={transitCount}
+                        icon={Navigation}
                         color="amber"
+                        badge="🔄"
+                    />
+                    <StatCard
+                        title="Transportes"
+                        value={transportCount}
+                        icon={Truck}
+                        color="blue"
+                        badge="🚚"
                     />
                     <StatCard
                         title="Completados"
@@ -252,6 +293,10 @@ export default function Index({ shipments, filters }) {
                                                 <div className="flex items-center gap-2">
                                                     {shipment.type === 'export' ? (
                                                         <TrendingUp className="w-5 h-5 text-emerald-600" />
+                                                    ) : shipment.type === 'transit' ? (
+                                                        <Navigation className="w-5 h-5 text-amber-600" />
+                                                    ) : shipment.type === 'transport' ? (
+                                                        <Truck className="w-5 h-5 text-purple-600" />
                                                     ) : (
                                                         <Ship className="w-5 h-5 text-blue-600" />
                                                     )}
@@ -266,6 +311,14 @@ export default function Index({ shipments, filters }) {
                                                             {shipment.type === 'export' ? (
                                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full">
                                                                     🚢 Exportação
+                                                                </span>
+                                                            ) : shipment.type === 'transit' ? (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-amber-700 bg-amber-100 rounded-full">
+                                                                    🔄 Trânsito
+                                                                </span>
+                                                            ) : shipment.type === 'transport' ? (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full">
+                                                                    🚚 Transporte
                                                                 </span>
                                                             ) : (
                                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
