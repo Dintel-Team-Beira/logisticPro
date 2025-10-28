@@ -183,16 +183,25 @@ class ShipmentController extends Controller
             Notification::send($adminsAndManagers, new ShipmentCreatedNotification($shipment));
 
             // Redirecionar para a tela específica baseado no tipo
-            if ($shipment->type === 'export') {
-                // Para exportação: ir para a tela de preparação de documentos
-                return redirect()
-                    ->route('export.preparacao', ['preparacao' => $shipment->id])
-                    ->with('success', "Processo de Exportação {$referenceNumber} criado com sucesso!");
-            } else {
-                // Para importação: ir para a tela de coleta dispersa (fase 1)
-                return redirect()
-                    ->route('shipments.show', $shipment)
-                    ->with('success', "Processo de Importação {$referenceNumber} criado com sucesso!");
+            switch ($shipment->type) {
+                case 'export':
+                    // Para exportação: ir para a tela de preparação de documentos
+                    return redirect()
+                        ->route('operations.export.preparacao', ['preparacao' => $shipment->id])
+                        ->with('success', "Processo de Exportação {$referenceNumber} criado com sucesso!");
+
+                case 'transit':
+                    // Para trânsito: ir para a tela de recepção
+                    return redirect()
+                        ->route('operations.transit.recepcao')
+                        ->with('success', "Processo de Trânsito {$referenceNumber} criado com sucesso!");
+
+                case 'import':
+                default:
+                    // Para importação: ir para a tela de coleta dispersa (fase 1)
+                    return redirect()
+                        ->route('shipments.show', $shipment)
+                        ->with('success', "Processo de Importação {$referenceNumber} criado com sucesso!");
             }
         } catch (\Exception $e) {
             DB::rollBack();
@@ -526,24 +535,45 @@ class ShipmentController extends Controller
 
             DB::commit();
 
-            // Redirecionar para a página da próxima fase
-            if ($shipment->type === 'export') {
-                // Mapear fases de exportação para rotas
-                $exportRoutes = [
-                    1 => 'export.preparacao',
-                    2 => 'export.booking',
-                    3 => 'export.inspecao',
-                    4 => 'export.despacho',
-                    5 => 'export.transporte',
-                    6 => 'export.embarque',
-                    7 => 'export.acompanhamento',
-                ];
+            // Redirecionar para a página da próxima fase baseado no tipo
+            switch ($shipment->type) {
+                case 'export':
+                    // Mapear fases de exportação para rotas
+                    $exportRoutes = [
+                        1 => 'operations.export.preparacao',
+                        2 => 'operations.export.booking',
+                        3 => 'operations.export.inspecao',
+                        4 => 'operations.export.despacho',
+                        5 => 'operations.export.transporte',
+                        6 => 'operations.export.embarque',
+                        7 => 'operations.export.acompanhamento',
+                    ];
 
-                if (isset($exportRoutes[$phase])) {
-                    return redirect()
-                        ->route($exportRoutes[$phase], $phase == 1 ? ['preparacao' => $shipment->id] : [])
-                        ->with('success', "Avançado para Fase {$phase}: " . $this->getPhaseName($phase));
-                }
+                    if (isset($exportRoutes[$phase])) {
+                        return redirect()
+                            ->route($exportRoutes[$phase], $phase == 1 ? ['preparacao' => $shipment->id] : [])
+                            ->with('success', "Avançado para Fase {$phase}: " . $this->getPhaseName($phase));
+                    }
+                    break;
+
+                case 'transit':
+                    // Mapear fases de trânsito para rotas
+                    $transitRoutes = [
+                        1 => 'operations.transit.recepcao',
+                        2 => 'operations.transit.documentacao',
+                        3 => 'operations.transit.desembaraco',
+                        4 => 'operations.transit.armazenamento',
+                        5 => 'operations.transit.preparacao-partida',
+                        6 => 'operations.transit.transporte-saida',
+                        7 => 'operations.transit.acompanhamento',
+                    ];
+
+                    if (isset($transitRoutes[$phase])) {
+                        return redirect()
+                            ->route($transitRoutes[$phase])
+                            ->with('success', "Avançado para Fase {$phase}: " . $this->getPhaseName($phase));
+                    }
+                    break;
             }
 
             // Para importação ou fallback
