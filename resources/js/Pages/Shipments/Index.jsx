@@ -74,7 +74,7 @@ export default function Index({ shipments, filters }) {
         }
 
         const names = {
-            1: 'Coleta Dispersa',
+            1: 'Coleta Dispesas',
             2: 'Legalização',
             3: 'Alfândegas',
             4: 'Cornelder',
@@ -239,8 +239,11 @@ export default function Index({ shipments, filters }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
+                                {console.log(shipments.data)}
                                 {shipments.data && shipments.data.length > 0 ? (
+
                                     shipments.data.map((shipment) => (
+
                                         <tr
                                             key={shipment.id}
                                             className="transition-colors hover:bg-slate-50"
@@ -302,8 +305,10 @@ export default function Index({ shipments, filters }) {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full ${getPhaseColor(shipment.current_phase || 1)}`}>
+                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full  ${getPhaseColor(shipment.current_phase || 1)}`}>
                                                     {getPhaseName(shipment, shipment.current_phase || 1)}
+
+                                                    {/* {shipment.stages?.[shipment.stages.length - 1]?.stage} */}
                                                 </span>
                                             </td>
                                             <td className="px-6 py-4">

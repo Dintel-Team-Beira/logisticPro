@@ -5,6 +5,9 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Foundation\Auth\User as Authenticatable;
+use Illuminate\Notifications\Notifiable;
+use Illuminate\Support\Str;
 
 /**
  * Model Client
@@ -56,9 +59,9 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
  *
  * @author Arnaldo Tomo
  */
-class Client extends Model
+class Client extends Authenticatable
 {
-    use HasFactory, SoftDeletes;
+    use HasFactory, SoftDeletes, Notifiable;
 
     /**
      * Tipos de cliente disponíveis
@@ -134,6 +137,12 @@ class Client extends Model
         'metadata',
         'assigned_to_user_id',
         'last_interaction_date',
+        'password',
+        'portal_access',
+        'email_verified_at',
+        'last_login_at',
+        'initial_access_token',
+        'initial_access_token_expires_at',
     ];
 
     /**
@@ -142,9 +151,13 @@ class Client extends Model
     protected $casts = [
         'active' => 'boolean',
         'blocked' => 'boolean',
+        'portal_access' => 'boolean',
         'credit_limit' => 'integer',
         'metadata' => 'array',
         'last_interaction_date' => 'datetime',
+        'email_verified_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'initial_access_token_expires_at' => 'datetime',
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
         'deleted_at' => 'datetime',
@@ -153,7 +166,11 @@ class Client extends Model
     /**
      * The attributes that should be hidden for serialization.
      */
-    protected $hidden = [];
+    protected $hidden = [
+        'password',
+        'remember_token',
+        'initial_access_token',
+    ];
 
     /**
      * Default values for attributes
@@ -215,6 +232,14 @@ class Client extends Model
     public function invoices()
     {
         return $this->hasMany(Invoice::class);
+    }
+
+    /**
+     * Get all quotes for this client
+     */
+    public function quotes()
+    {
+        return $this->hasMany(Quote::class);
     }
 
     /**
@@ -580,6 +605,72 @@ class Client extends Model
             self::PAYMENT_NET_60 => 'Net 60 dias',
             self::PAYMENT_CUSTOM => 'Personalizado',
         ];
+    }
+
+    /**
+     * Generate initial access token for portal
+     */
+    public function generateInitialAccessToken(): string
+    {
+        $token = Str::random(64);
+        $this->update([
+            'initial_access_token' => hash('sha256', $token),
+            'initial_access_token_expires_at' => now()->addDays(7),
+        ]);
+
+        return $token;
+    }
+
+    /**
+     * Validate initial access token
+     */
+    public function validateInitialAccessToken(string $token): bool
+    {
+        if (!$this->initial_access_token || !$this->initial_access_token_expires_at) {
+            return false;
+        }
+
+        if ($this->initial_access_token_expires_at->isPast()) {
+            return false;
+        }
+
+        return hash_equals($this->initial_access_token, hash('sha256', $token));
+    }
+
+    /**
+     * Set portal password and activate access
+     */
+    public function setPortalPassword(string $password): bool
+    {
+        $this->update([
+            'password' => bcrypt($password),
+            'portal_access' => true,
+            'initial_access_token' => null,
+            'initial_access_token_expires_at' => null,
+            'email_verified_at' => now(),
+        ]);
+
+        return true;
+    }
+
+    /**
+     * Check if client can access portal
+     */
+    public function canAccessPortal(): bool
+    {
+        return $this->portal_access
+            && $this->active
+            && !$this->blocked
+            && $this->password !== null;
+    }
+
+    /**
+     * Update last login timestamp
+     */
+    public function updateLastLogin(): bool
+    {
+        $this->last_login_at = now();
+        return $this->save();
     }
 
     /*

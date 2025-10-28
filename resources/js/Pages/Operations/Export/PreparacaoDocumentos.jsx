@@ -152,8 +152,13 @@ function ShipmentDetailedCard({
     return shipment.documents?.find(doc => doc.type === docType);
   };
 
+  // Check if all REQUIRED documents are uploaded
+  const allRequiredDocsUploaded = requiredDocs
+    .filter(doc => doc.required)
+    .every(doc => getDocumentStatus(doc.type));
+
   const progress = shipment.real_progress || 0;
-  const canAdvance = progress >= 100;
+  const canAdvance = allRequiredDocsUploaded;
 
   return (
     <div className="p-6 mb-4 bg-white border rounded-xl border-slate-200 hover:shadow-lg transition-shadow">

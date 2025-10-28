@@ -6,7 +6,9 @@ use App\Models\Client;
 use App\Models\User;
 use App\Http\Requests\ClientRequest;
 use App\Http\Resources\ClientResource;
+use App\Mail\ClientWelcomeMail;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Inertia\Inertia;
 
 class ClientController extends Controller
@@ -96,6 +98,24 @@ class ClientController extends Controller
     public function store(ClientRequest $request)
     {
         $client = Client::create($request->validated());
+
+        // Generate initial access token and send welcome email
+        if ($client->email) {
+            try {
+                $token = $client->generateInitialAccessToken();
+                Mail::to($client->email)->send(new ClientWelcomeMail($client, $token));
+
+                return redirect()
+                    ->route('clients.show', $client)
+                    ->with('success', 'Cliente criado com sucesso! Email de boas-vindas enviado para ' . $client->email);
+            } catch (\Exception $e) {
+                \Log::error('Erro ao enviar email de boas-vindas: ' . $e->getMessage());
+
+                return redirect()
+                    ->route('clients.show', $client)
+                    ->with('warning', 'Cliente criado com sucesso, mas não foi possível enviar o email de boas-vindas.');
+            }
+        }
 
         return redirect()
             ->route('clients.show', $client)

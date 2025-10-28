@@ -71,6 +71,8 @@ class ShipmentController extends Controller
     public function store(Request $request)
     {
 
+
+        // dd($request->all());
         Log::info('ShipmentController@store - Iniciando', ['data' => $request->except('bl_file')]);
 
         DB::beginTransaction();
@@ -78,7 +80,7 @@ class ShipmentController extends Controller
         try {
             // 1. Validação
             $validated = $request->validate([
-                'type' => 'required|in:import,export',
+                'type' => 'required|in:import,export,transit',
                 'client_id' => 'required|exists:clients,id',
                 'shipping_line_id' => 'required|exists:shipping_lines,id',
                 'bl_number' => 'nullable|string', // Removido unique: um BL pode ter múltiplos containers

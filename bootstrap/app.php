@@ -22,6 +22,12 @@ return Application::configure(basePath: dirname(__DIR__))
 
         ]);
 
+        // Register middleware aliases
+        $middleware->alias([
+            'client.auth' => \App\Http\Middleware\RedirectIfNotClient::class,
+            'client.guest' => \App\Http\Middleware\RedirectIfClient::class,
+        ]);
+
         //
     })
     ->withExceptions(function (Exceptions $exceptions): void {

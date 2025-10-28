@@ -188,6 +188,8 @@ export default function Create() {
                             ? 'Processo de Exportação: mercadoria saindo de Moçambique para o exterior'
                             : data.type === 'import'
                             ? 'Processo de Importação: mercadoria chegando do exterior para Moçambique'
+                            : data.type === 'transit'
+                            ? 'Processo de Trânsito: mercadoria passando por Moçambique em rota para outro destino'
                             : 'Selecione o tipo de processo para começar'
                         }
                     </p>
@@ -312,7 +314,7 @@ export default function Create() {
                                 Selecione o tipo de operação logística que deseja realizar:
                             </p>
 
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
                                 {/* IMPORTAÇÃO */}
                                 <button
                                     type="button"
@@ -381,6 +383,45 @@ export default function Create() {
                                             </div>
                                             {data.type === 'export' && (
                                                 <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white text-xs font-semibold rounded-full">
+                                                    <Check className="w-3 h-3" />
+                                                    Selecionado
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+                                </button>
+
+                                {/* TRÂNSITO */}
+                                <button
+                                    type="button"
+                                    onClick={() => setData('type', 'transit')}
+                                    className={`
+                                        p-6 border-2 rounded-xl text-left transition-all transform hover:scale-105
+                                        ${data.type === 'transit'
+                                            ? 'border-purple-500 bg-purple-50 shadow-lg'
+                                            : 'border-slate-200 bg-white hover:border-purple-300'
+                                        }
+                                    `}
+                                >
+                                    <div className="flex items-start gap-4">
+                                        <div className="p-3 bg-purple-100 rounded-lg">
+                                            <Ship className="w-8 h-8 text-purple-600" />
+                                        </div>
+                                        <div className="flex-1">
+                                            <h3 className="text-lg font-bold text-slate-900 mb-2">
+                                                🔄 Trânsito
+                                            </h3>
+                                            <p className="text-sm text-slate-600 mb-3">
+                                                Mercadoria <strong>passando por Moçambique</strong> em rota para <strong>outro destino</strong>
+                                            </p>
+                                            <div className="space-y-1 text-xs text-slate-500">
+                                                <p>• Origem: Qualquer porto</p>
+                                                <p>• Via: Moçambique (Trânsito)</p>
+                                                <p>• Destino: Outro país</p>
+                                                <p>• Requer: Documentação de Trânsito</p>
+                                            </div>
+                                            {data.type === 'transit' && (
+                                                <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 bg-purple-600 text-white text-xs font-semibold rounded-full">
                                                     <Check className="w-3 h-3" />
                                                     Selecionado
                                                 </div>
@@ -715,7 +756,7 @@ export default function Create() {
                                     <div>
                                         <p className="text-slate-600">Tipo:</p>
                                         <p className="font-semibold text-slate-900">
-                                            {data.type === 'export' ? '🚢 Exportação' : '📦 Importação'}
+                                            {data.type === 'export' ? '🚢 Exportação' : data.type === 'transit' ? '🔄 Trânsito' : '📦 Importação'}
                                         </p>
                                     </div>
                                     <div>

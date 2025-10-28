@@ -743,7 +743,7 @@ function GenerateInvoiceModal({ shipment, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 border n">
       <div className="w-full max-w-3xl overflow-hidden bg-white rounded-xl">
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200">

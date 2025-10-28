@@ -550,6 +550,7 @@ export default function ClientShow({ client, stats }) {
 
               {client.invoices && client.invoices.length > 0 ? (
                 <div className="space-y-3">
+                    {/* {console.log("Clinet Debugs",client.invoices)} */}
                   {client.invoices.map((invoice) => (
                     <Link
                       key={invoice.id}
@@ -571,7 +572,7 @@ export default function ClientShow({ client, stats }) {
                       </div>
                       <div className="flex items-center gap-3">
                         <p className="font-semibold text-slate-900">
-                          {invoice.total.toLocaleString('pt-MZ')} {invoice.currency}
+                          {invoice.amount.toLocaleString('pt-MZ')} {invoice.currency}
                         </p>
                         <span
                           className={`px-3 py-1 text-xs font-semibold rounded-full ${
