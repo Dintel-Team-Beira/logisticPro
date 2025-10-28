@@ -1135,6 +1135,21 @@ Route::middleware(['auth'])->prefix('operations/transit')->name('operations.tran
 });
 
 // ============================================================================
+// OPERAÇÕES DE TRANSPORTE (2 FASES)
+// ============================================================================
+use App\Http\Controllers\Operations\TransportOperationsController;
+
+Route::middleware(['auth'])->prefix('operations/transport')->name('operations.transport.')->group(function () {
+    // Fase 1: Coleta
+    Route::get('/coleta', [TransportOperationsController::class, 'coleta'])->name('coleta');
+    Route::post('/coleta/{shipment}/update-status', [TransportOperationsController::class, 'updateColetaStatus']);
+
+    // Fase 2: Entrega
+    Route::get('/entrega', [TransportOperationsController::class, 'entrega'])->name('entrega');
+    Route::post('/entrega/{shipment}/update-status', [TransportOperationsController::class, 'updateEntregaStatus']);
+});
+
+// ============================================================================
 // API ROUTES - Para acesso externo
 // ============================================================================
 Route::middleware(['auth:sanctum'])->prefix('api/v1')->group(function () {
