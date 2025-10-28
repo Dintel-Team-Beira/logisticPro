@@ -475,18 +475,50 @@ class OperationsController extends Controller
     /**
      * EXPORTAÇÃO - FASE 1: Preparação de Documentos
      */
-    public function exportPreparacao(Request $request,$shipment)
+    public function exportPreparacao(Request $request, $preparacao = null)
     {
+        // Se foi fornecido um ID específico, mostrar apenas aquele shipment
+        if ($preparacao) {
+            $shipment = Shipment::with(['client', 'shippingLine', 'documents', 'stages'])
+                ->where('type', 'export')
+                ->findOrFail($preparacao);
 
-        $query = Shipment::with(['client', 'shippingLine', 'documents', 'stages'])
-            ->where('type', 'export')
-            ->inStage('preparacao_documentos');
+            // Calcular progresso real baseado nos documentos
+            $requiredDocs = ['commercial_invoice', 'packing_list'];
+            $uploadedDocs = $shipment->documents->whereIn('type', $requiredDocs)->pluck('type')->toArray();
+            $progress = (count($uploadedDocs) / count($requiredDocs)) * 100;
+            $shipment->real_progress = $progress;
 
-        if ($request->has('search')) {
-            $query->search($request->search);
+            $shipments = collect([$shipment]);
+
+            // Converter para paginação fake
+            $shipments = new \Illuminate\Pagination\LengthAwarePaginator(
+                $shipments,
+                1,
+                15,
+                1
+            );
+        } else {
+            // Mostrar todos os shipments na fase de preparação
+            $query = Shipment::with(['client', 'shippingLine', 'documents', 'stages'])
+                ->where('type', 'export')
+                ->inStage('preparacao_documentos');
+
+            if ($request->has('search')) {
+                $query->search($request->search);
+            }
+
+            $shipments = $query->latest()->paginate(15);
+
+            // Calcular progresso para cada shipment
+            $shipments->getCollection()->transform(function ($shipment) {
+                $requiredDocs = ['commercial_invoice', 'packing_list'];
+                $uploadedDocs = $shipment->documents->whereIn('type', $requiredDocs)->pluck('type')->toArray();
+                $progress = (count($uploadedDocs) / count($requiredDocs)) * 100;
+                $shipment->real_progress = $progress;
+                return $shipment;
+            });
         }
-
-        $shipments = $query->latest()->paginate(15);
 
         $stats = [
             'total' => Shipment::where('type', 'export')->inStage('preparacao_documentos')->count(),

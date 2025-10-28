@@ -32,6 +32,10 @@ export default function PreparacaoDocumentos({ shipments, stats, flash }) {
       preserveScroll: true,
       onSuccess: () => {
         alert('Documento enviado com sucesso!');
+      },
+      onError: (errors) => {
+        console.error('Erro ao enviar documento:', errors);
+        alert('Erro ao enviar documento: ' + (errors.file || errors.error || 'Erro desconhecido'));
       }
     });
   };
@@ -40,7 +44,14 @@ export default function PreparacaoDocumentos({ shipments, stats, flash }) {
     if (confirm('Tem certeza que deseja excluir este documento?')) {
       router.delete(`/documents/${documentId}`, {
         preserveState: true,
-        preserveScroll: true
+        preserveScroll: true,
+        onSuccess: () => {
+          console.log('Documento excluído com sucesso!');
+        },
+        onError: (errors) => {
+          console.error('Erro ao excluir documento:', errors);
+          alert('Erro ao excluir documento: ' + (errors.error || 'Erro desconhecido'));
+        }
       });
     }
   };
@@ -56,10 +67,24 @@ export default function PreparacaoDocumentos({ shipments, stats, flash }) {
     });
   };
 
-  const handleAdvancePhase = (shipmentId) => {
+  const handleAdvancePhase = (shipmentId, canAdvance) => {
+    // Validar se pode avançar antes de confirmar
+    if (!canAdvance) {
+      alert('Por favor, complete todos os documentos obrigatórios antes de avançar.');
+      return;
+    }
+
     if (confirm('Deseja avançar para a próxima fase (Booking)?')) {
       router.post(`/shipments/${shipmentId}/advance`, {
         phase: 2
+      }, {
+        onSuccess: () => {
+          console.log('Avançado com sucesso!');
+        },
+        onError: (errors) => {
+          console.error('Erro ao avançar:', errors);
+          alert('Erro ao avançar: ' + (errors.error || 'Erro desconhecido. Verifique se todos os documentos obrigatórios foram enviados.'));
+        }
       });
     }
   };
@@ -263,7 +288,7 @@ function ShipmentDetailedCard({
         </div>
 
         <button
-          onClick={() => onAdvancePhase(shipment.id)}
+          onClick={() => onAdvancePhase(shipment.id, canAdvance)}
           disabled={!canAdvance}
           className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
         >
