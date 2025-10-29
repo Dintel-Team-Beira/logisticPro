@@ -28,6 +28,7 @@ class Shipment extends Model
         'reference_number',
         'type', // NOVO: import ou export
         'client_id',
+        'consignee_id',
         'shipping_line_id',
         'bl_number',
         'container_number',
@@ -219,6 +220,11 @@ class Shipment extends Model
     public function client()
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function consignee()
+    {
+        return $this->belongsTo(Consignee::class);
     }
 
     public function shippingLine()

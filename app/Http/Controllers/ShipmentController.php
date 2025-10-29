@@ -62,6 +62,7 @@ class ShipmentController extends Controller
         return Inertia::render('Shipments/Create', [
             'shippingLines' => ShippingLine::where('active', true)->get(),
             'clients' => Client::orderBy('name')->get(),
+            'consignees' => \App\Models\Consignee::active()->orderBy('name')->get(),
         ]);
     }
 
@@ -82,6 +83,7 @@ class ShipmentController extends Controller
             $validated = $request->validate([
                 'type' => 'required|in:import,export,transit,transport',
                 'client_id' => 'required|exists:clients,id',
+                'consignee_id' => 'nullable|exists:consignees,id',
 
                 // Campos de Import/Export/Transit
                 'shipping_line_id' => $request->type === 'transport' ? 'nullable|exists:shipping_lines,id' : 'required|exists:shipping_lines,id',

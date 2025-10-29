@@ -7,6 +7,7 @@ use Illuminate\Foundation\Application;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\StageController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ConsigneeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProfileController;
@@ -857,6 +858,23 @@ Route::middleware(['auth'])->group(function () {
     // Relatório Financeiro do Cliente
     Route::get('/clients/{client}/financial', [ClientController::class, 'financial'])
         ->name('clients.financial');
+});
+
+// ============================================================================
+// CONSIGNATÁRIOS - Gestão de Consignatários
+// ============================================================================
+Route::middleware(['auth'])->group(function () {
+
+    // CRUD Completo de Consignatários
+    Route::resource('consignees', ConsigneeController::class);
+
+    // Ativar/Desativar Consignatário
+    Route::patch('/consignees/{consignee}/toggle-active', [ConsigneeController::class, 'toggleActive'])
+        ->name('consignees.toggle-active');
+
+    // Obter consignatários por cliente (API)
+    Route::get('/api/clients/{client}/consignees', [ConsigneeController::class, 'getByClient'])
+        ->name('api.consignees.by-client');
 });
 
 // ============================================================================

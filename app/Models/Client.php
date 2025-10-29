@@ -217,6 +217,14 @@ class Client extends Authenticatable
     }
 
     /**
+     * Get all consignees for this client
+     */
+    public function consignees()
+    {
+        return $this->hasMany(Consignee::class);
+    }
+
+    /**
      * Get active shipments only
      */
     public function activeShipments()

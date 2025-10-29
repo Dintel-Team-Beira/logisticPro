@@ -24,13 +24,15 @@ import {
 } from 'lucide-react';
 
 export default function Create() {
-    const { shippingLines, clients } = usePage().props;
+    const { shippingLines, clients, consignees } = usePage().props;
     const [step, setStep] = useState(1);
     const [blFile, setBlFile] = useState(null);
+    const [filteredConsignees, setFilteredConsignees] = useState([]);
 
     const { data, setData, post, processing, errors } = useForm({
-        // Cliente
+        // Cliente e Consignatário
         client_id: '',
+        consignee_id: '',
 
         // Tipo de Processo (será escolhido no step 2)
         type: '',
@@ -102,6 +104,17 @@ export default function Create() {
     // ========================================
     // EFEITOS E HANDLERS
     // ========================================
+
+    // Filtrar consignatários por cliente selecionado
+    useEffect(() => {
+        if (data.client_id) {
+            const filtered = consignees?.filter(c => !c.client_id || c.client_id == data.client_id) || [];
+            setFilteredConsignees(filtered);
+        } else {
+            setFilteredConsignees([]);
+            setData('consignee_id', '');
+        }
+    }, [data.client_id]);
 
     // Quando o tipo mudar, limpar portos para evitar conflitos
     useEffect(() => {
@@ -297,6 +310,28 @@ export default function Create() {
                                     </option>
                                 ))}
                             </Select>
+
+                            {/* Consignatário (Opcional) */}
+                            {data.client_id && (
+                                <div className="mt-4">
+                                    <Select
+                                        label="Consignatário (Destinatário)"
+                                        value={data.consignee_id}
+                                        onChange={(e) => setData('consignee_id', e.target.value)}
+                                        error={errors.consignee_id}
+                                    >
+                                        <option value="">Nenhum (usar dados do cliente)</option>
+                                        {filteredConsignees.map((consignee) => (
+                                            <option key={consignee.id} value={consignee.id}>
+                                                {consignee.name} - {consignee.city || 'Sem localização'}
+                                            </option>
+                                        ))}
+                                    </Select>
+                                    <p className="mt-1 text-xs text-slate-500">
+                                        O consignatário é o destinatário final da mercadoria. Se não selecionar, os dados do cliente serão usados.
+                                    </p>
+                                </div>
+                            )}
 
                             <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
                                 <p className="text-sm text-blue-800">
