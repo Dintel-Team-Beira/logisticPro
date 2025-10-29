@@ -35,25 +35,32 @@ export default function Create() {
         // Tipo de Processo (será escolhido no step 2)
         type: '',
 
-        // Linha de Navegação e Documentos
+        // Linha de Navegação e Documentos (Import/Export/Transit)
         shipping_line_id: '',
         bl_number: '',
         bl_file: null,
 
-        // Container
+        // Container (Import/Export/Transit)
         container_number: '',
         container_type: '',
         vessel_name: '',
         arrival_date: '',
 
-        // Rota (dinâmica baseada no tipo)
+        // Rota (Import/Export/Transit)
         origin_port: '',
         destination_port: '',
 
-        // Carga
+        // Carga (Todos os tipos)
         cargo_description: '',
         cargo_weight: '',
         cargo_value: '',
+
+        // Campos específicos de TRANSPORTE
+        loading_location: '',           // Local de carregamento
+        unloading_location: '',         // Local de descarregamento
+        cargo_type: '',                 // Tipo de mercadoria
+        distance_km: '',                // Distância em KM
+        empty_return_location: '',      // Local da devolução do vazio
     });
 
     // ========================================
@@ -144,15 +151,25 @@ export default function Create() {
     };
 
     const canProceedToStep4 = () => {
+        // Para transport: não exige shipping_line (é opcional)
+        if (data.type === 'transport') {
+            return true; // Sempre pode prosseguir
+        }
         // Para importação: exige shipping_line_id, bl_number e bl_file
         if (data.type === 'import') {
             return data.shipping_line_id && data.bl_number && data.bl_file;
         }
-        // Para exportação: apenas shipping_line_id é obrigatório
+        // Para exportação/transit: apenas shipping_line_id é obrigatório
         return data.shipping_line_id;
     };
 
     const canProceedToStep5 = () => {
+        // Para transport: exige campos específicos
+        if (data.type === 'transport') {
+            return data.loading_location && data.unloading_location &&
+                   data.cargo_type && data.distance_km && data.empty_return_location;
+        }
+        // Para outros tipos: exige container e portos
         return data.container_type && data.origin_port && data.destination_port;
     };
 
@@ -501,44 +518,73 @@ export default function Create() {
                             <div className="flex items-center gap-2 mb-6">
                                 <FileText className="w-5 h-5 text-slate-600" />
                                 <h2 className="text-lg font-semibold text-slate-900">
-                                    {data.type === 'import' ? 'Documentação de Importação' : 'Documentação de Exportação'}
+                                    {data.type === 'transport'
+                                        ? 'Documentação de Transporte'
+                                        : data.type === 'import'
+                                        ? 'Documentação de Importação'
+                                        : 'Documentação de Exportação'}
                                 </h2>
                             </div>
 
-                            <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                <Select
-                                    label="Linha de Navegação *"
-                                    value={data.shipping_line_id}
-                                    onChange={(e) => setData('shipping_line_id', e.target.value)}
-                                    error={errors.shipping_line_id}
-                                    required
-                                >
-                                    <option value="">Selecione uma linha</option>
-                                    {shippingLines?.map((line) => (
-                                        <option key={line.id} value={line.id}>
-                                            {line.name}
-                                        </option>
-                                    ))}
-                                </Select>
+                            {data.type === 'transport' ? (
+                                // CAMPOS SIMPLIFICADOS PARA TRANSPORTE
+                                <div className="space-y-4">
+                                    <Select
+                                        label="Transportadora (Opcional)"
+                                        value={data.shipping_line_id}
+                                        onChange={(e) => setData('shipping_line_id', e.target.value)}
+                                        error={errors.shipping_line_id}
+                                    >
+                                        <option value="">Selecione uma transportadora</option>
+                                        {shippingLines?.map((line) => (
+                                            <option key={line.id} value={line.id}>
+                                                {line.name}
+                                            </option>
+                                        ))}
+                                    </Select>
 
-                                <Input
-                                    label={data.type === 'import' ? 'Número do BL *' : 'Número do BL (Opcional)'}
-                                    icon={FileText}
-                                    value={data.bl_number}
-                                    onChange={(e) => setData('bl_number', e.target.value)}
-                                    error={errors.bl_number}
-                                    placeholder="Ex: 253157188"
-                                    required={data.type === 'import'}
-                                />
-                            </div>
+                                    <p className="text-sm text-slate-500">
+                                        💡 Para processos de transporte, os detalhes principais serão preenchidos na próxima etapa.
+                                    </p>
+                                </div>
+                            ) : (
+                                // CAMPOS ORIGINAIS PARA IMPORT/EXPORT/TRANSIT
+                                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+                                    <Select
+                                        label="Linha de Navegação *"
+                                        value={data.shipping_line_id}
+                                        onChange={(e) => setData('shipping_line_id', e.target.value)}
+                                        error={errors.shipping_line_id}
+                                        required
+                                    >
+                                        <option value="">Selecione uma linha</option>
+                                        {shippingLines?.map((line) => (
+                                            <option key={line.id} value={line.id}>
+                                                {line.name}
+                                            </option>
+                                        ))}
+                                    </Select>
 
-                            {/* Upload de Documentos */}
-                            <div className="mt-6">
-                                <label className="block mb-2 text-sm font-medium text-slate-700">
-                                    {data.type === 'import'
-                                        ? '📄 Upload do BL Original * (PDF, JPG, PNG)'
-                                        : '📄 Upload de Documentos (Fatura Comercial, Packing List) (PDF, JPG, PNG)'}
-                                </label>
+                                    <Input
+                                        label={data.type === 'import' ? 'Número do BL *' : 'Número do BL (Opcional)'}
+                                        icon={FileText}
+                                        value={data.bl_number}
+                                        onChange={(e) => setData('bl_number', e.target.value)}
+                                        error={errors.bl_number}
+                                        placeholder="Ex: 253157188"
+                                        required={data.type === 'import'}
+                                    />
+                                </div>
+                            )}
+
+                            {/* Upload de Documentos - Oculto para Transport */}
+                            {data.type !== 'transport' && (
+                                <div className="mt-6">
+                                    <label className="block mb-2 text-sm font-medium text-slate-700">
+                                        {data.type === 'import'
+                                            ? '📄 Upload do BL Original * (PDF, JPG, PNG)'
+                                            : '📄 Upload de Documentos (Fatura Comercial, Packing List) (PDF, JPG, PNG)'}
+                                    </label>
                                 <div className="flex items-center justify-center w-full">
                                     <label className={`
                                         flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer
@@ -579,7 +625,8 @@ export default function Create() {
                                 {errors.bl_file && (
                                     <p className="mt-1 text-xs text-red-600">{errors.bl_file}</p>
                                 )}
-                            </div>
+                                </div>
+                            )}
 
                             <div className="flex justify-between mt-6">
                                 <button
@@ -602,19 +649,118 @@ export default function Create() {
                         </div>
                     )}
 
-                    {/* STEP 4: CONTAINER E ROTA (DINÂMICA) */}
+                    {/* STEP 4: CONTAINER E ROTA (DINÂMICA) OU TRANSPORTE */}
                     {step === 4 && (
                         <div className="space-y-6">
-                            {/* Container */}
-                            <div className="p-6 bg-white border rounded-lg border-slate-200">
-                                <div className="flex items-center gap-2 mb-6">
-                                    <Package className="w-5 h-5 text-slate-600" />
-                                    <h2 className="text-lg font-semibold text-slate-900">
-                                        Informações do Container
-                                    </h2>
-                                </div>
+                            {data.type === 'transport' ? (
+                                // CAMPOS ESPECÍFICOS DE TRANSPORTE
+                                <div className="p-6 bg-white border rounded-lg border-slate-200">
+                                    <div className="flex items-center gap-2 mb-6">
+                                        <Truck className="w-5 h-5 text-purple-600" />
+                                        <h2 className="text-lg font-semibold text-slate-900">
+                                            Detalhes do Transporte Rodoviário
+                                        </h2>
+                                    </div>
 
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                        {/* Local de Carregamento */}
+                                        <Input
+                                            label="Local de Carregamento *"
+                                            icon={MapPin}
+                                            value={data.loading_location}
+                                            onChange={(e) => setData('loading_location', e.target.value)}
+                                            error={errors.loading_location}
+                                            placeholder="Ex: Armazém Beira, Rua..."
+                                            required
+                                        />
+
+                                        {/* Local de Descarregamento */}
+                                        <Input
+                                            label="Local de Descarregamento *"
+                                            icon={MapPin}
+                                            value={data.unloading_location}
+                                            onChange={(e) => setData('unloading_location', e.target.value)}
+                                            error={errors.unloading_location}
+                                            placeholder="Ex: Cliente Final, Maputo..."
+                                            required
+                                        />
+
+                                        {/* Tipo de Mercadoria */}
+                                        <Input
+                                            label="Tipo de Mercadoria *"
+                                            icon={Package}
+                                            value={data.cargo_type}
+                                            onChange={(e) => setData('cargo_type', e.target.value)}
+                                            error={errors.cargo_type}
+                                            placeholder="Ex: Alimentos, Equipamentos..."
+                                            required
+                                        />
+
+                                        {/* Distância em KM */}
+                                        <Input
+                                            type="number"
+                                            label="Distância (KM) *"
+                                            icon={TrendingUp}
+                                            value={data.distance_km}
+                                            onChange={(e) => setData('distance_km', e.target.value)}
+                                            error={errors.distance_km}
+                                            placeholder="Ex: 580"
+                                            required
+                                        />
+
+                                        {/* Local da Devolução do Vazio */}
+                                        <div className="md:col-span-2">
+                                            <Input
+                                                label="Local da Devolução do Vazio *"
+                                                icon={MapPin}
+                                                value={data.empty_return_location}
+                                                onChange={(e) => setData('empty_return_location', e.target.value)}
+                                                error={errors.empty_return_location}
+                                                placeholder="Ex: Porto de Beira, Depósito..."
+                                                required
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Info Visual - Rota de Transporte */}
+                                    <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
+                                        <div className="flex items-center justify-between text-sm">
+                                            <div className="flex flex-col items-center gap-1">
+                                                <MapPin className="w-4 h-4 text-purple-600" />
+                                                <span className="font-semibold text-purple-900">
+                                                    {data.loading_location || 'Carregamento'}
+                                                </span>
+                                                <span className="text-xs text-purple-600">Origem</span>
+                                            </div>
+                                            <div className="flex-1 mx-4 border-t-2 border-dashed border-purple-300"></div>
+                                            <Truck className="w-6 h-6 text-purple-500" />
+                                            {data.distance_km && (
+                                                <span className="text-xs font-semibold text-purple-700">{data.distance_km} km</span>
+                                            )}
+                                            <div className="flex-1 mx-4 border-t-2 border-dashed border-purple-300"></div>
+                                            <div className="flex flex-col items-center gap-1">
+                                                <MapPin className="w-4 h-4 text-emerald-600" />
+                                                <span className="font-semibold text-emerald-900">
+                                                    {data.unloading_location || 'Descarregamento'}
+                                                </span>
+                                                <span className="text-xs text-emerald-600">Destino</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            ) : (
+                                // CAMPOS ORIGINAIS PARA IMPORT/EXPORT/TRANSIT
+                                <>
+                                    {/* Container */}
+                                    <div className="p-6 bg-white border rounded-lg border-slate-200">
+                                        <div className="flex items-center gap-2 mb-6">
+                                            <Package className="w-5 h-5 text-slate-600" />
+                                            <h2 className="text-lg font-semibold text-slate-900">
+                                                Informações do Container
+                                            </h2>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                                     <Input
                                         label="Número do Container"
                                         icon={Package}
@@ -719,6 +865,8 @@ export default function Create() {
                                     </div>
                                 </div>
                             </div>
+                                </>
+                            )}
 
                             <div className="flex justify-between">
                                 <button

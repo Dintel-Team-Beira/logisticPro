@@ -78,12 +78,14 @@ class ShipmentController extends Controller
         DB::beginTransaction();
 
         try {
-            // 1. Validação
+            // 1. Validação base
             $validated = $request->validate([
                 'type' => 'required|in:import,export,transit,transport',
                 'client_id' => 'required|exists:clients,id',
-                'shipping_line_id' => 'required|exists:shipping_lines,id',
-                'bl_number' => 'nullable|string', // Removido unique: um BL pode ter múltiplos containers
+
+                // Campos de Import/Export/Transit
+                'shipping_line_id' => $request->type === 'transport' ? 'nullable|exists:shipping_lines,id' : 'required|exists:shipping_lines,id',
+                'bl_number' => 'nullable|string',
                 'bl_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
                 'container_number' => 'nullable|string',
                 'container_type' => 'nullable|string',
@@ -91,12 +93,20 @@ class ShipmentController extends Controller
                 'arrival_date' => 'nullable|date',
                 'origin_port' => 'nullable|string',
                 'destination_port' => 'nullable|string',
+
+                // Campos comuns de carga
                 'cargo_description' => 'nullable|string',
-                'cargo_type' => 'nullable|in:normal,perishable,hazardous,oversized',
+                'cargo_type' => 'nullable|string',
                 'cargo_weight' => 'nullable|numeric',
                 'cargo_value' => 'nullable|numeric',
                 'has_tax_exemption' => 'boolean',
                 'is_reexport' => 'boolean',
+
+                // Campos específicos de Transport
+                'loading_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
+                'unloading_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
+                'distance_km' => $request->type === 'transport' ? 'required|numeric|min:0' : 'nullable|numeric',
+                'empty_return_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
             ]);
 
             Log::info('Validação passou');
