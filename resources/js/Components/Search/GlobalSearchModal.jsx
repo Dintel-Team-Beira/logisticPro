@@ -67,11 +67,15 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
         const timeoutId = setTimeout(async () => {
             try {
                 const response = await axios.get(`/api/search?q=${encodeURIComponent(query)}`);
+
+                // API esta vindo com uma carga pesada de dados (Devo Optimizar Depois essa sena)
                 setResults(response.data.results);
+                // Sempre e o primeiro d lista a ser escolhido kkk
                 setSelectedIndex(0);
             } catch (error) {
                 console.error('Search error:', error);
             } finally {
+                // Missao Comprisa ou quase kkk
                 setLoading(false);
             }
         }, 300);
@@ -79,7 +83,7 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
         return () => clearTimeout(timeoutId);
     }, [query]);
 
-    // Focus input when modal opens
+    // Focus total no input mas importante da vida
     useEffect(() => {
         if (isOpen && inputRef.current) {
             inputRef.current.focus();
@@ -154,7 +158,7 @@ export default function GlobalSearchModal({ isOpen, onClose }) {
                             onChange={(e) => setQuery(e.target.value)}
                             onKeyDown={handleKeyDown}
                             placeholder="Pesquisar processos, clientes, documentos, faturas..."
-                            className="flex-1 text-lg border-0 bg-transparent focus:ring-0 focus:outline-none placeholder:text-gray-400"
+                            className="flex-1 text-lg bg-transparent border-0 focus:ring-0 focus:outline-none placeholder:text-gray-400"
                         />
                         {loading && <Loader2 className="w-5 h-5 text-gray-400 animate-spin" />}
                         <button

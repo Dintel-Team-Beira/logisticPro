@@ -4,7 +4,8 @@ import DashboardLayout from '@/Layouts/DashboardLayout';
 import {
     Plus, Search, Filter, Eye, Edit2, Trash2,
     Ship, Package, Clock, CheckCircle2, AlertCircle,
-    TrendingUp, Globe, ArrowRight, MapPin, Truck, Navigation
+    TrendingUp, Globe, ArrowRight, MapPin, Truck, Navigation,
+    Check
 } from 'lucide-react';
 
 export default function Index({ shipments, filters }) {
@@ -113,6 +114,74 @@ export default function Index({ shipments, filters }) {
                 return importNames[phase] || 'Fase ' + phase;
         }
     };
+
+
+    // nova cores
+const getStageColor = (stageKey) => {
+    const colors = {
+        // Export
+        preparacao_documentos:    'bg-blue-100 text-blue-800',
+        booking:                  'bg-purple-100 text-purple-800',
+        inspecao_certificacao:    'bg-amber-100 text-amber-800',
+        despacho_aduaneiro:       'bg-cyan-100 text-cyan-800',
+        transporte_porto:         'bg-indigo-100 text-indigo-800',
+        embarque:                 'bg-green-100 text-green-800',
+        acompanhamento:           'bg-emerald-100 text-emerald-800',
+
+        // Transit
+        recepcao:                 'bg-teal-100 text-teal-800',
+        documentacao:             'bg-sky-100 text-sky-800',
+        desembaraco:              'bg-orange-100 text-orange-800',
+        armazenamento:            'bg-yellow-100 text-yellow-800',
+        preparacao_partida:       'bg-lime-100 text-lime-800',
+        transporte_saida:         'bg-rose-100 text-rose-800',
+
+        // Transport
+        coleta:                   'bg-pink-100 text-pink-800',
+        entrega:                  'bg-red-100 text-red-800',
+
+        // Import
+        coleta_dispersa:          'bg-orange-100 text-orange-800',
+        legalizacao:              'bg-pink-100 text-pink-800',
+        alfandegas:               'bg-red-100 text-red-800',
+        cornelder:                'bg-yellow-100 text-yellow-800',
+        taxacao:                  'bg-lime-100 text-lime-800',
+        faturacao:                'bg-rose-100 text-rose-800',
+        pod:                      'bg-sky-100 text-sky-800',
+    };
+    return colors[stageKey] || 'bg-slate-100 text-slate-700';
+};
+
+const getStageLabel = (stageKey) => {
+    const labels = {
+        preparacao_documentos: 'Documentos',
+        booking: 'Booking',
+        inspecao_certificacao: 'Inspeção',
+        despacho_aduaneiro: 'Despacho',
+        transporte_porto: 'Transporte',
+        embarque: 'Embarque',
+        acompanhamento: 'Acompanhamento',
+
+        recepcao: 'Recepção',
+        documentacao: 'Documentação',
+        desembaraco: 'Desembaraço',
+        armazenamento: 'Armazenamento',
+        preparacao_partida: 'Prep. Partida',
+        transporte_saida: 'Transp. Saída',
+
+        coleta: 'Coleta',
+        entrega: 'Entrega',
+
+        coleta_dispersa: 'Coleta',
+        legalizacao: 'Legalização',
+        alfandegas: 'Alfândegas',
+        cornelder: 'Cornelder',
+        taxacao: 'Taxação',
+        faturacao: 'Faturação',
+        pod: 'POD',
+    };
+    return labels[stageKey] || stageKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
 
     // Calcular estatísticas
     const importCount = shipments.data?.filter(s => s.type === 'import' || !s.type).length || 0;
@@ -280,7 +349,7 @@ export default function Index({ shipments, filters }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
-                                {console.log(shipments.data)}
+
                                 {shipments.data && shipments.data.length > 0 ? (
 
                                     shipments.data.map((shipment) => (
@@ -358,11 +427,19 @@ export default function Index({ shipments, filters }) {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full  ${getPhaseColor(shipment.current_phase || 1)}`}>
-                                                    {getPhaseName(shipment, shipment.current_phase || 1)}
-
-                                                    {/* {shipment.stages?.[shipment.stages.length - 1]?.stage} */}
-                                                </span>
+                                            {shipment.stages?.map((stage) => (
+    <span
+        key={stage.id}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full ${
+            stage.status === 'completed'
+                ? 'bg-slate-200 text-slate-600'
+                : getStageColor(stage.stage)
+        }`}
+    >
+        {getStageLabel(stage.stage)}
+        {stage.status === 'completed' && <Check className="w-3 h-3" />}
+    </span>
+))}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="text-sm text-slate-900">
