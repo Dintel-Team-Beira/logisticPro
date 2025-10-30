@@ -109,6 +109,12 @@ class ShipmentController extends Controller
                 'unloading_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
                 'distance_km' => $request->type === 'transport' ? 'required|numeric|min:0' : 'nullable|numeric',
                 'empty_return_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
+
+                // Campos de cotação automática
+                'regime' => 'nullable|string',
+                'final_destination' => 'nullable|string',
+                'additional_services' => 'nullable|array',
+                'quotation_data' => 'nullable|array',
             ]);
 
             Log::info('Validação passou');
@@ -132,13 +138,20 @@ class ShipmentController extends Controller
 
             $referenceNumber = 'ALEK-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-            Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
+            // Gerar referência de cotação se houver dados
+            $quotationReference = null;
+            if ($request->has('quotation_data') && !empty($request->quotation_data)) {
+                $quotationReference = 'COT-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            }
+
+            Log::info('Número de referência gerado', ['reference' => $referenceNumber, 'quotation' => $quotationReference]);
 
             // 3. Criar shipment
-            $shipment = Shipment::create([
+            $shipmentData = [
                 'reference_number' => $referenceNumber,
                 'type' => $validated['type'],
                 'client_id' => $validated['client_id'],
+                'consignee_id' => $validated['consignee_id'] ?? null,
                 'shipping_line_id' => $validated['shipping_line_id'],
                 'bl_number' => $validated['bl_number'] ?? null,
                 'container_number' => $validated['container_number'],
@@ -155,7 +168,32 @@ class ShipmentController extends Controller
                 'is_reexport' => $validated['is_reexport'] ?? false,
                 'status' => 'active',
                 'created_by' => auth()->id(),
-            ]);
+                // Campos de cotação
+                'regime' => $validated['regime'] ?? null,
+                'final_destination' => $validated['final_destination'] ?? null,
+                'additional_services' => $validated['additional_services'] ?? null,
+            ];
+
+            // Adicionar dados de cotação se fornecidos
+            if ($quotationReference && isset($validated['quotation_data'])) {
+                $quotationData = $validated['quotation_data'];
+                $shipmentData['quotation_reference'] = $quotationReference;
+                $shipmentData['quotation_subtotal'] = $quotationData['subtotal'] ?? 0;
+                $shipmentData['quotation_tax'] = $quotationData['tax'] ?? 0;
+                $shipmentData['quotation_total'] = $quotationData['total'] ?? 0;
+                $shipmentData['quotation_breakdown'] = $quotationData['breakdown'] ?? [];
+                $shipmentData['quotation_status'] = 'pending';
+            }
+
+            // Adicionar campos específicos de Transport
+            if ($validated['type'] === 'transport') {
+                $shipmentData['loading_location'] = $validated['loading_location'] ?? null;
+                $shipmentData['unloading_location'] = $validated['unloading_location'] ?? null;
+                $shipmentData['distance_km'] = $validated['distance_km'] ?? null;
+                $shipmentData['empty_return_location'] = $validated['empty_return_location'] ?? null;
+            }
+
+            $shipment = Shipment::create($shipmentData);
 
             Log::info('Shipment criado', ['id' => $shipment->id]);
 

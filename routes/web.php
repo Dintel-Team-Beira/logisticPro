@@ -1225,6 +1225,15 @@ Route::middleware(['auth:sanctum'])->prefix('api/v1')->group(function () {
         ->name('api.pricing.calculate');
 });
 
+// ============================================================================
+// COTAÇÕES - Visualização e Download
+// ============================================================================
+Route::middleware(['auth'])->prefix('quotations')->name('quotations.')->group(function () {
+    Route::get('/{shipment}', [App\Http\Controllers\QuotationController::class, 'show'])->name('show');
+    Route::get('/{shipment}/pdf', [App\Http\Controllers\QuotationController::class, 'downloadPdf'])->name('pdf');
+    Route::post('/{shipment}/approve', [App\Http\Controllers\QuotationController::class, 'approve'])->name('approve');
+    Route::post('/{shipment}/reject', [App\Http\Controllers\QuotationController::class, 'reject'])->name('reject');
+});
 
 // ============================================================================
 // AUTENTICAÇÃO
