@@ -4,6 +4,8 @@ import { Head, Link, router, useForm, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import Input from '@/Components/Forms/Input';
 import Select from '@/Components/Forms/Select';
+import QuotationCalculator from '@/Components/Quotation/QuotationCalculator';
+import axios from 'axios';
 import {
     ArrowLeft,
     Save,
@@ -28,6 +30,20 @@ export default function Create() {
     const [step, setStep] = useState(1);
     const [blFile, setBlFile] = useState(null);
     const [filteredConsignees, setFilteredConsignees] = useState([]);
+
+    // Parâmetros de precificação da API
+    const [pricingParams, setPricingParams] = useState({
+        container_type: [],
+        cargo_type: [],
+        regime: [],
+        destination: [],
+        additional_service: [],
+    });
+    const [loadingParams, setLoadingParams] = useState(true);
+
+    // Cotação calculada
+    const [quotationData, setQuotationData] = useState(null);
+    const [selectedServices, setSelectedServices] = useState([]);
 
     const { data, setData, post, processing, errors } = useForm({
         // Cliente e Consignatário
@@ -56,13 +72,21 @@ export default function Create() {
         cargo_description: '',
         cargo_weight: '',
         cargo_value: '',
+        cargo_type: '',  // Tipo de mercadoria (dos parâmetros)
+
+        // Campos de cotação
+        regime: '',
+        final_destination: '',
+        additional_services: [],
 
         // Campos específicos de TRANSPORTE
         loading_location: '',           // Local de carregamento
         unloading_location: '',         // Local de descarregamento
-        cargo_type: '',                 // Tipo de mercadoria
         distance_km: '',                // Distância em KM
         empty_return_location: '',      // Local da devolução do vazio
+
+        // Dados da cotação (será preenchido automaticamente)
+        quotation_data: null,
     });
 
     // ========================================
@@ -126,6 +150,21 @@ export default function Create() {
             }));
         }
     }, [data.type]);
+
+    // Buscar parâmetros de precificação da API
+    useEffect(() => {
+        const fetchPricingParams = async () => {
+            try {
+                const response = await axios.get('/api/v1/pricing-parameters-grouped');
+                setPricingParams(response.data);
+                setLoadingParams(false);
+            } catch (error) {
+                console.error('Erro ao buscar parâmetros de precificação:', error);
+                setLoadingParams(false);
+            }
+        };
+        fetchPricingParams();
+    }, []);
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -812,10 +851,10 @@ export default function Create() {
                                         error={errors.container_type}
                                         required
                                     >
-                                        <option value="">Selecione o tipo</option>
-                                        {containerTypes.map((type) => (
-                                            <option key={type.value} value={type.value}>
-                                                {type.label}
+                                        <option value="">{loadingParams ? 'Carregando...' : 'Selecione o tipo'}</option>
+                                        {pricingParams.container_type?.filter(p => p.active).map((param) => (
+                                            <option key={param.code} value={param.code}>
+                                                {param.name} - {param.formatted_price}
                                             </option>
                                         ))}
                                     </Select>
@@ -974,6 +1013,122 @@ export default function Create() {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Parâmetros de Cotação - Apenas para tipos não-Transport */}
+                            {data.type !== 'transport' && (
+                                <div className="p-6 bg-white border rounded-lg border-slate-200">
+                                    <div className="flex items-center gap-2 mb-6">
+                                        <FileText className="w-5 h-5 text-slate-600" />
+                                        <h2 className="text-lg font-semibold text-slate-900">
+                                            Parâmetros de Cotação
+                                        </h2>
+                                    </div>
+
+                                    <div className="space-y-4">
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            {/* Tipo de Mercadoria */}
+                                            <Select
+                                                label="Tipo de Mercadoria"
+                                                value={data.cargo_type}
+                                                onChange={(e) => setData('cargo_type', e.target.value)}
+                                                error={errors.cargo_type}
+                                            >
+                                                <option value="">{loadingParams ? 'Carregando...' : 'Selecione (opcional)'}</option>
+                                                {pricingParams.cargo_type?.filter(p => p.active).map((param) => (
+                                                    <option key={param.code} value={param.code}>
+                                                        {param.name} - {param.formatted_price}
+                                                    </option>
+                                                ))}
+                                            </Select>
+
+                                            {/* Regime */}
+                                            <Select
+                                                label="Regime"
+                                                value={data.regime}
+                                                onChange={(e) => setData('regime', e.target.value)}
+                                                error={errors.regime}
+                                            >
+                                                <option value="">{loadingParams ? 'Carregando...' : 'Selecione (opcional)'}</option>
+                                                {pricingParams.regime?.filter(p => p.active).map((param) => (
+                                                    <option key={param.code} value={param.code}>
+                                                        {param.name} - {param.formatted_price}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </div>
+
+                                        {/* Destino Final */}
+                                        <Select
+                                            label="Destino Final"
+                                            value={data.final_destination}
+                                            onChange={(e) => setData('final_destination', e.target.value)}
+                                            error={errors.final_destination}
+                                        >
+                                            <option value="">{loadingParams ? 'Carregando...' : 'Selecione (opcional)'}</option>
+                                            {pricingParams.destination?.filter(p => p.active).map((param) => (
+                                                <option key={param.code} value={param.code}>
+                                                    {param.name} - {param.formatted_price}
+                                                </option>
+                                            ))}
+                                        </Select>
+
+                                        {/* Serviços Adicionais */}
+                                        {pricingParams.additional_service && pricingParams.additional_service.length > 0 && (
+                                            <div>
+                                                <label className="block mb-3 text-sm font-medium text-slate-700">
+                                                    Serviços Adicionais
+                                                </label>
+                                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                                    {pricingParams.additional_service.filter(p => p.active).map((service) => (
+                                                        <label
+                                                            key={service.code}
+                                                            className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer border-slate-200 hover:bg-slate-50 transition-colors"
+                                                        >
+                                                            <input
+                                                                type="checkbox"
+                                                                value={service.code}
+                                                                checked={selectedServices.includes(service.code)}
+                                                                onChange={(e) => {
+                                                                    const newServices = e.target.checked
+                                                                        ? [...selectedServices, service.code]
+                                                                        : selectedServices.filter(s => s !== service.code);
+                                                                    setSelectedServices(newServices);
+                                                                    setData('additional_services', newServices);
+                                                                }}
+                                                                className="mt-1 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-600"
+                                                            />
+                                                            <div className="flex-1">
+                                                                <p className="text-sm font-medium text-slate-900">{service.name}</p>
+                                                                {service.description && (
+                                                                    <p className="text-xs text-slate-500 mt-0.5">{service.description}</p>
+                                                                )}
+                                                                <p className="text-sm font-semibold text-blue-600 mt-1">
+                                                                    {service.formatted_price}
+                                                                </p>
+                                                            </div>
+                                                        </label>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            )}
+
+                            {/* Cotação Automática */}
+                            {data.type !== 'transport' && (data.container_type || data.cargo_type || data.regime || data.final_destination || selectedServices.length > 0) && (
+                                <QuotationCalculator
+                                    containerType={data.container_type}
+                                    cargoType={data.cargo_type}
+                                    regime={data.regime}
+                                    finalDestination={data.final_destination}
+                                    additionalServices={selectedServices}
+                                    onQuotationCalculated={(quotation) => {
+                                        setQuotationData(quotation);
+                                        setData('quotation_data', quotation);
+                                    }}
+                                />
+                            )}
 
                             {/* Resumo Final */}
                             <div className="p-6 bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200 rounded-lg">

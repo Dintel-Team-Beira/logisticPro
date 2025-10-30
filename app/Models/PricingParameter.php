@@ -166,6 +166,7 @@ class PricingParameter extends Model
                     'description' => $item->description,
                     'price' => $item->price,
                     'formatted_price' => $item->formatted_price,
+                    'active' => $item->active,
                 ];
             });
         })->toArray();
