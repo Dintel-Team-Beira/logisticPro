@@ -1082,6 +1082,27 @@ Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(functi
         // ->middleware('role:admin');
 
     // ========================================
+    // PARÂMETROS DE PRECIFICAÇÃO (Admin Only)
+    // ========================================
+
+    // Página de gerenciamento de parâmetros de precificação
+    Route::get('/pricing-parameters', [App\Http\Controllers\PricingParameterController::class, 'index'])
+        ->name('pricing.index');
+
+    // CRUD de parâmetros
+    Route::post('/pricing-parameters', [App\Http\Controllers\PricingParameterController::class, 'store'])
+        ->name('pricing.store');
+
+    Route::put('/pricing-parameters/{pricingParameter}', [App\Http\Controllers\PricingParameterController::class, 'update'])
+        ->name('pricing.update');
+
+    Route::delete('/pricing-parameters/{pricingParameter}', [App\Http\Controllers\PricingParameterController::class, 'destroy'])
+        ->name('pricing.destroy');
+
+    Route::patch('/pricing-parameters/{pricingParameter}/toggle-active', [App\Http\Controllers\PricingParameterController::class, 'toggleActive'])
+        ->name('pricing.toggle-active');
+
+    // ========================================
     // API E INTEGRAÇÕES
     // ========================================
 
@@ -1186,6 +1207,22 @@ Route::middleware(['auth:sanctum'])->prefix('api/v1')->group(function () {
             \App\Models\CompanySetting::getInstance()
         );
     });
+
+    // ========================================
+    // PRICING PARAMETERS API
+    // ========================================
+
+    // Obter parâmetros por categoria
+    Route::get('/pricing-parameters/{category}', [App\Http\Controllers\PricingParameterController::class, 'getByCategory'])
+        ->name('api.pricing.by-category');
+
+    // Obter todos os parâmetros agrupados
+    Route::get('/pricing-parameters-grouped', [App\Http\Controllers\PricingParameterController::class, 'getAllGrouped'])
+        ->name('api.pricing.grouped');
+
+    // Calcular cotação baseado em seleções
+    Route::post('/calculate-quotation', [App\Http\Controllers\PricingParameterController::class, 'calculateQuotation'])
+        ->name('api.pricing.calculate');
 });
 
 
