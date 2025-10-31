@@ -1,14 +1,15 @@
 import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import {
     Plus, Search, Filter, Eye, Edit2, Trash2,
     Ship, Package, Clock, CheckCircle2, AlertCircle,
     TrendingUp, Globe, ArrowRight, MapPin, Truck, Navigation,
-    Check
+    Check, DollarSign
 } from 'lucide-react';
 
 export default function Index({ shipments, filters }) {
+    const { auth } = usePage().props;
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [typeFilter, setTypeFilter] = useState(filters.type || '');
@@ -376,7 +377,7 @@ const getStageLabel = (stageKey) => {
                                                         >
                                                             {shipment.reference_number}
                                                         </Link>
-                                                        <div className="mt-1">
+                                                        <div className="flex items-center gap-2 mt-1">
                                                             {shipment.type === 'export' ? (
                                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full">
                                                                     🚢 Exportação
@@ -392,6 +393,17 @@ const getStageLabel = (stageKey) => {
                                                             ) : (
                                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
                                                                     📦 Importação
+                                                                </span>
+                                                            )}
+
+                                                            {/* Indicador de Cotação - Só para Admin e Finance */}
+                                                            {shipment.quotation_reference && (auth.user.role === 'admin' || auth.user.role === 'finance') && (
+                                                                <span
+                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-green-700 bg-green-100 rounded-full"
+                                                                    title={`Cotação: ${shipment.quotation_reference}`}
+                                                                >
+                                                                    <DollarSign className="w-3 h-3" />
+                                                                    Cotação
                                                                 </span>
                                                             )}
                                                         </div>

@@ -535,6 +535,114 @@ export default function Show ({
                                 )}
                             </div>
                         </div>
+
+                        {/* Cotação Automática - Só para Admin e Finance */}
+                        {shipment.quotation_reference && (auth.user.role === 'admin' || auth.user.role === 'finance') && (
+                            <div className='p-6 bg-white border rounded-lg border-slate-200'>
+                                <div className='flex items-center justify-between mb-4'>
+                                    <h3 className='flex items-center gap-2 text-lg font-semibold text-slate-900'>
+                                        <DollarSign className='w-5 h-5 text-blue-600' />
+                                        Cotação Automática
+                                    </h3>
+                                    <div className='flex items-center gap-2'>
+                                        <span className={`px-3 py-1 text-xs font-medium rounded-full ${
+                                            shipment.quotation_status === 'approved'
+                                                ? 'bg-emerald-100 text-emerald-800'
+                                                : shipment.quotation_status === 'rejected'
+                                                ? 'bg-red-100 text-red-800'
+                                                : shipment.quotation_status === 'revised'
+                                                ? 'bg-amber-100 text-amber-800'
+                                                : 'bg-blue-100 text-blue-800'
+                                        }`}>
+                                            {shipment.quotation_status === 'approved' ? 'Aprovada' :
+                                             shipment.quotation_status === 'rejected' ? 'Rejeitada' :
+                                             shipment.quotation_status === 'revised' ? 'Revisada' : 'Pendente'}
+                                        </span>
+                                        <a
+                                            href={`/quotations/${shipment.id}/pdf`}
+                                            target='_blank'
+                                            className='flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700'
+                                        >
+                                            <Download className='w-4 h-4' />
+                                            Baixar PDF
+                                        </a>
+                                    </div>
+                                </div>
+
+                                <div className='p-4 mb-4 border rounded-lg bg-slate-50 border-slate-200'>
+                                    <div className='flex items-center justify-between'>
+                                        <div>
+                                            <p className='text-xs font-medium uppercase text-slate-500'>Referência</p>
+                                            <p className='text-lg font-bold text-slate-900'>{shipment.quotation_reference}</p>
+                                        </div>
+                                        {shipment.quotation_approved_at && (
+                                            <div className='text-right'>
+                                                <p className='text-xs font-medium uppercase text-slate-500'>Aprovado em</p>
+                                                <p className='text-sm font-semibold text-emerald-600'>
+                                                    {new Date(shipment.quotation_approved_at).toLocaleDateString('pt-BR')}
+                                                </p>
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Breakdown dos Valores */}
+                                {shipment.quotation_breakdown && shipment.quotation_breakdown.length > 0 && (
+                                    <div className='mb-4'>
+                                        <p className='mb-3 text-sm font-medium text-slate-700'>Composição da Cotação:</p>
+                                        <div className='space-y-2'>
+                                            {shipment.quotation_breakdown.map((item, idx) => (
+                                                <div key={idx} className='flex items-center justify-between p-2 rounded bg-slate-50'>
+                                                    <div>
+                                                        <p className='text-xs font-medium uppercase text-slate-500'>{item.category}</p>
+                                                        <p className='text-sm text-slate-900'>{item.name}</p>
+                                                    </div>
+                                                    <p className='text-sm font-semibold text-slate-900'>
+                                                        {new Intl.NumberFormat('pt-BR', {
+                                                            style: 'currency',
+                                                            currency: 'MZN'
+                                                        }).format(item.price)}
+                                                    </p>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                )}
+
+                                {/* Totais */}
+                                <div className='pt-4 border-t border-slate-200'>
+                                    <div className='space-y-2'>
+                                        <div className='flex items-center justify-between text-sm'>
+                                            <span className='text-slate-600'>Subtotal:</span>
+                                            <span className='font-semibold text-slate-900'>
+                                                {new Intl.NumberFormat('pt-BR', {
+                                                    style: 'currency',
+                                                    currency: 'MZN'
+                                                }).format(shipment.quotation_subtotal)}
+                                            </span>
+                                        </div>
+                                        <div className='flex items-center justify-between text-sm'>
+                                            <span className='text-slate-600'>IVA (16%):</span>
+                                            <span className='font-semibold text-slate-900'>
+                                                {new Intl.NumberFormat('pt-BR', {
+                                                    style: 'currency',
+                                                    currency: 'MZN'
+                                                }).format(shipment.quotation_tax)}
+                                            </span>
+                                        </div>
+                                        <div className='flex items-center justify-between pt-2 border-t border-slate-200'>
+                                            <span className='text-base font-bold text-slate-900'>Total:</span>
+                                            <span className='text-xl font-bold text-blue-600'>
+                                                {new Intl.NumberFormat('pt-BR', {
+                                                    style: 'currency',
+                                                    currency: 'MZN'
+                                                }).format(shipment.quotation_total)}
+                                            </span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
                     </div>
 
                     {/* Sidebar - Checklist */}
