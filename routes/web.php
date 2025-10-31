@@ -740,6 +740,34 @@ Route::middleware(['auth'])->group(function () {
     // Preview PDF
     Route::get('/invoices/{shipment}/preview', [App\Http\Controllers\InvoiceController::class, 'preview'])
         ->name('invoices.preview');
+
+    // ========================================
+    // QUOTATION INVOICES (Faturas de Cotações)
+    // ========================================
+
+    // Lista de faturas de cotações
+    Route::get('/invoices/quotations', [App\Http\Controllers\InvoiceController::class, 'quotationInvoices'])
+        ->name('invoices.quotations.index');
+
+    // Gerar fatura da cotação
+    Route::post('/invoices/quotations/generate/{shipment}', [App\Http\Controllers\InvoiceController::class, 'generateFromQuotation'])
+        ->name('invoices.quotations.generate');
+
+    // Ver fatura de cotação
+    Route::get('/invoices/quotations/{invoice}', [App\Http\Controllers\InvoiceController::class, 'showQuotationInvoice'])
+        ->name('invoices.quotations.show');
+
+    // Marcar como paga
+    Route::post('/invoices/quotations/{invoice}/mark-paid', [App\Http\Controllers\InvoiceController::class, 'markAsPaid'])
+        ->name('invoices.quotations.mark-paid');
+
+    // Enviar por email
+    Route::post('/invoices/quotations/{invoice}/send-email', [App\Http\Controllers\InvoiceController::class, 'sendByEmail'])
+        ->name('invoices.quotations.send-email');
+
+    // Download PDF
+    Route::get('/invoices/quotations/{invoice}/pdf', [App\Http\Controllers\InvoiceController::class, 'downloadQuotationPdf'])
+        ->name('invoices.quotations.pdf');
 });
 
     Route::put('/invoices', [SettingsController::class, 'updateInvoiceSettings'])
