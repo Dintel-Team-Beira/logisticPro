@@ -71,8 +71,6 @@ class ShipmentController extends Controller
      */
     public function store(Request $request)
     {
-
-
         // dd($request->all());
         Log::info('ShipmentController@store - Iniciando', ['data' => $request->except('bl_file')]);
 

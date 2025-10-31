@@ -15,51 +15,51 @@ return new class extends Migration
     {
         Schema::table('shipments', function (Blueprint $table) {
             // Referência da cotação
-            $table->string('quotation_reference')
-                ->nullable()
-                ->unique()
-                ->after('reference_number')
-                ->comment('Referência única da cotação');
+            // $table->string('quotation_reference')
+            //     ->nullable()
+            //     ->unique()
+            //     ->after('reference_number')
+            //     ->comment('Referência única da cotação');
 
             // Valores da cotação
-            $table->decimal('quotation_subtotal', 15, 2)
-                ->nullable()
-                ->after('quotation_reference')
-                ->comment('Subtotal da cotação (sem impostos)');
+            // $table->decimal('quotation_subtotal', 15, 2)
+            //     ->nullable()
+            //     ->after('quotation_reference')
+            //     ->comment('Subtotal da cotação (sem impostos)');
 
-            $table->decimal('quotation_tax', 15, 2)
-                ->nullable()
-                ->after('quotation_subtotal')
-                ->comment('Valor de impostos');
+            // $table->decimal('quotation_tax', 15, 2)
+            //     ->nullable()
+            //     ->after('quotation_subtotal')
+            //     ->comment('Valor de impostos');
 
-            $table->decimal('quotation_total', 15, 2)
-                ->nullable()
-                ->after('quotation_tax')
-                ->comment('Valor total da cotação');
+            // $table->decimal('quotation_total', 15, 2)
+            //     ->nullable()
+            //     ->after('quotation_tax')
+            //     ->comment('Valor total da cotação');
 
             // Breakdown dos custos (JSON)
-            $table->json('quotation_breakdown')
-                ->nullable()
-                ->after('quotation_total')
-                ->comment('Detalhamento dos custos da cotação');
+            // $table->json('quotation_breakdown')
+            //     ->nullable()
+            //     ->after('quotation_total')
+            //     ->comment('Detalhamento dos custos da cotação');
 
             // Status da cotação
-            $table->enum('quotation_status', ['pending', 'approved', 'rejected', 'revised'])
-                ->default('pending')
-                ->after('quotation_breakdown')
-                ->comment('Status da cotação');
+            // $table->enum('quotation_status', ['pending', 'approved', 'rejected', 'revised'])
+            //     ->default('pending')
+            //     ->after('quotation_breakdown')
+            //     ->comment('Status da cotação');
 
             // Data de aprovação
-            $table->timestamp('quotation_approved_at')
-                ->nullable()
-                ->after('quotation_status')
-                ->comment('Data de aprovação da cotação');
+            // $table->timestamp('quotation_approved_at')
+            //     ->nullable()
+            //     ->after('quotation_status')
+            //     ->comment('Data de aprovação da cotação');
 
             // Regime e destino (para cálculo)
-            $table->string('regime')
-                ->nullable()
-                ->after('type')
-                ->comment('Regime: nacional, trânsito');
+            // $table->string('regime')
+            //     ->nullable()
+            //     ->after('type')
+            //     ->comment('Regime: nacional, trânsito');
 
             $table->string('final_destination')
                 ->nullable()
