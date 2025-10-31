@@ -5,7 +5,7 @@ import {
     Plus, Search, Filter, Eye, Edit2, Trash2,
     Ship, Package, Clock, CheckCircle2, AlertCircle,
     TrendingUp, Globe, ArrowRight, MapPin, Truck, Navigation,
-    Check, DollarSign
+    Check, DollarSign, Download
 } from 'lucide-react';
 
 export default function Index({ shipments, filters }) {
@@ -468,6 +468,20 @@ const getStageLabel = (stageKey) => {
                                                         <Eye className="w-3 h-3" />
                                                         Ver
                                                     </button>
+
+                                                    {/* Botão Download Cotação - Admin e Finance */}
+                                                    {shipment.quotation_reference && (auth.user.role === 'admin' || auth.user.role === 'finance') && (
+                                                        <a
+                                                            href={`/quotations/${shipment.id}/pdf`}
+                                                            target="_blank"
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white transition-colors bg-emerald-600 rounded-lg hover:bg-emerald-700"
+                                                            title="Baixar Cotação"
+                                                        >
+                                                            <Download className="w-3 h-3" />
+                                                            Cotação
+                                                        </a>
+                                                    )}
+
                                                     <Link
                                                         href={`/shipments/${shipment.id}/edit`}
                                                         className="p-2 transition-colors rounded-lg hover:bg-slate-100"
