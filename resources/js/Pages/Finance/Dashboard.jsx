@@ -49,10 +49,13 @@ export default function FinanceDashboard({ stats, recentRequests }) {
   ];
 
   const formatCurrency = (amount, currency = 'MZN') => {
+    // Validar valor antes de formatar para evitar NaN
+    const value = amount ?? 0;
+
     return new Intl.NumberFormat('pt-MZ', {
       style: 'currency',
       currency: currency
-    }).format(amount);
+    }).format(value);
   };
 
   const getStatusBadge = (status) => {
