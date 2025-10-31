@@ -37,7 +37,10 @@ export default function Show ({
     overallProgress,
     canForceAdvance,
     paymentRequests,
-    auth
+    auth,
+    hasQuotationInvoice = false,
+    quotationInvoiceId = null,
+    quotationInvoiceNumber = null
 }) {
     // console.log("paymentRequests",paymentRequests);
     const [selectedPhase, setSelectedPhase] = useState(activePhases[0] || 1)
@@ -566,6 +569,28 @@ export default function Show ({
                                             <Download className='w-4 h-4' />
                                             Baixar PDF
                                         </a>
+
+                                        {/* Botão Gerar Fatura - Se ainda não existe fatura */}
+                                        {!hasQuotationInvoice && (
+                                            <button
+                                                onClick={() => router.post(`/invoices/quotations/generate/${shipment.id}`)}
+                                                className='flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white transition-colors bg-emerald-600 rounded-lg hover:bg-emerald-700'
+                                            >
+                                                <FileText className='w-4 h-4' />
+                                                Gerar Fatura
+                                            </button>
+                                        )}
+
+                                        {/* Link Ver Fatura - Se já existe fatura */}
+                                        {hasQuotationInvoice && (
+                                            <Link
+                                                href={`/invoices/quotations/${quotationInvoiceId}`}
+                                                className='flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white transition-colors bg-emerald-600 rounded-lg hover:bg-emerald-700'
+                                            >
+                                                <CheckCircle2 className='w-4 h-4' />
+                                                Ver Fatura {quotationInvoiceNumber}
+                                            </Link>
+                                        )}
                                     </div>
                                 </div>
 

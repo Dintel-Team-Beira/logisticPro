@@ -365,6 +365,11 @@ class ShipmentController extends Controller
             ->orderBy('created_at')
             ->get();
 
+        // Verificar se existe fatura de cotação
+        $quotationInvoice = \App\Models\Invoice::where('shipment_id', $shipment->id)
+            ->where('invoice_type', 'quotation')
+            ->first();
+
         // dd($phaseProgress);
         return Inertia::render('Shipments/Show', [
             'shipment' => $shipment,
@@ -373,7 +378,10 @@ class ShipmentController extends Controller
             'overallProgress' => $overallProgress,
             'activePhases' => $activePhases,
             'canForceAdvance' => auth()->user()->hasRole('manager'),
-            'paymentRequests' => $paymentRequests
+            'paymentRequests' => $paymentRequests,
+            'hasQuotationInvoice' => $quotationInvoice !== null,
+            'quotationInvoiceId' => $quotationInvoice?->id,
+            'quotationInvoiceNumber' => $quotationInvoice?->invoice_number,
         ]);
     }
 
