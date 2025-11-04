@@ -30,7 +30,23 @@ export function PaymentRequestsVisualizer({ shipment, phase, paymentRequests = [
     const [expandedRequests, setExpandedRequests] = useState({});
 // console.log("paymentRequests visluazer",paymentRequests);
     // Filtrar requests desta fase
-const phaseRequests = paymentRequests.filter(req => String(req.phase) === String(phase));
+    // Agora usa related_phases para mostrar despesas em múltiplas fases
+
+    const phaseRequests = paymentRequests.filter(req => {
+
+        // Se o request tem o campo related_phases, usa ele
+
+        if (req.related_phases && Array.isArray(req.related_phases)) {
+
+            return req.related_phases.includes(parseInt(phase));
+
+        }
+
+        // Fallback: compara apenas a fase atual
+
+        return String(req.phase) === String(phase);
+
+    });
 
     // Se não há requests, mostrar mensagem
     if (phaseRequests.length === 0) {

@@ -49,8 +49,107 @@ class PaymentRequest extends Model
     'status_label',
     'status_color',
     'formatted_amount',
+    'related_phases'
 ];
 
+
+
+    // * Accessor: Retorna as fases onde esta despesa deve aparecer
+
+    //  * Este accessor é automaticamente serializado no JSON
+    public function getRelatedPhasesAttribute(): array
+
+    {
+
+        return $this->calculateRelatedPhases();
+
+    }
+
+
+      /**
+
+     * Retorna as fases onde esta despesa deve aparecer
+
+     * baseado no tipo de despesa
+
+     */
+
+    public function calculateRelatedPhases(): array
+
+    {
+
+        $phaseMapping = [
+
+            // Fase 1: Coleta Dispersa
+
+            'shipping_line_quotation' => [1],
+
+            'cdm_fee' => [1,4],
+
+            'customs_preliminary' => [1, 3], // Aparece em Coleta e Alfândegas
+
+            'transport_fee' => [1, 7], // Aparece em Coleta e POD
+
+            'other_coleta' => [1],
+
+
+
+            // Fase 2: Legalização
+
+            'legalization_advance' => [1, 2], // Aparece em Coleta e Legalização
+
+            'legalization_fee' => [1, 2], // Aparece em Coleta e Legalização
+
+
+
+            // Fase 3: Alfândegas
+
+            'customs_tax' => [1, 3], // Aparece em Coleta e Alfândegas
+
+
+
+            // Fase 4: Cornelder
+
+            'storage_fee' => [1, 4], // Aparece em Coleta e Cornelder
+
+
+
+            // Fase 5: Taxação
+
+            'tax_payment' => [1, 5], // Aparece em Coleta e Taxação
+
+
+
+            // Fase 6: Faturação
+
+            'invoice_related' => [1, 6], // Aparece em Coleta e Faturação
+
+
+
+            // Fase 7: POD
+
+            'delivery_fee' => [1, 7], // Aparece em Coleta e POD
+
+        ];
+
+
+
+        // Se não encontrar o tipo, retorna apenas a fase atual
+
+        return $phaseMapping[$this->request_type] ?? [$this->phase];
+
+    }
+
+
+     public function shouldShowInPhase(int $phase): bool
+
+    {
+
+        // return in_array($phase, $this->getRelatedPhases());
+
+        return in_array($phase, $this->calculateRelatedPhases());
+
+    }
     // ========================================
     // RELATIONSHIPS
     // ========================================
