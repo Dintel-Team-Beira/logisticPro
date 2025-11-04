@@ -45,14 +45,32 @@ class PaymentRequestController extends Controller
             'total_approved_amount' => PaymentRequest::approved()->sum('amount'),
         ];
 
+         // Buscar todas as solicitações recentes (não apenas awaitingFinance)
+
+        // para permitir filtros no frontend
+
         $recentRequests = PaymentRequest::with([
+
             'shipment.client',
+
             'requester',
-            'quotationDocument'
+
+            'quotationDocument',
+
+            'paymentProof',
+
+            'receiptDocument',
+
+            'approver',
+
+            'payer'
+
         ])
-            ->awaitingFinance()
+
             ->latest()
-            ->take(10)
+
+            ->take(50) // Aumentado para 50 para ter mais dados para filtrar
+
             ->get();
 
         return Inertia::render('Finance/Dashboard', [
