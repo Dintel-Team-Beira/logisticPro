@@ -477,20 +477,20 @@ class InvoiceController extends Controller
         ]);
     }
 
-    public function markAsPaid(Invoice $invoice)
-    {
-        if ($invoice->status === 'paid') {
-            return back()->with('info', 'Esta fatura já está marcada como paga.');
-        }
+    // public function markAsPaid(Invoice $invoice)
+    // {
+    //     if ($invoice->status === 'paid') {
+    //         return back()->with('info', 'Esta fatura já está marcada como paga.');
+    //     }
 
-        $invoice->update([
-            'status' => 'paid',
-            'paid_date' => now(),
-            'updated_by' => auth()->id(),
-        ]);
+    //     $invoice->update([
+    //         'status' => 'paid',
+    //         'paid_date' => now(),
+    //         'updated_by' => auth()->id(),
+    //     ]);
 
-        return back()->with('success', 'Fatura marcada como paga com sucesso!');
-    }
+    //     return back()->with('success', 'Fatura marcada como paga com sucesso!');
+    // }
 
     public function preview(Shipment $shipment)
     {
