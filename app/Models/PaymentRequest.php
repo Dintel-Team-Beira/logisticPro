@@ -44,6 +44,13 @@ class PaymentRequest extends Model
         'paid_at' => 'datetime',
     ];
 
+    protected $appends = [
+    'request_type_label',
+    'status_label',
+    'status_color',
+    'formatted_amount',
+];
+
     // ========================================
     // RELATIONSHIPS
     // ========================================

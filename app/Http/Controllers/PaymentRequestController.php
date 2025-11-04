@@ -32,52 +32,39 @@ class PaymentRequestController extends Controller
     /**
      * Dashboard de Finanças - Visão geral
      */
-    public function financeDashboard()
-    {
-        $stats = [
-            'pending_approval' => PaymentRequest::pending()->count(),
-            'approved' => PaymentRequest::approved()->count(),
-            'in_payment' => PaymentRequest::inPayment()->count(),
-            'paid_today' => PaymentRequest::paid()
-                ->whereDate('paid_at', today())
-                ->count(),
-            'total_pending_amount' => PaymentRequest::pending()->sum('amount'),
-            'total_approved_amount' => PaymentRequest::approved()->sum('amount'),
-        ];
+  public function financeDashboard()
+{
+    $stats = [
+        'pending_approval' => PaymentRequest::pending()->count(),
+        'approved' => PaymentRequest::approved()->count(),
+        'in_payment' => PaymentRequest::inPayment()->count(),
+        'paid_today' => PaymentRequest::paid()
+            ->whereDate('paid_at', today())
+            ->count(),
+        'total_pending_amount' => PaymentRequest::pending()->sum('amount'),
+        'total_approved_amount' => PaymentRequest::approved()->sum('amount'),
+    ];
 
-         // Buscar todas as solicitações recentes (não apenas awaitingFinance)
+    // Buscar todas as solicitações recentes (não apenas awaitingFinance)
+    // para permitir filtros no frontend
+    $recentRequests = PaymentRequest::with([
+        'shipment.client',
+        'requester',
+        'quotationDocument',
+        'paymentProof',
+        'receiptDocument',
+        'approver',
+        'payer'
+    ])
+        ->latest()
+        ->take(50) // Aumentado para 50 para ter mais dados para filtrar
+        ->get();
 
-        // para permitir filtros no frontend
-
-        $recentRequests = PaymentRequest::with([
-
-            'shipment.client',
-
-            'requester',
-
-            'quotationDocument',
-
-            'paymentProof',
-
-            'receiptDocument',
-
-            'approver',
-
-            'payer'
-
-        ])
-
-            ->latest()
-
-            ->take(50) // Aumentado para 50 para ter mais dados para filtrar
-
-            ->get();
-
-        return Inertia::render('Finance/Dashboard', [
-            'stats' => $stats,
-            'recentRequests' => $recentRequests,
-        ]);
-    }
+    return Inertia::render('Finance/Dashboard', [
+        'stats' => $stats,
+        'recentRequests' => $recentRequests,
+    ]);
+}
 /**
      * Registrar recibo para solicitação de pagamento
      */

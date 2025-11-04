@@ -15,7 +15,6 @@ import {
 } from 'lucide-react';
 
 export default function FinanceDashboard({ stats, recentRequests }) {
-    console.log('Recent Requests:', stats); // Log para depuração
   const [activeFilter, setActiveFilter] = useState('all');
   const [searchTerm, setSearchTerm] = useState('');
 
@@ -110,11 +109,11 @@ export default function FinanceDashboard({ stats, recentRequests }) {
   };
 
   const handlePayment = (requestId) => {
-    router.post(`/finance/payment-requests/${requestId}/start-payment`, {}, {
+    router.post(`/payment-requests/${requestId}/start-payment`, {}, {
       preserveScroll: true,
       onSuccess: () => {
-        // Redirecionar para página de confirmação
-        router.visit(`/finance/payment-requests/${requestId}/confirm`);
+        // Redirecionar para página de detalhes após iniciar pagamento
+        router.visit(`/payment-requests/${requestId}`);
       }
     });
   };
@@ -383,7 +382,7 @@ export default function FinanceDashboard({ stats, recentRequests }) {
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm text-slate-900">
-                          {request.getTypeLabel || request.request_type}
+                          {request.request_type_label || request.request_type}
                         </p>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -399,21 +398,23 @@ export default function FinanceDashboard({ stats, recentRequests }) {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => router.visit(`/finance/payment-requests/${request.id}`)}
+                            onClick={() => router.visit(`/payment-requests/${request.id}`)}
                             className="p-1 transition-colors rounded hover:bg-slate-200"
                             title="Ver detalhes"
                           >
                             <Eye className="w-4 h-4 text-slate-600" />
                           </button>
 
-                          {request.quotation_document && (
-                            <button
-                              onClick={() => router.visit(`/documents/${request.quotation_document.id}/download`)}
+                          {request.quotation_document_id && (
+                            <a
+                              href={`/documents/${request.quotation_document_id}/download`}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="p-1 transition-colors rounded hover:bg-slate-200"
                               title="Baixar cotação"
                             >
                               <Download className="w-4 h-4 text-slate-600" />
-                            </button>
+                            </a>
                           )}
 
                           {request.status === 'approved' && (
