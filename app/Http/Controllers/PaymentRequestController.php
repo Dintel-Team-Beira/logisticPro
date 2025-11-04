@@ -65,6 +65,28 @@ class PaymentRequestController extends Controller
         'recentRequests' => $recentRequests,
     ]);
 }
+
+
+/**
+ * Ver detalhes de uma solicitação de pagamento
+ */
+public function show(PaymentRequest $paymentRequest)
+{
+    $paymentRequest->load([
+        'shipment.client',
+        'requester',
+        'approver',
+        'payer',
+        'quotationDocument',
+        'paymentProof',
+        'receiptDocument'
+    ]);
+
+    return Inertia::render('Finance/PaymentRequestShow', [
+        'paymentRequest' => $paymentRequest,
+    ]);
+}
+
 /**
      * Registrar recibo para solicitação de pagamento
      */
