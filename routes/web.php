@@ -717,6 +717,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/invoices/{invoice}/mark-as-paid', [App\Http\Controllers\InvoiceController::class, 'markAsPaid'])
         ->name('invoices.mark-as-paid');
 
+ // Atualizar status da fatura (pending, paid, cancelled, rejected)
+    Route::post('/invoices/{invoice}/update-status', [App\Http\Controllers\InvoiceController::class, 'updateStatus'])
+        ->name('invoices.update-status');
+
+
     // API: Calcular custos e preview (RF-020)
     Route::get('/invoices/{shipment}/calculate', [App\Http\Controllers\InvoiceController::class, 'calculateCosts'])
         ->name('invoices.calculate');
