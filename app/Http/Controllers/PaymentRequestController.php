@@ -32,7 +32,7 @@ class PaymentRequestController extends Controller
     /**
      * Dashboard de Finanças - Visão geral
      */
-  public function financeDashboard()
+public function financeDashboard()
 {
     $stats = [
         'pending_approval' => PaymentRequest::pending()->count(),

@@ -112,25 +112,14 @@ class InvoiceController extends Controller
         // Buscar TODAS as invoices (cotações) com relacionamentos
 
         $query = Invoice::with([
-
             'shipment.client',
-
             'client',
-
             'createdBy'
-
         ])
-
         ->clientInvoices(); // Apenas invoices ao cliente
-
-
-
         // Filtros
-
         if ($request->has('status') && $request->status !== 'all') {
-
             $query->where('status', $request->status);
-
         }
 
 
@@ -140,17 +129,11 @@ class InvoiceController extends Controller
             $query->where(function($q) use ($request) {
 
                 $q->where('invoice_number', 'like', "%{$request->search}%")
-
                   ->orWhereHas('shipment', function($sq) use ($request) {
-
                       $sq->where('reference_number', 'like', "%{$request->search}%");
-
                   })
-
                   ->orWhereHas('client', function($cq) use ($request) {
-
                       $cq->where('name', 'like', "%{$request->search}%");
-
                   });
 
             });

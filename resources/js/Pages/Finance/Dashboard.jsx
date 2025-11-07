@@ -57,14 +57,11 @@ export default function FinanceDashboard({ stats, recentRequests }) {
     }
   ];
 
-  // Filtrar requests baseado no filtro ativo e pesquisa
   const filteredRequests = useMemo(() => {
     let filtered = [...recentRequests];
 
-    // Aplicar filtro de status
     if (activeFilter !== 'all') {
       if (activeFilter === 'paid_today') {
-        // Filtrar pagos hoje
         const today = new Date().toDateString();
         filtered = filtered.filter(req =>
           req.status === 'paid' &&
@@ -76,7 +73,6 @@ export default function FinanceDashboard({ stats, recentRequests }) {
       }
     }
 
-    // Aplicar pesquisa
     if (searchTerm.trim()) {
       const search = searchTerm.toLowerCase();
       filtered = filtered.filter(req =>
@@ -112,7 +108,6 @@ export default function FinanceDashboard({ stats, recentRequests }) {
     router.post(`/payment-requests/${requestId}/start-payment`, {}, {
       preserveScroll: true,
       onSuccess: () => {
-        // Redirecionar para página de detalhes após iniciar pagamento
         router.visit(`/payment-requests/${requestId}`);
       }
     });
@@ -120,7 +115,7 @@ export default function FinanceDashboard({ stats, recentRequests }) {
 
   const handleCardClick = (filter) => {
     if (activeFilter === filter) {
-      setActiveFilter('all'); // Desmarcar se clicar novamente
+      setActiveFilter('all');
     } else {
       setActiveFilter(filter);
     }
@@ -135,7 +130,6 @@ export default function FinanceDashboard({ stats, recentRequests }) {
     <DashboardLayout>
       <Head title="Dashboard Financeiro" />
     <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-slate-900">
           Dashboard Financeiro
@@ -145,7 +139,6 @@ export default function FinanceDashboard({ stats, recentRequests }) {
         </p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
         {statCards.map((stat, idx) => {
           const isActive = activeFilter === stat.filter;
@@ -182,7 +175,6 @@ export default function FinanceDashboard({ stats, recentRequests }) {
         })}
       </div>
 
-      {/* Financial Summary */}
       <div className="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-2">
         <div className="p-6 border border-blue-200 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100">
           <h3 className="text-sm font-semibold text-blue-900">Total Pendente</h3>
@@ -205,7 +197,6 @@ export default function FinanceDashboard({ stats, recentRequests }) {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
         <Link
           href="/finance/pending"
@@ -247,7 +238,6 @@ export default function FinanceDashboard({ stats, recentRequests }) {
         </Link>
       </div>
 
-      {/* Recent Requests Table */}
       <div className="bg-white border rounded-xl border-slate-200">
         <div className="p-6 border-b border-slate-200">
           <div className="flex items-center justify-between mb-4">
@@ -276,7 +266,6 @@ export default function FinanceDashboard({ stats, recentRequests }) {
             </Link>
           </div>
 
-          {/* Search Bar and Filters */}
           <div className="flex items-center gap-3">
             <div className="relative flex-1">
               <Search className="absolute w-5 h-5 -translate-y-1/2 text-slate-400 left-3 top-1/2" />
