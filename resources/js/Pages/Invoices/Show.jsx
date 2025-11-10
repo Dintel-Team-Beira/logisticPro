@@ -89,7 +89,8 @@ export default function InvoiceShow({ invoice }) {
     };
 
     const handleDownload = () => {
-        window.location.href = `/invoices/${invoice.shipment_id}/download`;
+        window.location.href = `/quotations/${invoice.shipment_id}/pdf`;
+
     };
 
     const handlePrint = () => {
@@ -98,7 +99,7 @@ export default function InvoiceShow({ invoice }) {
 
     return (
         <DashboardLayout>
-            {/* <Head title={`Fatura ${invoice.invoice_number}`} /> */}
+            <Head title={`Fatura ${invoice.invoice_number}`} />
 
             <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
                 {/* Header Actions - Não imprime */}
@@ -295,65 +296,67 @@ export default function InvoiceShow({ invoice }) {
                         </div>
 
                         {/* Tabela de Itens */}
-                        <div>
-                            <h3 className="mb-4 text-sm font-bold uppercase text-slate-900">Descrição dos Serviços:</h3>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-slate-100">
-                                        <tr>
-                                            <th className="px-4 py-3 text-xs font-semibold text-left uppercase text-slate-700">
-                                                Descrição
-                                            </th>
-                                            <th className="px-4 py-3 text-xs font-semibold text-center uppercase text-slate-700">
-                                                Qtd
-                                            </th>
-                                            <th className="px-4 py-3 text-xs font-semibold text-right uppercase text-slate-700">
-                                                Preço Unit.
-                                            </th>
-                                            <th className="px-4 py-3 text-xs font-semibold text-right uppercase text-slate-700">
-                                                Total
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                                                     <tbody className="divide-y divide-slate-200">
-                                        {allItems.length > 0 ? (
-                                            allItems.map((item, index) => (
-                                                <tr key={index}>
-                                                    <td className="px-4 py-3 text-sm text-slate-900">
-                                                        <p className="font-medium">{item.description}</p>
-                                                        {item.payee && (
-                                                            <p className="mt-1 text-xs text-slate-600">
-                                                                Fornecedor: {item.payee}
-                                                            </p>
-                                                        )}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-center text-slate-900">
-                                                        {item.quantity || 1}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm text-right text-slate-900">
-                                                        {formatCurrency(item.unit_price || item.amount, invoice.currency)}
-                                                    </td>
-                                                    <td className="px-4 py-3 text-sm font-medium text-right text-slate-900">
-                                                        {formatCurrency(item.total || item.amount, invoice.currency)}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="4" className="px-4 py-8 text-center">
-                                                    <div className="text-slate-500">
-                                                        <p className="font-medium">Serviços de Logística</p>
-                                                        <p className="mt-1 text-sm">
-                                                            Processo: {invoice.shipment?.reference_number}
-                                                        </p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
+                     {/* Tabela de Itens - Usando quotation_breakdown */}
+<div>
+    <h3 className="mb-4 text-sm font-bold uppercase text-slate-900">
+        Descrição dos Serviços:
+    </h3>
+    <div className="overflow-x-auto">
+        <table className="w-full">
+            <thead className="bg-slate-100">
+                <tr>
+                    <th className="px-4 py-3 text-xs font-semibold text-left uppercase text-slate-700">
+                        Descrição
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold text-center uppercase text-slate-700">
+                        Qtd
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold text-right uppercase text-slate-700">
+                        Preço Unit.
+                    </th>
+                    <th className="px-4 py-3 text-xs font-semibold text-right uppercase text-slate-700">
+                        Total
+                    </th>
+                </tr>
+            </thead>
+            <tbody className="divide-y divide-slate-200">
+                {console.log(invoice.metadata)}
+                {/* Verifica se existe quotation_breakdown */}
+                {invoice.metadata?.quotation_breakdown && invoice.metadata.quotation_breakdown.length > 0 ? (
+                    invoice.metadata.quotation_breakdown.map((item, index) => (
+                        <tr key={index}>
+                            <td className="px-4 py-3 text-sm text-slate-900">
+                                <p className="font-medium">
+                                    {item.category}: {item.name}
+                                </p>
+                            </td>
+                            <td className="px-4 py-3 text-sm text-center text-slate-900">
+                                1
+                            </td>
+                            <td className="px-4 py-3 text-sm text-right text-slate-900">
+                                {formatCurrency(item.price, invoice.currency)}
+                            </td>
+                            <td className="px-4 py-3 text-sm font-medium text-right text-slate-900">
+                                {formatCurrency(item.price, invoice.currency)}
+                            </td>
+                        </tr>
+                    ))
+                ) : (
+                    <tr>
+                        <td colSpan="4" className="px-4 py-8 text-center">
+                            <div className="text-slate-500">
+                                <p className="font-medium">Serviços de Logística</p>
+                                <p className="mt-1 text-sm">
+                                    Processo: {invoice.shipment?.reference_number || 'N/D'}
+                                </p>
                             </div>
-                        </div>
+                        </td>
+                    </tr>
+                )}
+            </tbody>
+        </table>
+    </div>
+</div>
 
                         {/* Totais */}
                         <div className="flex justify-end">
