@@ -2,277 +2,273 @@
 <html>
 <head>
     <meta charset="utf-8">
-    <title>Cotação {{ $shipment->quotation_reference }}</title>
+    <title>Proforma Invoice {{ $shipment->reference_number }}</title>
     <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
+        /* Reset e Configuração Base */
         body {
-            font-family: 'DejaVu Sans', sans-serif;
-            font-size: 12px;
-            color: #333;
-            padding: 30px;
+            font-family: Arial, sans-serif;
+            font-size: 10px;
+            color: #000;
+            margin: 20px;
         }
-        .header {
-            border-bottom: 3px solid #2563eb;
-            padding-bottom: 20px;
-            margin-bottom: 30px;
-        }
-        .company-name {
-            font-size: 24px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 5px;
-        }
-        .document-title {
-            font-size: 18px;
-            color: #64748b;
-            margin-top: 10px;
-        }
-        .reference {
-            font-size: 14px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-top: 5px;
-        }
-        .info-section {
-            margin-bottom: 25px;
-        }
-        .section-title {
-            font-size: 14px;
-            font-weight: bold;
-            color: #2563eb;
-            margin-bottom: 10px;
-            padding-bottom: 5px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .info-grid {
+        /* Para limpar floats */
+        .clearfix::after {
+            content: "";
+            clear: both;
             display: table;
+        }
+
+        /* 1. CABEÇALHO (Corrigido) */
+        .header {
             width: 100%;
+            text-align: center; /* Centralizado como na imagem */
+            border-bottom: 2px solid #000;
+            padding-bottom: 10px;
             margin-bottom: 15px;
         }
-        .info-row {
-            display: table-row;
+        .header .logo-img {
+            max-width: 250px;
         }
-        .info-label {
-            display: table-cell;
-            font-weight: bold;
-            color: #64748b;
-            padding: 5px 10px 5px 0;
-            width: 30%;
-        }
-        .info-value {
-            display: table-cell;
-            padding: 5px 0;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 15px;
-        }
-        th {
-            background-color: #2563eb;
-            color: white;
-            padding: 10px;
-            text-align: left;
-            font-weight: bold;
-        }
-        td {
-            padding: 10px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        .text-right {
-            text-align: right;
-        }
-        .totals-table {
-            margin-top: 30px;
-            width: 50%;
-            float: right;
-        }
-        .totals-table td {
-            padding: 8px 10px;
-        }
-        .subtotal-row td {
-            font-weight: bold;
-        }
-        .tax-row td {
-            color: #64748b;
-        }
-        .total-row {
-            background-color: #2563eb;
-            color: white;
+        .header .company-name {
             font-size: 16px;
             font-weight: bold;
         }
-        .footer {
-            clear: both;
-            margin-top: 50px;
-            padding-top: 20px;
-            border-top: 1px solid #e2e8f0;
-            text-align: center;
-            color: #64748b;
-            font-size: 10px;
-        }
-        .status-badge {
-            display: inline-block;
-            padding: 5px 15px;
-            border-radius: 15px;
+        .header .company-info {
             font-size: 11px;
+        }
+
+        /* 2. SECÇÃO TOPO (Cliente e Detalhes) */
+        .section-top {
+            width: 100%;
+            margin-top: 15px;
+        }
+        .top-left-col {
+            width: 48%;
+            float: left;
+        }
+        .top-right-col {
+            width: 48%;
+            float: right;
+        }
+        .proforma-title {
+            font-size: 16px;
+            font-weight: bold;
+            margin-top: 15px;
+        }
+        .shipment-details {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #000;
+        }
+        .shipment-details td {
+            border: 1px solid #000;
+            padding: 3px 5px;
+            font-size: 9px;
+        }
+        .shipment-details .label {
+            font-weight: bold;
+            width: 40%;
+            background-color: #f0f0f0;
+        }
+
+        /* 3. TABELA DE ITENS */
+        .items-section {
+            width: 100%;
+            margin-top: 15px;
+        }
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 9px;
+        }
+        .items-table th, .items-table td {
+            border: 1px solid #000;
+            padding: 4px 5px;
+            text-align: left;
+        }
+        .items-table th {
+            background-color: #f0f0f0;
             font-weight: bold;
         }
-        .status-pending {
-            background-color: #fef3c7;
-            color: #92400e;
+        .items-table .col-qty, .items-table .col-price {
+            text-align: right;
+            width: 100px;
         }
-        .status-approved {
-            background-color: #d1fae5;
-            color: #065f46;
+        .items-table .col-desc {
+            width: 45%;
         }
-        .clearfix::after {
-            content: "";
-            display: table;
-            clear: both;
+
+        /* 4. TOTAIS */
+        .totals-section {
+            width: 40%;
+            float: right;
+            margin-top: 10px;
+            font-size: 10px;
+        }
+        .totals-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+        .totals-table td {
+            padding: 4px 5px;
+            border: 1px solid #000;
+        }
+        .totals-table .label {
+            font-weight: bold;
+            background-color: #f0f0f0;
+        }
+        .totals-table .value {
+            text-align: right;
+        }
+
+        /* 5. SECÇÃO INFERIOR (Notas e Banco) (Corrigido) */
+        .footer-section {
+            width: 50%; /* Ocupa a metade esquerda */
+            float: left;
+            margin-top: 10px;
+            font-size: 9px;
+            line-height: 1.4;
+        }
+        .footer-section h3 {
+            font-size: 10px;
+            font-weight: bold;
+            text-decoration: underline;
+            margin-bottom: 5px;
+        }
+        .footer-section ul {
+            margin-left: 15px;
+            padding-left: 5px;
+        }
+        .bank-details {
+            margin-top: 15px; /* Adiciona espaço entre Notes e Bank */
+        }
+
+        /* 6. RODAPÉ FINAL */
+        .footer {
+            width: 100%;
+            text-align: center;
+            font-style: italic;
+            font-size: 10px;
+            margin-top: 30px;
+            padding-top: 10px;
+            border-top: 1px solid #000;
+            clear: both; /* Limpa os floats anteriores */
         }
     </style>
 </head>
 <body>
-    <!-- Header -->
+
     <div class="header">
-        <div class="company-name">ALEK LOGÍSTICA & TRADING LDA</div>
-        <div style="color: #64748b; font-size: 11px;">
-            Rua da Manga, Nr 517 - Beira, Moçambique<br>
-            Tel: +258 84 123 4567 | Email: geral@alek.co.mz
+        <div style="font-size: 24px; font-weight: bold;">
+            <img src="{{ public_path('ft_logo.png') }}" alt="Company Logo" class="logo-img">
         </div>
-        <div class="document-title">COTAÇÃO DE SERVIÇOS</div>
-        <div class="reference">{{ $shipment->quotation_reference }}</div>
-        <div style="margin-top: 10px;">
-            <span class="status-badge {{ $shipment->quotation_status === 'approved' ? 'status-approved' : 'status-pending' }}">
-                {{ $shipment->quotation_status === 'approved' ? 'APROVADA' : 'PENDENTE' }}
-            </span>
+
+        <div class="company-name">ALEK LOGISTIC & TRANSPORT, LDA</div>
+        <div class="company-info">
+            Endereço: Rua António Enes, Q.09, B.Ponta-Gêa, Beira
+            <br>
+            Email: info@alek-lda.com
         </div>
     </div>
 
-    <!-- Client Information -->
-    <div class="info-section">
-        <div class="section-title">DADOS DO CLIENTE</div>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Cliente:</div>
-                <div class="info-value">{{ $shipment->client->name }}</div>
+    <div class="content">
+
+        <div class="clearfix section-top">
+
+            <div class="top-left-col">
+                <strong>To: {{ $shipment->client->name }}</strong>
+                <div class="proforma-title">
+                    Proforma Invoice #{{ $shipment->reference_number }}
+                </div>
             </div>
-            @if($shipment->client->company_name)
-            <div class="info-row">
-                <div class="info-label">Empresa:</div>
-                <div class="info-value">{{ $shipment->client->company_name }}</div>
-            </div>
-            @endif
-            @if($shipment->client->tax_id)
-            <div class="info-row">
-                <div class="info-label">NIF:</div>
-                <div class="info-value">{{ $shipment->client->tax_id }}</div>
-            </div>
-            @endif
-            <div class="info-row">
-                <div class="info-label">Email:</div>
-                <div class="info-value">{{ $shipment->client->email }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Telefone:</div>
-                <div class="info-value">{{ $shipment->client->phone }}</div>
+
+            <div class="top-right-col">
+                <table class="shipment-details">
+                    <tr><td class="label">POL:</td><td>{{ $shipment->pol ?? 'QINGDAO' }}</td></tr>
+                    <tr><td class="label">POD:</td><td>{{ $shipment->pod ?? 'BEIRA' }}</td></tr>
+                    <tr><td class="label">FINAL DESTINATION:</td><td>{{ $shipment->final_destination }}</td></tr>
+                    <tr><td class="label">CNEE:</td><td>{{ $shipment->client->name }}</td></tr>
+                    <tr><td class="label">VESSEL NAME:</td><td>{{ $shipment->vessel_name ?? 'SAN FRANCISCO BRIDGE' }}</td></tr>
+                    <tr><td class="label">VOYAGE Nº:</td><td>{{ $shipment->voyage_no ?? '012E' }}</td></tr>
+                    <tr><td class="label">BL Nº:</td><td>{{ $shipment->bl_no ?? 'COSU6180794100' }}</td></tr>
+                    <tr><td class="label">CNT:</td><td>{{ $shipment->container_type }} ({{ $shipment->container_no ?? 'TRHU4073724' }})</td></tr>
+                    <tr><td class="label">EMPTY OFF-LOADING:</td><td>{{ $shipment->empty_offloading ?? 'CORRIDOR' }}</td></tr>
+                </table>
             </div>
         </div>
-    </div>
 
-    <!-- Shipment Information -->
-    <div class="info-section">
-        <div class="section-title">INFORMAÇÕES DO PROCESSO</div>
-        <div class="info-grid">
-            <div class="info-row">
-                <div class="info-label">Referência:</div>
-                <div class="info-value">{{ $shipment->reference_number }}</div>
-            </div>
-            <div class="info-row">
-                <div class="info-label">Tipo:</div>
-                <div class="info-value">{{ strtoupper($shipment->type) }}</div>
-            </div>
-            @if($shipment->container_type)
-            <div class="info-row">
-                <div class="info-label">Container:</div>
-                <div class="info-value">{{ $shipment->container_type }}</div>
-            </div>
-            @endif
-            @if($shipment->regime)
-            <div class="info-row">
-                <div class="info-label">Regime:</div>
-                <div class="info-value">{{ ucfirst($shipment->regime) }}</div>
-            </div>
-            @endif
-            @if($shipment->final_destination)
-            <div class="info-row">
-                <div class="info-label">Destino:</div>
-                <div class="info-value">{{ $shipment->final_destination }}</div>
-            </div>
-            @endif
-            <div class="info-row">
-                <div class="info-label">Data:</div>
-                <div class="info-value">{{ $shipment->created_at->format('d/m/Y H:i') }}</div>
-            </div>
+        <div class="items-section">
+            <table class="items-table">
+                <thead>
+                    <tr>
+                        <th class="col-desc">CARGO HANDLING</th>
+                        <th class="col-qty">Quantity</th>
+                        <th class="col-price">Price (USD)</th>
+                        <th class="col-price">Price (USD)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach($shipment->quotation_breakdown as $item)
+                    <tr>
+                        <td>{{ $item['name'] }}</td>
+                        <td class="col-qty">{{ number_format($item['quantity'] ?? 1, 2) }}</td>
+                        <td class="col-price">{{ number_format($item['unit_price'] ?? $item['price'], 2) }}</td>
+                        <td class="col-price">{{ number_format(($item['quantity'] ?? 1) * ($item['unit_price'] ?? $item['price']), 2) }}</td>
+                    </tr>
+                    @endforeach
+                </tbody>
+            </table>
         </div>
-    </div>
 
-    <!-- Breakdown Table -->
-    <div class="info-section">
-        <div class="section-title">DETALHAMENTO DOS CUSTOS</div>
-        <table>
-            <thead>
+        <div class="totals-section">
+            <table class="totals-table">
                 <tr>
-                    <th>Categoria</th>
-                    <th>Descrição</th>
-                    <th class="text-right">Valor (MZN)</th>
+                    <td class="label">Sub Total (L/C, Port & Clearance Charges)</td>
+                    <td class="value">{{ number_format($shipment->quotation_subtotal, 2) }}</td>
                 </tr>
-            </thead>
-            <tbody>
-                @foreach($shipment->quotation_breakdown as $item)
                 <tr>
-                    <td>{{ $item['category'] }}</td>
-                    <td>{{ $item['name'] }}</td>
-                    <td class="text-right">{{ number_format($item['price'], 2, ',', '.') }}</td>
+                    <td class="label">TOTAL (USD)</td>
+                    <td class="value">{{ number_format($shipment->quotation_subtotal, 2) }}</td>
                 </tr>
-                @endforeach
-            </tbody>
-        </table>
-    </div>
+                <tr>
+                    <td class="label">TOTAL (MZN)</td>
+                    <td class="value">{{ number_format($shipment->quotation_total, 2) }}</td>
+                </tr>
+            </table>
+        </div>
 
-    <!-- Totals -->
-    <div class="clearfix">
-        <table class="totals-table">
-            <tr class="subtotal-row">
-                <td>Subtotal:</td>
-                <td class="text-right">{{ number_format($shipment->quotation_subtotal, 2, ',', '.') }} MZN</td>
-            </tr>
-            <tr class="tax-row">
-                <td>IVA (16%):</td>
-                <td class="text-right">{{ number_format($shipment->quotation_tax, 2, ',', '.') }} MZN</td>
-            </tr>
-            <tr class="total-row">
-                <td>TOTAL:</td>
-                <td class="text-right">{{ number_format($shipment->quotation_total, 2, ',', '.') }} MZN</td>
-            </tr>
-        </table>
-    </div>
+        <div class="footer-section">
+            <div class="notes">
+                <h3>NOTES:</h3>
+                <ul>
+                    <li>All costs must provider Export Commercial Invoice, Bank Details for T&C, Valid Company Documents.</li>
+                    <li>This is not a Tax Invoice, this is a Proforma for Shipping Line.</li>
+                    <li>Validity of Quotation - 30 days from this date.</li>
+                    <li>All charges are subject to statutory and 3rd party rate increases, without prior notice.</li>
+                </ul>
+                <br>
+                <h3>Standard Free Time:</h3>
+                <ul>
+                    <li>12 - Free Period Storage grant by port.</li>
+                    <li>14 - Free Days as per Shipping Line ZIM - 18 Days</li>
+                </ul>
+            </div>
 
-    <!-- Footer -->
-    <div class="footer">
-        <p><strong>Validade:</strong> 15 dias a partir da data de emissão</p>
-        <p style="margin-top: 10px;">
-            Este documento é uma cotação e não constitui fatura. Os valores apresentados são estimativas<br>
-            e podem sofrer alterações conforme especificações finais do serviço.
-        </p>
-        <p style="margin-top: 15px;">
-            Documento gerado automaticamente em {{ now()->format('d/m/Y às H:i') }}
-        </p>
-    </div>
-</body>
+            <div class="bank-details">
+                <h3>BANK DETAILS:</h3>
+                <strong>Bank:</strong> Millennium
+                <br>
+                <strong>Acc Number:</strong> 37348558410001
+                <br>
+                <strong>NIB:</strong> 000100000037348558415
+                <br>
+                <strong>Account Name:</strong> ALEK LOGISTIC & TRANSPORT, LDA
+            </div>
+        </div>
+
+        <div class="footer">
+            Handling and Transporting your cargo efficiently and safely.
+        </div>
+
+    </div> </body>
 </html>
