@@ -208,14 +208,26 @@
                     </tr>
                 </thead>
                 <tbody>
-                    @foreach($shipment->quotation_breakdown as $item)
-                    <tr>
-                        <td>{{ $item['name'] }}</td>
-                        <td class="col-qty">{{ number_format($item['quantity'] ?? 1, 2) }}</td>
+
+                    @php
+                $map = [
+                    'Tipo de Container' => 'Shipping Line Charges',
+                    'Tipo de Mercadoria' => 'Port Charges',
+                    'Regime' => 'Customs Charges',
+                    'Destino' => 'Transport',
+                    'Serviço Adicional' => 'Agency Services and Extra Charges'
+                ];
+            @endphp
+            @foreach($shipment->quotation_breakdown as $item)
+            <tr>
+                <td>{{ $map[$item['category']] ?? $item['category'] }}</td>
+           <td class="col-qty">{{ number_format($item['quantity'] ?? 1, 2) }}</td>
                         <td class="col-price">{{ number_format($item['unit_price'] ?? $item['price'], 2) }}</td>
                         <td class="col-price">{{ number_format(($item['quantity'] ?? 1) * ($item['unit_price'] ?? $item['price']), 2) }}</td>
-                    </tr>
+            </tr>
+
                     @endforeach
+
                 </tbody>
             </table>
         </div>
