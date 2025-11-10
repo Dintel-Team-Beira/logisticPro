@@ -1,13 +1,15 @@
 import { useState } from 'react';
-import { Head, Link, router } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import {
     Plus, Search, Filter, Eye, Edit2, Trash2,
     Ship, Package, Clock, CheckCircle2, AlertCircle,
-    TrendingUp, Globe, ArrowRight, MapPin
+    TrendingUp, Globe, ArrowRight, MapPin, Truck, Navigation,
+    Check, DollarSign, Download
 } from 'lucide-react';
 
 export default function Index({ shipments, filters }) {
+    const { auth } = usePage().props;
     const [search, setSearch] = useState(filters.search || '');
     const [statusFilter, setStatusFilter] = useState(filters.status || '');
     const [typeFilter, setTypeFilter] = useState(filters.type || '');
@@ -39,10 +41,18 @@ export default function Index({ shipments, filters }) {
 
     // Redirecionar para a tela correta baseado no tipo
     const handleViewDetails = (shipment) => {
-        if (shipment.type === 'export') {
-            router.visit(`/operations/export/preparacao/${shipment.id}`);
-        } else {
-            router.visit(`/shipments/${shipment.id}`);
+        switch (shipment.type) {
+            case 'export':
+                router.visit(`/operations/export/preparacao/${shipment.id}`);
+                break;
+            case 'transit':
+                router.visit(`/operations/transit/recepcao`);
+                break;
+            case 'transport':
+                router.visit(`/operations/transport/coleta`);
+                break;
+            default: // import
+                router.visit(`/shipments/${shipment.id}`);
         }
     };
 
@@ -60,34 +70,125 @@ export default function Index({ shipments, filters }) {
     };
 
     const getPhaseName = (shipment, phase) => {
-        if (shipment.type === 'export') {
-            const names = {
-                1: 'Prep. Documentos',
-                2: 'Booking',
-                3: 'Inspeção',
-                4: 'Despacho',
-                5: 'Transporte',
-                6: 'Embarque',
-                7: 'Acompanhamento',
-            };
-            return names[phase] || 'Fase ' + phase;
-        }
+        switch (shipment.type) {
+            case 'export':
+                const exportNames = {
+                    1: 'Prep. Documentos',
+                    2: 'Booking',
+                    3: 'Inspeção',
+                    4: 'Despacho',
+                    5: 'Transporte',
+                    6: 'Embarque',
+                    7: 'Acompanhamento',
+                };
+                return exportNames[phase] || 'Fase ' + phase;
 
-        const names = {
-            1: 'Coleta Dispesas',
-            2: 'Legalização',
-            3: 'Alfândegas',
-            4: 'Cornelder',
-            5: 'Taxação',
-            6: 'Faturação',
-            7: 'POD',
-        };
-        return names[phase] || 'Fase ' + phase;
+            case 'transit':
+                const transitNames = {
+                    1: 'Recepção',
+                    2: 'Documentação',
+                    3: 'Desembaraço',
+                    4: 'Armazenamento',
+                    5: 'Prep. Partida',
+                    6: 'Transp. Saída',
+                    7: 'Acompanhamento',
+                };
+                return transitNames[phase] || 'Fase ' + phase;
+
+            case 'transport':
+                const transportNames = {
+                    1: 'Coleta',
+                    2: 'Entrega',
+                };
+                return transportNames[phase] || 'Fase ' + phase;
+
+            default: // import
+                const importNames = {
+                    1: 'Coleta Dispersa',
+                    2: 'Legalização',
+                    3: 'Alfândegas',
+                    4: 'Cornelder',
+                    5: 'Taxação',
+                    6: 'Faturação',
+                    7: 'POD',
+                };
+                return importNames[phase] || 'Fase ' + phase;
+        }
     };
+
+
+    // nova cores
+const getStageColor = (stageKey) => {
+    const colors = {
+        // Export
+        preparacao_documentos:    'bg-blue-100 text-blue-800',
+        booking:                  'bg-purple-100 text-purple-800',
+        inspecao_certificacao:    'bg-amber-100 text-amber-800',
+        despacho_aduaneiro:       'bg-cyan-100 text-cyan-800',
+        transporte_porto:         'bg-indigo-100 text-indigo-800',
+        embarque:                 'bg-green-100 text-green-800',
+        acompanhamento:           'bg-emerald-100 text-emerald-800',
+
+        // Transit
+        recepcao:                 'bg-teal-100 text-teal-800',
+        documentacao:             'bg-sky-100 text-sky-800',
+        desembaraco:              'bg-orange-100 text-orange-800',
+        armazenamento:            'bg-yellow-100 text-yellow-800',
+        preparacao_partida:       'bg-lime-100 text-lime-800',
+        transporte_saida:         'bg-rose-100 text-rose-800',
+
+        // Transport
+        coleta:                   'bg-pink-100 text-pink-800',
+        entrega:                  'bg-red-100 text-red-800',
+
+        // Import
+        coleta_dispersa:          'bg-orange-100 text-orange-800',
+        legalizacao:              'bg-pink-100 text-pink-800',
+        alfandegas:               'bg-red-100 text-red-800',
+        cornelder:                'bg-yellow-100 text-yellow-800',
+        taxacao:                  'bg-lime-100 text-lime-800',
+        faturacao:                'bg-rose-100 text-rose-800',
+        pod:                      'bg-sky-100 text-sky-800',
+    };
+    return colors[stageKey] || 'bg-slate-100 text-slate-700';
+};
+
+const getStageLabel = (stageKey) => {
+    const labels = {
+        preparacao_documentos: 'Documentos',
+        booking: 'Booking',
+        inspecao_certificacao: 'Inspeção',
+        despacho_aduaneiro: 'Despacho',
+        transporte_porto: 'Transporte',
+        embarque: 'Embarque',
+        acompanhamento: 'Acompanhamento',
+
+        recepcao: 'Recepção',
+        documentacao: 'Documentação',
+        desembaraco: 'Desembaraço',
+        armazenamento: 'Armazenamento',
+        preparacao_partida: 'Prep. Partida',
+        transporte_saida: 'Transp. Saída',
+
+        coleta: 'Coleta',
+        entrega: 'Entrega',
+
+        coleta_dispersa: 'Coleta',
+        legalizacao: 'Legalização',
+        alfandegas: 'Alfândegas',
+        cornelder: 'Cornelder',
+        taxacao: 'Taxação',
+        faturacao: 'Faturação',
+        pod: 'POD',
+    };
+    return labels[stageKey] || stageKey.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+};
 
     // Calcular estatísticas
     const importCount = shipments.data?.filter(s => s.type === 'import' || !s.type).length || 0;
     const exportCount = shipments.data?.filter(s => s.type === 'export').length || 0;
+    const transitCount = shipments.data?.filter(s => s.type === 'transit').length || 0;
+    const transportCount = shipments.data?.filter(s => s.type === 'transport').length || 0;
 
     return (
         <DashboardLayout>
@@ -101,7 +202,7 @@ export default function Index({ shipments, filters }) {
                             Processos Logísticos
                         </h1>
                         <p className="text-sm text-slate-500">
-                            Gerencie processos de importação e exportação
+                            Gerencie processos de importação, exportação, trânsito e transporte
                         </p>
                     </div>
                     <Link
@@ -139,6 +240,8 @@ export default function Index({ shipments, filters }) {
                             <option value="">Todos os Tipos</option>
                             <option value="import">📦 Importação</option>
                             <option value="export">🚢 Exportação</option>
+                            <option value="transit">🔄 Trânsito</option>
+                            <option value="transport">🚚 Transporte</option>
                         </select>
 
                         {/* Status Filter */}
@@ -174,7 +277,7 @@ export default function Index({ shipments, filters }) {
                 </div>
 
                 {/* Estatísticas Rápidas */}
-                <div className="grid grid-cols-5 gap-4">
+                <div className="grid grid-cols-6 gap-4">
                     <StatCard
                         title="Total Processos"
                         value={shipments.total}
@@ -196,10 +299,18 @@ export default function Index({ shipments, filters }) {
                         badge="🚢"
                     />
                     <StatCard
-                        title="Ativos"
-                        value={shipments.data?.filter(s => s.status === 'active').length || 0}
-                        icon={Clock}
+                        title="Trânsitos"
+                        value={transitCount}
+                        icon={Navigation}
                         color="amber"
+                        badge="🔄"
+                    />
+                    <StatCard
+                        title="Transportes"
+                        value={transportCount}
+                        icon={Truck}
+                        color="blue"
+                        badge="🚚"
                     />
                     <StatCard
                         title="Completados"
@@ -239,7 +350,7 @@ export default function Index({ shipments, filters }) {
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
-                                {console.log(shipments.data)}
+
                                 {shipments.data && shipments.data.length > 0 ? (
 
                                     shipments.data.map((shipment) => (
@@ -252,6 +363,10 @@ export default function Index({ shipments, filters }) {
                                                 <div className="flex items-center gap-2">
                                                     {shipment.type === 'export' ? (
                                                         <TrendingUp className="w-5 h-5 text-emerald-600" />
+                                                    ) : shipment.type === 'transit' ? (
+                                                        <Navigation className="w-5 h-5 text-amber-600" />
+                                                    ) : shipment.type === 'transport' ? (
+                                                        <Truck className="w-5 h-5 text-purple-600" />
                                                     ) : (
                                                         <Ship className="w-5 h-5 text-blue-600" />
                                                     )}
@@ -262,14 +377,33 @@ export default function Index({ shipments, filters }) {
                                                         >
                                                             {shipment.reference_number}
                                                         </Link>
-                                                        <div className="mt-1">
+                                                        <div className="flex items-center gap-2 mt-1">
                                                             {shipment.type === 'export' ? (
                                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-emerald-700 bg-emerald-100 rounded-full">
                                                                     🚢 Exportação
                                                                 </span>
+                                                            ) : shipment.type === 'transit' ? (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-amber-700 bg-amber-100 rounded-full">
+                                                                    🔄 Trânsito
+                                                                </span>
+                                                            ) : shipment.type === 'transport' ? (
+                                                                <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-purple-700 bg-purple-100 rounded-full">
+                                                                    🚚 Transporte
+                                                                </span>
                                                             ) : (
                                                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-blue-700 bg-blue-100 rounded-full">
                                                                     📦 Importação
+                                                                </span>
+                                                            )}
+
+                                                            {/* Indicador de Cotação - Só para Admin e Finance */}
+                                                            {shipment.quotation_reference && (auth.user.role === 'admin' || auth.user.role === 'finance') && (
+                                                                <span
+                                                                    className="inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold text-green-700 bg-green-100 rounded-full"
+                                                                    title={`Cotação: ${shipment.quotation_reference}`}
+                                                                >
+                                                                    <DollarSign className="w-3 h-3" />
+                                                                    Cotação
                                                                 </span>
                                                             )}
                                                         </div>
@@ -305,11 +439,19 @@ export default function Index({ shipments, filters }) {
                                                 </div>
                                             </td>
                                             <td className="px-6 py-4">
-                                                <span className={`inline-flex px-2 py-1 text-xs font-semibold rounded-full  ${getPhaseColor(shipment.current_phase || 1)}`}>
-                                                    {getPhaseName(shipment, shipment.current_phase || 1)}
-
-                                                    {/* {shipment.stages?.[shipment.stages.length - 1]?.stage} */}
-                                                </span>
+                                            {shipment.stages?.map((stage) => (
+    <span
+        key={stage.id}
+        className={`inline-flex items-center gap-1 px-2 py-0.5 text-xs font-semibold rounded-full ${
+            stage.status === 'completed'
+                ? 'bg-slate-200 text-slate-600'
+                : getStageColor(stage.stage)
+        }`}
+    >
+        {getStageLabel(stage.stage)}
+        {stage.status === 'completed' && <Check className="w-3 h-3" />}
+    </span>
+))}
                                             </td>
                                             <td className="px-6 py-4">
                                                 <div className="text-sm text-slate-900">
@@ -326,6 +468,20 @@ export default function Index({ shipments, filters }) {
                                                         <Eye className="w-3 h-3" />
                                                         Ver
                                                     </button>
+
+                                                    {/* Botão Download Cotação - Admin e Finance */}
+                                                    {shipment.quotation_reference && (auth.user.role === 'admin' || auth.user.role === 'finance') && (
+                                                        <a
+                                                            href={`/quotations/${shipment.id}/pdf`}
+                                                            target="_blank"
+                                                            className="inline-flex items-center gap-1 px-3 py-1.5 text-xs font-medium text-white transition-colors bg-emerald-600 rounded-lg hover:bg-emerald-700"
+                                                            title="Baixar Cotação"
+                                                        >
+                                                            <Download className="w-3 h-3" />
+                                                            Cotação
+                                                        </a>
+                                                    )}
+
                                                     <Link
                                                         href={`/shipments/${shipment.id}/edit`}
                                                         className="p-2 transition-colors rounded-lg hover:bg-slate-100"

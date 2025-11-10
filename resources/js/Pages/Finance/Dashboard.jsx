@@ -1,4 +1,5 @@
 import { Head, Link, router } from '@inertiajs/react';
+import { useState, useMemo } from 'react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import {
   DollarSign,
@@ -8,10 +9,14 @@ import {
   TrendingUp,
   FileText,
   Download,
-  Eye
+  Eye,
+  Search,
+  X
 } from 'lucide-react';
 
 export default function FinanceDashboard({ stats, recentRequests }) {
+  const [activeFilter, setActiveFilter] = useState('all');
+  const [searchTerm, setSearchTerm] = useState('');
 
   const statCards = [
     {
@@ -20,7 +25,8 @@ export default function FinanceDashboard({ stats, recentRequests }) {
       icon: Clock,
       color: 'yellow',
       bgColor: 'bg-yellow-100',
-      textColor: 'text-yellow-600'
+      textColor: 'text-yellow-600',
+      filter: 'pending'
     },
     {
       title: 'Aprovados (A Pagar)',
@@ -28,7 +34,8 @@ export default function FinanceDashboard({ stats, recentRequests }) {
       icon: CheckCircle,
       color: 'blue',
       bgColor: 'bg-blue-100',
-      textColor: 'text-blue-600'
+      textColor: 'text-blue-600',
+      filter: 'approved'
     },
     {
       title: 'Em Pagamento',
@@ -36,7 +43,8 @@ export default function FinanceDashboard({ stats, recentRequests }) {
       icon: DollarSign,
       color: 'purple',
       bgColor: 'bg-purple-100',
-      textColor: 'text-purple-600'
+      textColor: 'text-purple-600',
+      filter: 'in_payment'
     },
     {
       title: 'Pagos Hoje',
@@ -44,9 +52,39 @@ export default function FinanceDashboard({ stats, recentRequests }) {
       icon: TrendingUp,
       color: 'green',
       bgColor: 'bg-green-100',
-      textColor: 'text-green-600'
+      textColor: 'text-green-600',
+      filter: 'paid_today'
     }
   ];
+
+  const filteredRequests = useMemo(() => {
+    let filtered = [...recentRequests];
+
+    if (activeFilter !== 'all') {
+      if (activeFilter === 'paid_today') {
+        const today = new Date().toDateString();
+        filtered = filtered.filter(req =>
+          req.status === 'paid' &&
+          req.paid_at &&
+          new Date(req.paid_at).toDateString() === today
+        );
+      } else {
+        filtered = filtered.filter(req => req.status === activeFilter);
+      }
+    }
+
+    if (searchTerm.trim()) {
+      const search = searchTerm.toLowerCase();
+      filtered = filtered.filter(req =>
+        req.shipment.reference_number.toLowerCase().includes(search) ||
+        req.payee.toLowerCase().includes(search) ||
+        (req.shipment.client?.name || '').toLowerCase().includes(search) ||
+        req.request_type.toLowerCase().includes(search)
+      );
+    }
+
+    return filtered;
+  }, [recentRequests, activeFilter, searchTerm]);
 
   const formatCurrency = (amount, currency = 'MZN') => {
     return new Intl.NumberFormat('pt-MZ', {
@@ -67,20 +105,31 @@ export default function FinanceDashboard({ stats, recentRequests }) {
   };
 
   const handlePayment = (requestId) => {
-    router.post(`/finance/payment-requests/${requestId}/start-payment`, {}, {
+    router.post(`/payment-requests/${requestId}/start-payment`, {}, {
       preserveScroll: true,
       onSuccess: () => {
-        // Redirecionar para página de confirmação
-        router.visit(`/finance/payment-requests/${requestId}/confirm`);
+        router.visit(`/payment-requests/${requestId}`);
       }
     });
+  };
+
+  const handleCardClick = (filter) => {
+    if (activeFilter === filter) {
+      setActiveFilter('all');
+    } else {
+      setActiveFilter(filter);
+    }
+  };
+
+  const clearFilters = () => {
+    setActiveFilter('all');
+    setSearchTerm('');
   };
 
   return (
     <DashboardLayout>
       <Head title="Dashboard Financeiro" />
     <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
-      {/* Header */}
       <div className="mb-6">
         <h1 className="text-3xl font-bold text-slate-900">
           Dashboard Financeiro
@@ -90,22 +139,42 @@ export default function FinanceDashboard({ stats, recentRequests }) {
         </p>
       </div>
 
-      {/* Stats Grid */}
       <div className="grid grid-cols-1 gap-6 mb-6 md:grid-cols-2 lg:grid-cols-4">
-        {statCards.map((stat, idx) => (
-          <div key={idx} className="p-6 bg-white border rounded-xl border-slate-200">
-            <div className="flex items-center justify-between mb-4">
-              <div className={`p-3 rounded-lg ${stat.bgColor}`}>
-                <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
+        {statCards.map((stat, idx) => {
+          const isActive = activeFilter === stat.filter;
+          return (
+            <button
+              key={idx}
+              onClick={() => handleCardClick(stat.filter)}
+              className={`p-6 text-left transition-all duration-200 bg-white border rounded-xl
+                ${isActive
+                  ? 'border-blue-500 ring-2 ring-blue-200 shadow-lg'
+                  : 'border-slate-200 hover:border-blue-300 hover:shadow-md'
+                }
+                cursor-pointer`}
+            >
+              <div className="flex items-center justify-between mb-4">
+                <div className={`p-3 rounded-lg ${stat.bgColor}`}>
+                  <stat.icon className={`w-6 h-6 ${stat.textColor}`} />
+                </div>
+                {isActive && (
+                  <div className="p-1 bg-blue-100 rounded-full">
+                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                  </div>
+                )}
               </div>
-            </div>
-            <h3 className="text-sm font-medium text-slate-600">{stat.title}</h3>
-            <p className="mt-1 text-3xl font-bold text-slate-900">{stat.value}</p>
-          </div>
-        ))}
+              <h3 className="text-sm font-medium text-slate-600">{stat.title}</h3>
+              <p className="mt-1 text-3xl font-bold text-slate-900">{stat.value}</p>
+              {isActive && (
+                <p className="mt-2 text-xs font-medium text-blue-600">
+                  Filtro ativo
+                </p>
+              )}
+            </button>
+          );
+        })}
       </div>
 
-      {/* Financial Summary */}
       <div className="grid grid-cols-1 gap-6 mb-6 lg:grid-cols-2">
         <div className="p-6 border border-blue-200 rounded-xl bg-gradient-to-br from-blue-50 to-blue-100">
           <h3 className="text-sm font-semibold text-blue-900">Total Pendente</h3>
@@ -128,7 +197,6 @@ export default function FinanceDashboard({ stats, recentRequests }) {
         </div>
       </div>
 
-      {/* Quick Actions */}
       <div className="grid grid-cols-1 gap-4 mb-6 md:grid-cols-3">
         <Link
           href="/finance/pending"
@@ -170,24 +238,63 @@ export default function FinanceDashboard({ stats, recentRequests }) {
         </Link>
       </div>
 
-      {/* Recent Requests Table */}
       <div className="bg-white border rounded-xl border-slate-200">
         <div className="p-6 border-b border-slate-200">
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-4">
             <div>
               <h2 className="text-xl font-bold text-slate-900">
                 Solicitações Recentes
               </h2>
               <p className="mt-1 text-sm text-slate-600">
-                Últimas 10 solicitações aguardando processamento
+                {activeFilter === 'all'
+                  ? 'Todas as solicitações'
+                  : `Filtrado por: ${statCards.find(s => s.filter === activeFilter)?.title || 'N/A'}`
+                }
+                {searchTerm && ` - Pesquisando: "${searchTerm}"`}
+                {filteredRequests.length !== recentRequests.length && (
+                  <span className="ml-2 text-blue-600">
+                    ({filteredRequests.length} de {recentRequests.length})
+                  </span>
+                )}
               </p>
             </div>
             <Link
-    href="/finance/pending"
+              href="/finance/pending"
               className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
             >
               Ver Todas
             </Link>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute w-5 h-5 -translate-y-1/2 text-slate-400 left-3 top-1/2" />
+              <input
+                type="text"
+                placeholder="Pesquisar por processo, cliente, payee ou tipo..."
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full py-2 pl-10 pr-10 transition-colors border rounded-lg border-slate-300 focus:border-blue-500 focus:ring-2 focus:ring-blue-200"
+              />
+              {searchTerm && (
+                <button
+                  onClick={() => setSearchTerm('')}
+                  className="absolute p-1 transition-colors -translate-y-1/2 rounded-full right-3 top-1/2 hover:bg-slate-200"
+                  title="Limpar pesquisa"
+                >
+                  <X className="w-4 h-4 text-slate-500" />
+                </button>
+              )}
+            </div>
+            {(activeFilter !== 'all' || searchTerm) && (
+              <button
+                onClick={clearFilters}
+                className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border rounded-lg border-slate-300 text-slate-700 hover:bg-slate-100"
+              >
+                <X className="w-4 h-4" />
+                Limpar Filtros
+              </button>
+            )}
           </div>
         </div>
 
@@ -216,16 +323,34 @@ export default function FinanceDashboard({ stats, recentRequests }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-200">
-              {recentRequests.length === 0 ? (
+              {filteredRequests.length === 0 ? (
                 <tr>
                   <td colSpan="6" className="px-6 py-12 text-center text-slate-500">
                     <AlertCircle className="w-12 h-12 mx-auto mb-3 text-slate-400" />
-                    <p className="text-sm font-medium">Nenhuma solicitação pendente</p>
-                    <p className="text-xs">Todas as solicitações foram processadas</p>
+                    <p className="text-sm font-medium">
+                      {recentRequests.length === 0
+                        ? 'Nenhuma solicitação encontrada'
+                        : 'Nenhum resultado para os filtros aplicados'
+                      }
+                    </p>
+                    <p className="text-xs">
+                      {recentRequests.length === 0
+                        ? 'Todas as solicitações foram processadas'
+                        : 'Tente ajustar os filtros ou pesquisa'
+                      }
+                    </p>
+                    {(activeFilter !== 'all' || searchTerm) && (
+                      <button
+                        onClick={clearFilters}
+                        className="px-4 py-2 mt-4 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+                      >
+                        Limpar Filtros
+                      </button>
+                    )}
                   </td>
                 </tr>
               ) : (
-                recentRequests.map((request) => {
+                filteredRequests.map((request) => {
                   const badge = getStatusBadge(request.status);
                   return (
                     <tr key={request.id} className="transition-colors hover:bg-slate-50">
@@ -246,7 +371,7 @@ export default function FinanceDashboard({ stats, recentRequests }) {
                       </td>
                       <td className="px-6 py-4">
                         <p className="text-sm text-slate-900">
-                          {request.getTypeLabel || request.request_type}
+                          {request.request_type_label || request.request_type}
                         </p>
                       </td>
                       <td className="px-6 py-4 text-right">
@@ -262,21 +387,23 @@ export default function FinanceDashboard({ stats, recentRequests }) {
                       <td className="px-6 py-4 text-right">
                         <div className="flex items-center justify-end gap-2">
                           <button
-                            onClick={() => router.visit(`/finance/payment-requests/${request.id}`)}
+                            onClick={() => router.visit(`/payment-requests/${request.id}`)}
                             className="p-1 transition-colors rounded hover:bg-slate-200"
                             title="Ver detalhes"
                           >
                             <Eye className="w-4 h-4 text-slate-600" />
                           </button>
 
-                          {request.quotation_document && (
-                            <button
-                              onClick={() => router.visit(`/documents/${request.quotation_document.id}/download`)}
+                          {request.quotation_document_id && (
+                            <a
+                              href={`/documents/${request.quotation_document_id}/download`}
+                              target="_blank"
+                              rel="noopener noreferrer"
                               className="p-1 transition-colors rounded hover:bg-slate-200"
                               title="Baixar cotação"
                             >
                               <Download className="w-4 h-4 text-slate-600" />
-                            </button>
+                            </a>
                           )}
 
                           {request.status === 'approved' && (

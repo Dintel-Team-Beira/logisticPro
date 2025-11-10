@@ -31,75 +31,151 @@ class InvoiceController extends Controller
     /**
      * Página principal de faturação
      */
+    // public function index(Request $request)
+    // {
+    //     // Buscar shipments que estão prontos para faturação ou já têm fatura
+    //     $query = Shipment::with([
+    //         'client',
+    //         'paymentRequests' => function($q) {
+    //             $q->with(['requester', 'approver', 'payer'])
+    //               ->orderBy('phase')
+    //               ->orderBy('created_at');
+    //         },
+    //         'stages' => function($q) {
+    //             $q->whereIn('stage', ['coleta_dispersa', 'faturacao']);
+    //         }
+    //     ])
+    //     ->whereHas('stages', function($q) {
+    //         $q->where('stage', 'coleta_dispersa')
+    //           ->where('status', 'completed');
+    //     });
+
+    //     // Buscar faturas (documents com type='client_invoice')
+    //     $shipmentsData = $query->latest()->paginate(15);
+
+    //     // Adicionar informações de fatura a cada shipment
+    //     $shipmentsData->getCollection()->transform(function ($shipment) {
+    //         // Buscar fatura ao cliente se existir
+    //         $invoice = Invoice::clientInvoices()
+    //             ->where('shipment_id', $shipment->id)
+    //             ->latest()
+    //             ->first();
+
+    //         $shipment->invoices = $invoice ? [$invoice] : [];
+
+    //         // Verificar se fase 1 está completa
+    //         $shipment->phase1_complete = $shipment->stages
+    //             ->where('stage', 'coleta_dispersa')
+    //             ->where('status', 'completed')
+    //             ->count() > 0;
+
+    //         return $shipment;
+    //     });
+
+    //     // Calcular estatísticas
+    //     $stats = [
+    //         'ready' => Shipment::whereHas('stages', function($q) {
+    //             $q->where('stage', 'coleta_dispersa')
+    //               ->where('status', 'completed');
+    //         })
+    //         ->whereDoesntHave('invoices', function($q) {
+    //             $q->where('type', 'client_invoice');
+    //         })
+    //         ->count(),
+
+    //         'pending' => Invoice::clientInvoices()
+    //             ->where('status', 'pending')
+    //             ->count(),
+
+    //         'paid' => Invoice::clientInvoices()
+    //             ->where('status', 'paid')
+    //             ->count(),
+
+    //         'total_amount' => Invoice::clientInvoices()
+    //             ->where('status', 'paid')
+    //             ->sum('amount'),
+    //     ];
+
+    //     return Inertia::render('Invoices/Index', [
+    //         'shipments' => $shipmentsData,
+    //         'stats' => $stats,
+    //     ]);
+    // }
+
+
+    // * Página principal de faturação - Lista TODAS as invoices
+
     public function index(Request $request)
+
     {
-        // Buscar shipments que estão prontos para faturação ou já têm fatura
-        $query = Shipment::with([
+
+        // Buscar TODAS as invoices (cotações) com relacionamentos
+
+        $query = Invoice::with([
+            'shipment.client',
             'client',
-            'paymentRequests' => function($q) {
-                $q->with(['requester', 'approver', 'payer'])
-                  ->orderBy('phase')
-                  ->orderBy('created_at');
-            },
-            'stages' => function($q) {
-                $q->whereIn('stage', ['coleta_dispersa', 'faturacao']);
-            }
+            'createdBy'
         ])
-        ->whereHas('stages', function($q) {
-            $q->where('stage', 'coleta_dispersa')
-              ->where('status', 'completed');
-        });
+        ->clientInvoices(); // Apenas invoices ao cliente
+        // Filtros
+        if ($request->has('status') && $request->status !== 'all') {
+            $query->where('status', $request->status);
+        }
 
-        // Buscar faturas (documents com type='client_invoice')
-        $shipmentsData = $query->latest()->paginate(15);
 
-        // Adicionar informações de fatura a cada shipment
-        $shipmentsData->getCollection()->transform(function ($shipment) {
-            // Buscar fatura ao cliente se existir
-            $invoice = Invoice::clientInvoices()
-                ->where('shipment_id', $shipment->id)
-                ->latest()
-                ->first();
 
-            $shipment->invoices = $invoice ? [$invoice] : [];
+        if ($request->has('search')) {
 
-            // Verificar se fase 1 está completa
-            $shipment->phase1_complete = $shipment->stages
-                ->where('stage', 'coleta_dispersa')
-                ->where('status', 'completed')
-                ->count() > 0;
+            $query->where(function($q) use ($request) {
 
-            return $shipment;
-        });
+                $q->where('invoice_number', 'like', "%{$request->search}%")
+                  ->orWhereHas('shipment', function($sq) use ($request) {
+                      $sq->where('reference_number', 'like', "%{$request->search}%");
+                  })
+                  ->orWhereHas('client', function($cq) use ($request) {
+                      $cq->where('name', 'like', "%{$request->search}%");
+                  });
+
+            });
+
+        }
+
+
+
+        $invoices = $query->latest('issue_date')->paginate(20);
+
+
 
         // Calcular estatísticas
+
         $stats = [
-            'ready' => Shipment::whereHas('stages', function($q) {
-                $q->where('stage', 'coleta_dispersa')
-                  ->where('status', 'completed');
-            })
-            ->whereDoesntHave('invoices', function($q) {
-                $q->where('type', 'client_invoice');
-            })
-            ->count(),
 
-            'pending' => Invoice::clientInvoices()
-                ->where('status', 'pending')
-                ->count(),
+            'total' => Invoice::clientInvoices()->count(),
 
-            'paid' => Invoice::clientInvoices()
-                ->where('status', 'paid')
-                ->count(),
+            'pending' => Invoice::clientInvoices()->where('status', 'pending')->count(),
 
-            'total_amount' => Invoice::clientInvoices()
-                ->where('status', 'paid')
-                ->sum('amount'),
+            'paid' => Invoice::clientInvoices()->where('status', 'paid')->count(),
+
+            'cancelled' => Invoice::clientInvoices()->where('status', 'cancelled')->count(),
+
+            'rejected' => Invoice::clientInvoices()->where('status', 'rejected')->count(),
+
+            'total_amount' => Invoice::clientInvoices()->where('status', 'paid')->sum('amount'),
+
         ];
 
+
+
         return Inertia::render('Invoices/Index', [
-            'shipments' => $shipmentsData,
+
+            'invoices' => $invoices,
+
             'stats' => $stats,
+
+            'filters' => $request->only(['status', 'search']),
+
         ]);
+
     }
 
     /**
@@ -465,32 +541,71 @@ class InvoiceController extends Controller
         return Storage::disk('public')->download($invoice->file_path, $invoice->invoice_number . '.pdf');
     }
 
-    /**
+  /**
      * Preview da fatura em PDF
      */
     public function show(Invoice $invoice)
     {
-        $invoice->load(['client', 'shipment', 'items', 'createdBy', 'quote']);
+        try {
+            // Carregar relacionamentos necessários
+            $invoice->load([
+                'client',
+                'shipment.client',
+                'createdBy'
+            ]);
 
-        return Inertia::render('Invoices/Show', [
-            'invoice' => $invoice,
-        ]);
-    }
+            // Buscar dados do metadata para exibir na invoice
+            $metadata = $invoice->metadata;
 
-    public function markAsPaid(Invoice $invoice)
-    {
-        if ($invoice->status === 'paid') {
-            return back()->with('info', 'Esta fatura já está marcada como paga.');
+            // Se metadata for string JSON, decodificar
+            if (is_string($metadata)) {
+                $metadata = json_decode($metadata, true);
+            }
+
+            // Extrair invoice_data
+            $invoiceData = $metadata['invoice_data'] ?? null;
+
+            // Se não tiver invoice_data no metadata, criar estrutura básica
+            if (!$invoiceData) {
+                $invoiceData = [
+                    'items' => [],
+                    'costs_by_phase' => [
+                        'coleta_dispersa' => [],
+                        'alfandegas' => [],
+                        'cornelder' => [],
+                        'outros' => [],
+                    ],
+                    'base_rates' => [],
+                    'subtotal' => $invoice->subtotal ?? $invoice->amount,
+                    'margin_amount' => 0,
+                    'margin_percent' => 0,
+                    'total_invoice' => $invoice->amount,
+                ];
+            }
+
+            // Normalizar: base_rates -> base_rates_costs (para compatibilidade com frontend)
+            if (isset($invoiceData['base_rates']) && !isset($invoiceData['base_rates_costs'])) {
+                $invoiceData['base_rates_costs'] = $invoiceData['base_rates'];
+            }
+
+            return Inertia::render('Invoices/Show', [
+                'invoice' => array_merge($invoice->toArray(), [
+                    'invoice_data' => $invoiceData,
+                ]),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erro no show da invoice', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withErrors([
+                'error' => 'Erro ao carregar fatura: ' . $e->getMessage()
+            ]);
         }
-
-        $invoice->update([
-            'status' => 'paid',
-            'paid_date' => now(),
-            'updated_by' => auth()->id(),
-        ]);
-
-        return back()->with('success', 'Fatura marcada como paga com sucesso!');
     }
+
 
     public function preview(Shipment $shipment)
     {
@@ -550,5 +665,346 @@ class InvoiceController extends Controller
             'nuit' => '6474687',
             'logo_path' => public_path('logoH.webp'),
         ];
+    }
+
+    // ========================================
+    // QUOTATION INVOICE SYSTEM
+    // ========================================
+
+    /**
+     * Lista todas as faturas geradas de cotações
+     */
+    public function quotationInvoices(Request $request)
+    {
+        $query = Invoice::with(['shipment.client', 'shipment.shipping_line', 'createdBy'])
+            ->where('invoice_type', 'quotation')
+            ->latest();
+
+        // Filtros
+        if ($request->status) {
+            $query->where('status', $request->status);
+        }
+
+        if ($request->search) {
+            $query->where(function($q) use ($request) {
+                $q->where('invoice_number', 'like', "%{$request->search}%")
+                  ->orWhereHas('shipment', function($sq) use ($request) {
+                      $sq->where('reference_number', 'like', "%{$request->search}%");
+                  })
+                  ->orWhereHas('client', function($cq) use ($request) {
+                      $cq->where('name', 'like', "%{$request->search}%");
+                  });
+            });
+        }
+
+        $invoices = $query->paginate(15);
+
+        // Stats
+        $stats = [
+            'total' => Invoice::where('invoice_type', 'quotation')->count(),
+            'pending' => Invoice::where('invoice_type', 'quotation')->where('status', 'pending')->count(),
+            'paid' => Invoice::where('invoice_type', 'quotation')->where('status', 'paid')->count(),
+            'overdue' => Invoice::where('invoice_type', 'quotation')
+                ->where('status', 'pending')
+                ->where('due_date', '<', now())
+                ->count(),
+            'total_pending_amount' => Invoice::where('invoice_type', 'quotation')
+                ->where('status', 'pending')
+                ->sum('amount'),
+            'total_paid_amount' => Invoice::where('invoice_type', 'quotation')
+                ->where('status', 'paid')
+                ->sum('amount'),
+        ];
+
+        return Inertia::render('Invoices/QuotationIndex', [
+            'invoices' => $invoices,
+            'stats' => $stats,
+            'filters' => $request->only(['status', 'search']),
+        ]);
+    }
+
+    /**
+     * Gera fatura automaticamente da cotação do shipment
+     */
+    public function generateFromQuotation(Shipment $shipment)
+    {
+        // Verificar se shipment tem cotação
+        if (!$shipment->quotation_reference) {
+            return redirect()->back()->with('error', 'Este processo não possui cotação automática.');
+        }
+
+        // Verificar se já existe fatura
+        $existingInvoice = Invoice::where('shipment_id', $shipment->id)
+            ->where('invoice_type', 'quotation')
+            ->first();
+
+        if ($existingInvoice) {
+            return redirect()->back()->with('error', 'Já existe uma fatura gerada para este processo.');
+        }
+
+        try {
+            DB::beginTransaction();
+
+            // Gerar número da fatura
+            $invoiceNumber = $this->generateQuotationInvoiceNumber();
+
+            // Criar fatura
+            $invoice = Invoice::create([
+                'shipment_id' => $shipment->id,
+                'client_id' => $shipment->client_id,
+                'invoice_number' => $invoiceNumber,
+                'invoice_type' => 'quotation',
+                'type' => 'client_invoice',
+                'issuer' => 'ALEK Transporte',
+                'amount' => $shipment->quotation_total,
+                'subtotal' => $shipment->quotation_subtotal,
+                'tax_amount' => $shipment->quotation_tax,
+                'currency' => 'MZN',
+                'issue_date' => now(),
+                'due_date' => now()->addDays(30),
+                'status' => 'pending',
+                'description' => 'Fatura gerada da cotação ' . $shipment->quotation_reference,
+                'terms' => 'Pagamento em 30 dias',
+                'metadata' => [
+                    'quotation_reference' => $shipment->quotation_reference,
+                    'quotation_breakdown' => $shipment->quotation_breakdown,
+                    'quotation_status' => $shipment->quotation_status,
+                ],
+                'created_by' => auth()->id(),
+            ]);
+
+            // Criar items da fatura baseados no breakdown
+            if ($shipment->quotation_breakdown) {
+                $sortOrder = 0;
+                foreach ($shipment->quotation_breakdown as $item) {
+                    \App\Models\InvoiceItem::create([
+                        'invoice_id' => $invoice->id,
+                        'description' => $item['name'],
+                        'quantity' => 1,
+                        'unit_price' => $item['price'],
+                        'amount' => $item['price'],
+                        'sort_order' => $sortOrder++,
+                        'metadata' => [
+                            'category' => $item['category'] ?? null,
+                        ],
+                    ]);
+                }
+            }
+
+            DB::commit();
+
+            // Enviar notificação ao cliente (opcional)
+            if ($shipment->client && $shipment->client->email) {
+                try {
+                    Notification::send($shipment->client, new InvoiceCreatedNotification($invoice));
+                } catch (\Exception $e) {
+                    // Log erro mas não falha a operação
+                    \Log::error('Erro ao enviar notificação de fatura: ' . $e->getMessage());
+                }
+            }
+
+            return redirect()->route('invoices.quotations.show', $invoice->id)
+                ->with('success', 'Fatura gerada com sucesso!');
+
+        } catch (\Exception $e) {
+            DB::rollBack();
+            return redirect()->back()->with('error', 'Erro ao gerar fatura: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Exibe detalhes da fatura de cotação
+     */
+    public function showQuotationInvoice(Invoice $invoice)
+    {
+        $invoice->load(['shipment.client', 'shipment.shipping_line', 'items', 'createdBy']);
+
+        return Inertia::render('Invoices/QuotationShow', [
+            'invoice' => $invoice,
+        ]);
+    }
+
+    /**
+     * Marca fatura como paga
+     */
+    public function markAsPaid(Request $request, Invoice $invoice)
+    {
+        $validated = $request->validate([
+            'payment_date' => 'required|date',
+            'payment_reference' => 'nullable|string|max:255',
+            'notes' => 'nullable|string',
+        ]);
+
+        try {
+            $invoice->update([
+                'status' => 'paid',
+                'payment_date' => $validated['payment_date'],
+                'payment_reference' => $validated['payment_reference'] ?? null,
+                'notes' => $validated['notes'] ?? $invoice->notes,
+            ]);
+
+            // Enviar notificação
+            if ($invoice->client && $invoice->client->email) {
+                try {
+                    Notification::send($invoice->client, new InvoicePaidNotification($invoice));
+                } catch (\Exception $e) {
+                    \Log::error('Erro ao enviar notificação de pagamento: ' . $e->getMessage());
+                }
+            }
+
+            return redirect()->back()->with('success', 'Fatura marcada como paga!');
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao atualizar fatura: ' . $e->getMessage());
+        }
+    }
+
+
+        /**
+
+     * Atualizar status da invoice
+
+     */
+
+    public function updateStatus(Request $request, Invoice $invoice)
+
+    {
+
+        $validated = $request->validate([
+
+            'status' => 'required|in:pending,paid,cancelled,rejected',
+
+            'notes' => 'nullable|string|max:500'
+
+        ]);
+
+
+
+        $oldStatus = $invoice->status;
+
+        $newStatus = $validated['status'];
+
+
+
+        // Atualizar invoice
+
+        $updateData = [
+
+            'status' => $newStatus,
+
+        ];
+
+
+
+        // Se mudou para pago, registrar data de pagamento
+
+        if ($newStatus === 'paid' && $oldStatus !== 'paid') {
+
+            $updateData['payment_date'] = now();
+
+        }
+
+
+
+        // Adicionar notas ao metadata
+
+        if (isset($validated['notes'])) {
+
+            $metadata = $invoice->metadata ?? [];
+
+            $metadata['status_change_history'] = $metadata['status_change_history'] ?? [];
+
+            $metadata['status_change_history'][] = [
+
+                'from' => $oldStatus,
+
+                'to' => $newStatus,
+
+                'notes' => $validated['notes'],
+
+                'changed_by' => auth()->id(),
+
+                'changed_at' => now()->toIso8601String(),
+
+            ];
+
+            $updateData['metadata'] = $metadata;
+
+        }
+
+
+
+        $invoice->update($updateData);
+
+
+
+        // Mensagens de sucesso baseadas no status
+
+        $messages = [
+
+            'pending' => 'Fatura marcada como pendente.',
+
+            'paid' => 'Fatura marcada como paga!',
+
+            'cancelled' => 'Fatura cancelada.',
+
+            'rejected' => 'Fatura rejeitada.',
+
+        ];
+
+
+
+        return back()->with('success', $messages[$newStatus] ?? 'Status atualizado com sucesso!');
+
+    }
+
+    /**
+     * Envia fatura por email
+     */
+    public function sendByEmail(Invoice $invoice)
+    {
+        if (!$invoice->client || !$invoice->client->email) {
+            return redirect()->back()->with('error', 'Cliente não possui email cadastrado.');
+        }
+
+        try {
+            Notification::send($invoice->client, new InvoiceCreatedNotification($invoice));
+
+            return redirect()->back()->with('success', 'Fatura enviada por email para ' . $invoice->client->email);
+        } catch (\Exception $e) {
+            return redirect()->back()->with('error', 'Erro ao enviar email: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Download PDF da fatura de cotação
+     */
+    public function downloadQuotationPdf(Invoice $invoice)
+    {
+        $invoice->load(['shipment.client', 'items']);
+
+        $company = $this->getCompanyData();
+
+        $pdf = Pdf::loadView('pdf.quotation-invoice', [
+            'invoice' => $invoice,
+            'company' => $company,
+        ]);
+
+        return $pdf->download($invoice->invoice_number . '.pdf');
+    }
+
+    /**
+     * Gera número sequencial de fatura de cotação
+     */
+    private function generateQuotationInvoiceNumber(): string
+    {
+        $year = date('Y');
+        $lastInvoice = Invoice::where('invoice_type', 'quotation')
+            ->whereYear('created_at', $year)
+            ->orderBy('id', 'desc')
+            ->first();
+
+        $sequence = $lastInvoice ? ((int) substr($lastInvoice->invoice_number, -4)) + 1 : 1;
+
+        return sprintf('FAT-%s-%04d', $year, $sequence);
     }
 }

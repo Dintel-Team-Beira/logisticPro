@@ -28,7 +28,8 @@ import {
     Info,
     XCircle,
     TrendingUp,
-    Clock
+    Clock,
+    Building2
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
@@ -223,8 +224,8 @@ export default function DashboardLayout({ children }) {
         ]},
         {
             name: 'Consignatários',
-            icon: Ship,
-            href: '/shipping-lines',
+            icon: Building2,
+            href: '/consignees',
             roles: ['admin', 'manager'],
             badge: null
         },

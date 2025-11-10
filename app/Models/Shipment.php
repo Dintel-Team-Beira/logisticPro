@@ -28,6 +28,7 @@ class Shipment extends Model
         'reference_number',
         'type', // NOVO: import ou export
         'client_id',
+        'consignee_id',
         'shipping_line_id',
         'bl_number',
         'container_number',
@@ -51,8 +52,18 @@ class Shipment extends Model
         'requires_inspection', // NOVO
         'metadata',
         'created_by',
+        // Campos de cotação automática
+        'quotation_reference',
+        'quotation_subtotal',
+        'quotation_tax',
+        'quotation_total',
+        'quotation_breakdown',
+        'quotation_status',
+        'quotation_approved_at',
+        'regime',
+        'final_destination',
+        'additional_services',
         // Campos de status por fase - IMPORTAÇÃO
-        'quotation_status', // not_requested, requested, received, accepted, paid
         'payment_status',
         'customs_status',
         'customs_payment_status',
@@ -108,6 +119,14 @@ class Shipment extends Model
         'invoice_amount' => 'decimal:2',
         'profit_margin' => 'decimal:2',
         'metadata' => 'array',
+
+        // Cotação automática
+        'quotation_subtotal' => 'decimal:2',
+        'quotation_tax' => 'decimal:2',
+        'quotation_total' => 'decimal:2',
+        'quotation_breakdown' => 'array',
+        'quotation_approved_at' => 'datetime',
+        'additional_services' => 'array',
 
         'freight_cost' => 'decimal:2',
         'customs_cost' => 'decimal:2',
@@ -219,6 +238,11 @@ class Shipment extends Model
     public function client()
     {
         return $this->belongsTo(Client::class);
+    }
+
+    public function consignee()
+    {
+        return $this->belongsTo(Consignee::class);
     }
 
     public function shippingLine()
@@ -1091,15 +1115,43 @@ public function getPhase5Progress(): float
             return 1;
         }
 
-        $stageMap = [
-            'coleta_dispersa' => 1,
-            'legalizacao' => 2,
-            'alfandegas' => 3,
-            'cornelder' => 4,
-            'taxacao' => 5,
-            'faturacao' => 6,
-            'pod' => 7,
+        // Mapeamento baseado no tipo do shipment
+        $stageMaps = [
+            'import' => [
+                'coleta_dispersa' => 1,
+                'legalizacao' => 2,
+                'alfandegas' => 3,
+                'cornelder' => 4,
+                'taxacao' => 5,
+                'faturacao' => 6,
+                'pod' => 7,
+            ],
+            'export' => [
+                'preparacao_documentos' => 1,
+                'booking' => 2,
+                'inspecao_certificacao' => 3,
+                'despacho_aduaneiro' => 4,
+                'transporte_porto' => 5,
+                'embarque' => 6,
+                'acompanhamento' => 7,
+            ],
+            'transit' => [
+                'recepcao' => 1,
+                'documentacao' => 2,
+                'desembaraco' => 3,
+                'armazenamento' => 4,
+                'preparacao_partida' => 5,
+                'transporte_saida' => 6,
+                'acompanhamento' => 7,
+            ],
+            'transport' => [
+                'coleta' => 1,
+                'entrega' => 2,
+            ],
         ];
+
+        $type = $this->type ?? 'import';
+        $stageMap = $stageMaps[$type] ?? $stageMaps['import'];
 
         return $stageMap[$currentStage->stage] ?? 1;
     }

@@ -62,6 +62,7 @@ class ShipmentController extends Controller
         return Inertia::render('Shipments/Create', [
             'shippingLines' => ShippingLine::where('active', true)->get(),
             'clients' => Client::orderBy('name')->get(),
+            'consignees' => \App\Models\Consignee::active()->orderBy('name')->get(),
         ]);
     }
 
@@ -70,20 +71,21 @@ class ShipmentController extends Controller
      */
     public function store(Request $request)
     {
-
-
         // dd($request->all());
         Log::info('ShipmentController@store - Iniciando', ['data' => $request->except('bl_file')]);
 
         DB::beginTransaction();
 
         try {
-            // 1. Validação
+            // 1. Validação base
             $validated = $request->validate([
-                'type' => 'required|in:import,export,transit',
+                'type' => 'required|in:import,export,transit,transport',
                 'client_id' => 'required|exists:clients,id',
-                'shipping_line_id' => 'required|exists:shipping_lines,id',
-                'bl_number' => 'nullable|string', // Removido unique: um BL pode ter múltiplos containers
+                'consignee_id' => 'nullable|exists:consignees,id',
+
+                // Campos de Import/Export/Transit
+                'shipping_line_id' => $request->type === 'transport' ? 'nullable|exists:shipping_lines,id' : 'required|exists:shipping_lines,id',
+                'bl_number' => 'nullable|string',
                 'bl_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
                 'container_number' => 'nullable|string',
                 'container_type' => 'nullable|string',
@@ -91,12 +93,26 @@ class ShipmentController extends Controller
                 'arrival_date' => 'nullable|date',
                 'origin_port' => 'nullable|string',
                 'destination_port' => 'nullable|string',
+
+                // Campos comuns de carga
                 'cargo_description' => 'nullable|string',
-                'cargo_type' => 'nullable|in:normal,perishable,hazardous,oversized',
+                'cargo_type' => 'nullable|string',
                 'cargo_weight' => 'nullable|numeric',
                 'cargo_value' => 'nullable|numeric',
                 'has_tax_exemption' => 'boolean',
                 'is_reexport' => 'boolean',
+
+                // Campos específicos de Transport
+                'loading_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
+                'unloading_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
+                'distance_km' => $request->type === 'transport' ? 'required|numeric|min:0' : 'nullable|numeric',
+                'empty_return_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
+
+                // Campos de cotação automática
+                'regime' => 'nullable|string',
+                'final_destination' => 'nullable|string',
+                'additional_services' => 'nullable|array',
+                'quotation_data' => 'nullable|array',
             ]);
 
             Log::info('Validação passou');
@@ -120,13 +136,20 @@ class ShipmentController extends Controller
 
             $referenceNumber = 'ALEK-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
 
-            Log::info('Número de referência gerado', ['reference' => $referenceNumber]);
+            // Gerar referência de cotação se houver dados
+            $quotationReference = null;
+            if ($request->has('quotation_data') && !empty($request->quotation_data)) {
+                $quotationReference = 'COT-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            }
+
+            Log::info('Número de referência gerado', ['reference' => $referenceNumber, 'quotation' => $quotationReference]);
 
             // 3. Criar shipment
-            $shipment = Shipment::create([
+            $shipmentData = [
                 'reference_number' => $referenceNumber,
                 'type' => $validated['type'],
                 'client_id' => $validated['client_id'],
+                'consignee_id' => $validated['consignee_id'] ?? null,
                 'shipping_line_id' => $validated['shipping_line_id'],
                 'bl_number' => $validated['bl_number'] ?? null,
                 'container_number' => $validated['container_number'],
@@ -143,7 +166,32 @@ class ShipmentController extends Controller
                 'is_reexport' => $validated['is_reexport'] ?? false,
                 'status' => 'active',
                 'created_by' => auth()->id(),
-            ]);
+                // Campos de cotação
+                'regime' => $validated['regime'] ?? null,
+                'final_destination' => $validated['final_destination'] ?? null,
+                'additional_services' => $validated['additional_services'] ?? null,
+            ];
+
+            // Adicionar dados de cotação se fornecidos
+            if ($quotationReference && isset($validated['quotation_data'])) {
+                $quotationData = $validated['quotation_data'];
+                $shipmentData['quotation_reference'] = $quotationReference;
+                $shipmentData['quotation_subtotal'] = $quotationData['subtotal'] ?? 0;
+                $shipmentData['quotation_tax'] = $quotationData['tax'] ?? 0;
+                $shipmentData['quotation_total'] = $quotationData['total'] ?? 0;
+                $shipmentData['quotation_breakdown'] = $quotationData['breakdown'] ?? [];
+                $shipmentData['quotation_status'] = 'pending';
+            }
+
+            // Adicionar campos específicos de Transport
+            if ($validated['type'] === 'transport') {
+                $shipmentData['loading_location'] = $validated['loading_location'] ?? null;
+                $shipmentData['unloading_location'] = $validated['unloading_location'] ?? null;
+                $shipmentData['distance_km'] = $validated['distance_km'] ?? null;
+                $shipmentData['empty_return_location'] = $validated['empty_return_location'] ?? null;
+            }
+
+            $shipment = Shipment::create($shipmentData);
 
             Log::info('Shipment criado', ['id' => $shipment->id]);
 
@@ -182,13 +230,33 @@ class ShipmentController extends Controller
             $adminsAndManagers = User::whereIn('role', ['admin', 'manager'])->get();
             Notification::send($adminsAndManagers, new ShipmentCreatedNotification($shipment));
 
-            // Redirecionar para a página de detalhes do processo criado...
-            return redirect()
-                ->route('shipments.show', $shipment)
-                ->with('success', $shipment->type === 'export'
-                    ? "Processo de Exportação {$referenceNumber} criado com sucesso!"
-                    : "Processo de Importação {$referenceNumber} criado com sucesso!"
-                );
+            // Redirecionar para a tela específica baseado no tipo
+            switch ($shipment->type) {
+                case 'export':
+                    // Para exportação: ir para a tela de preparação de documentos
+                    return redirect()
+                        ->route('operations.export.preparacao', ['preparacao' => $shipment->id])
+                        ->with('success', "Processo de Exportação {$referenceNumber} criado com sucesso!");
+
+                case 'transit':
+                    // Para trânsito: ir para a tela de recepção
+                    return redirect()
+                        ->route('operations.transit.recepcao')
+                        ->with('success', "Processo de Trânsito {$referenceNumber} criado com sucesso!");
+
+                case 'transport':
+                    // Para transporte: ir para a primeira tela de transporte
+                    return redirect()
+                        ->route('operations.transport.coleta')
+                        ->with('success', "Processo de Transporte {$referenceNumber} criado com sucesso!");
+
+                case 'import':
+                default:
+                    // Para importação: ir para a tela de coleta dispersa (fase 1)
+                    return redirect()
+                        ->route('shipments.show', $shipment)
+                        ->with('success', "Processo de Importação {$referenceNumber} criado com sucesso!");
+            }
         } catch (\Exception $e) {
             DB::rollBack();
 
@@ -297,6 +365,11 @@ class ShipmentController extends Controller
             ->orderBy('created_at')
             ->get();
 
+        // Verificar se existe fatura de cotação
+        $quotationInvoice = \App\Models\Invoice::where('shipment_id', $shipment->id)
+            ->where('invoice_type', 'quotation')
+            ->first();
+
         // dd($phaseProgress);
         return Inertia::render('Shipments/Show', [
             'shipment' => $shipment,
@@ -305,7 +378,10 @@ class ShipmentController extends Controller
             'overallProgress' => $overallProgress,
             'activePhases' => $activePhases,
             'canForceAdvance' => auth()->user()->hasRole('manager'),
-            'paymentRequests' => $paymentRequests
+            'paymentRequests' => $paymentRequests,
+            'hasQuotationInvoice' => $quotationInvoice !== null,
+            'quotationInvoiceId' => $quotationInvoice?->id,
+            'quotationInvoiceNumber' => $quotationInvoice?->invoice_number,
         ]);
     }
 
@@ -521,7 +597,65 @@ class ShipmentController extends Controller
 
             DB::commit();
 
-            return back()->with('success', "Fase {$phase} iniciada com sucesso!");
+            // Redirecionar para a página da próxima fase baseado no tipo
+            switch ($shipment->type) {
+                case 'export':
+                    // Mapear fases de exportação para rotas
+                    $exportRoutes = [
+                        1 => 'operations.export.preparacao',
+                        2 => 'operations.export.booking',
+                        3 => 'operations.export.inspecao',
+                        4 => 'operations.export.despacho',
+                        5 => 'operations.export.transporte',
+                        6 => 'operations.export.embarque',
+                        7 => 'operations.export.acompanhamento',
+                    ];
+
+                    if (isset($exportRoutes[$phase])) {
+                        return redirect()
+                            ->route($exportRoutes[$phase], $phase == 1 ? ['preparacao' => $shipment->id] : [])
+                            ->with('success', "Avançado para Fase {$phase}: " . $this->getPhaseName($phase));
+                    }
+                    break;
+
+                case 'transit':
+                    // Mapear fases de trânsito para rotas
+                    $transitRoutes = [
+                        1 => 'operations.transit.recepcao',
+                        2 => 'operations.transit.documentacao',
+                        3 => 'operations.transit.desembaraco',
+                        4 => 'operations.transit.armazenamento',
+                        5 => 'operations.transit.preparacao-partida',
+                        6 => 'operations.transit.transporte-saida',
+                        7 => 'operations.transit.acompanhamento',
+                    ];
+
+                    if (isset($transitRoutes[$phase])) {
+                        return redirect()
+                            ->route($transitRoutes[$phase])
+                            ->with('success', "Avançado para Fase {$phase}: " . $this->getPhaseName($phase));
+                    }
+                    break;
+
+                case 'transport':
+                    // Mapear fases de transporte para rotas (simplificado - 2 fases)
+                    $transportRoutes = [
+                        1 => 'operations.transport.coleta',
+                        2 => 'operations.transport.entrega',
+                    ];
+
+                    if (isset($transportRoutes[$phase])) {
+                        return redirect()
+                            ->route($transportRoutes[$phase])
+                            ->with('success', "Avançado para Fase {$phase}: " . $this->getPhaseName($phase));
+                    }
+                    break;
+            }
+
+            // Para importação ou fallback
+            return redirect()
+                ->route('shipments.show', $shipment)
+                ->with('success', "Fase {$phase} iniciada com sucesso!");
         } catch (\Exception $e) {
             DB::rollBack();
             Log::error('Erro ao avançar fase', [

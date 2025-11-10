@@ -7,6 +7,7 @@ use Illuminate\Foundation\Application;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\StageController;
 use App\Http\Controllers\ClientController;
+use App\Http\Controllers\ConsigneeController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProfileController;
@@ -716,6 +717,11 @@ Route::middleware(['auth'])->group(function () {
     Route::post('/invoices/{invoice}/mark-as-paid', [App\Http\Controllers\InvoiceController::class, 'markAsPaid'])
         ->name('invoices.mark-as-paid');
 
+ // Atualizar status da fatura (pending, paid, cancelled, rejected)
+    Route::post('/invoices/{invoice}/update-status', [App\Http\Controllers\InvoiceController::class, 'updateStatus'])
+        ->name('invoices.update-status');
+
+
     // API: Calcular custos e preview (RF-020)
     Route::get('/invoices/{shipment}/calculate', [App\Http\Controllers\InvoiceController::class, 'calculateCosts'])
         ->name('invoices.calculate');
@@ -739,6 +745,34 @@ Route::middleware(['auth'])->group(function () {
     // Preview PDF
     Route::get('/invoices/{shipment}/preview', [App\Http\Controllers\InvoiceController::class, 'preview'])
         ->name('invoices.preview');
+
+    // ========================================
+    // QUOTATION INVOICES (Faturas de Cotações)
+    // ========================================
+
+    // Lista de faturas de cotações
+    Route::get('/invoices/quotations', [App\Http\Controllers\InvoiceController::class, 'quotationInvoices'])
+        ->name('invoices.quotations.index');
+
+    // Gerar fatura da cotação
+    Route::post('/invoices/quotations/generate/{shipment}', [App\Http\Controllers\InvoiceController::class, 'generateFromQuotation'])
+        ->name('invoices.quotations.generate');
+
+    // Ver fatura de cotação
+    Route::get('/invoices/quotations/{invoice}', [App\Http\Controllers\InvoiceController::class, 'showQuotationInvoice'])
+        ->name('invoices.quotations.show');
+
+    // Marcar como paga
+    Route::post('/invoices/quotations/{invoice}/mark-paid', [App\Http\Controllers\InvoiceController::class, 'markAsPaid'])
+        ->name('invoices.quotations.mark-paid');
+
+    // Enviar por email
+    Route::post('/invoices/quotations/{invoice}/send-email', [App\Http\Controllers\InvoiceController::class, 'sendByEmail'])
+        ->name('invoices.quotations.send-email');
+
+    // Download PDF
+    Route::get('/invoices/quotations/{invoice}/pdf', [App\Http\Controllers\InvoiceController::class, 'downloadQuotationPdf'])
+        ->name('invoices.quotations.pdf');
 });
 
     Route::put('/invoices', [SettingsController::class, 'updateInvoiceSettings'])
@@ -857,6 +891,23 @@ Route::middleware(['auth'])->group(function () {
     // Relatório Financeiro do Cliente
     Route::get('/clients/{client}/financial', [ClientController::class, 'financial'])
         ->name('clients.financial');
+});
+
+// ============================================================================
+// CONSIGNATÁRIOS - Gestão de Consignatários
+// ============================================================================
+Route::middleware(['auth'])->group(function () {
+
+    // CRUD Completo de Consignatários
+    Route::resource('consignees', ConsigneeController::class);
+
+    // Ativar/Desativar Consignatário
+    Route::patch('/consignees/{consignee}/toggle-active', [ConsigneeController::class, 'toggleActive'])
+        ->name('consignees.toggle-active');
+
+    // Obter consignatários por cliente (API)
+    Route::get('/api/clients/{client}/consignees', [ConsigneeController::class, 'getByClient'])
+        ->name('api.consignees.by-client');
 });
 
 // ============================================================================
@@ -1064,6 +1115,27 @@ Route::middleware(['auth'])->prefix('settings')->name('settings.')->group(functi
         // ->middleware('role:admin');
 
     // ========================================
+    // PARÂMETROS DE PRECIFICAÇÃO (Admin Only)
+    // ========================================
+
+    // Página de gerenciamento de parâmetros de precificação
+    Route::get('/pricing-parameters', [App\Http\Controllers\PricingParameterController::class, 'index'])
+        ->name('pricing.index');
+
+    // CRUD de parâmetros
+    Route::post('/pricing-parameters', [App\Http\Controllers\PricingParameterController::class, 'store'])
+        ->name('pricing.store');
+
+    Route::put('/pricing-parameters/{pricingParameter}', [App\Http\Controllers\PricingParameterController::class, 'update'])
+        ->name('pricing.update');
+
+    Route::delete('/pricing-parameters/{pricingParameter}', [App\Http\Controllers\PricingParameterController::class, 'destroy'])
+        ->name('pricing.destroy');
+
+    Route::patch('/pricing-parameters/{pricingParameter}/toggle-active', [App\Http\Controllers\PricingParameterController::class, 'toggleActive'])
+        ->name('pricing.toggle-active');
+
+    // ========================================
     // API E INTEGRAÇÕES
     // ========================================
 
@@ -1135,6 +1207,21 @@ Route::middleware(['auth'])->prefix('operations/transit')->name('operations.tran
 });
 
 // ============================================================================
+// OPERAÇÕES DE TRANSPORTE (2 FASES)
+// ============================================================================
+use App\Http\Controllers\Operations\TransportOperationsController;
+
+Route::middleware(['auth'])->prefix('operations/transport')->name('operations.transport.')->group(function () {
+    // Fase 1: Coleta
+    Route::get('/coleta', [TransportOperationsController::class, 'coleta'])->name('coleta');
+    Route::post('/coleta/{shipment}/update-status', [TransportOperationsController::class, 'updateColetaStatus']);
+
+    // Fase 2: Entrega
+    Route::get('/entrega', [TransportOperationsController::class, 'entrega'])->name('entrega');
+    Route::post('/entrega/{shipment}/update-status', [TransportOperationsController::class, 'updateEntregaStatus']);
+});
+
+// ============================================================================
 // API ROUTES - Para acesso externo
 // ============================================================================
 Route::middleware(['auth:sanctum'])->prefix('api/v1')->group(function () {
@@ -1153,8 +1240,33 @@ Route::middleware(['auth:sanctum'])->prefix('api/v1')->group(function () {
             \App\Models\CompanySetting::getInstance()
         );
     });
+
+    // ========================================
+    // PRICING PARAMETERS API
+    // ========================================
+
+    // Obter parâmetros por categoria
+    Route::get('/pricing-parameters/{category}', [App\Http\Controllers\PricingParameterController::class, 'getByCategory'])
+        ->name('api.pricing.by-category');
+
+    // Obter todos os parâmetros agrupados
+    Route::get('/pricing-parameters-grouped', [App\Http\Controllers\PricingParameterController::class, 'getAllGrouped'])
+        ->name('api.pricing.grouped');
+
+    // Calcular cotação baseado em seleções
+    Route::post('/calculate-quotation', [App\Http\Controllers\PricingParameterController::class, 'calculateQuotation'])
+        ->name('api.pricing.calculate');
 });
 
+// ============================================================================
+// COTAÇÕES - Visualização e Download
+// ============================================================================
+Route::middleware(['auth'])->prefix('quotations')->name('quotations.')->group(function () {
+    Route::get('/{shipment}', [App\Http\Controllers\QuotationController::class, 'show'])->name('show');
+    Route::get('/{shipment}/pdf', [App\Http\Controllers\QuotationController::class, 'downloadPdf'])->name('pdf');
+    Route::post('/{shipment}/approve', [App\Http\Controllers\QuotationController::class, 'approve'])->name('approve');
+    Route::post('/{shipment}/reject', [App\Http\Controllers\QuotationController::class, 'reject'])->name('reject');
+});
 
 // ============================================================================
 // AUTENTICAÇÃO

@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm, Link } from '@inertiajs/react';
 import DashboardLayout from '@/Layouts/DashboardLayout';
 import Card from '@/Components/Card';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -28,6 +28,8 @@ import {
     BarChart3,
     FileText,
     X,
+    Settings as SettingsIcon,
+    ArrowRight,
 } from 'lucide-react';
 import Select from '@/Components/Forms/Select';
 
@@ -186,6 +188,33 @@ const advancedForm = useForm({
                         </p>
                     </div>
                 </motion.div>
+
+                {/* Admin Quick Access - Parâmetros de Precificação */}
+                {auth.user.role === 'admin' && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                    >
+                        <Link href="/settings/pricing-parameters">
+                            <Card className="p-6 transition-all cursor-pointer bg-gradient-to-r from-blue-600 to-blue-700 hover:shadow-xl hover:scale-[1.02]">
+                                <div className="flex items-center justify-between text-white">
+                                    <div className="flex items-center gap-4">
+                                        <div className="p-4 bg-white/20 rounded-xl">
+                                            <DollarSign className="w-8 h-8" />
+                                        </div>
+                                        <div>
+                                            <h3 className="text-xl font-bold">Parâmetros de Precificação</h3>
+                                            <p className="mt-1 text-sm text-blue-100">
+                                                Configure os preços para cotações automáticas (Containers, Destinos, Serviços, etc)
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <ArrowRight className="w-6 h-6" />
+                                </div>
+                            </Card>
+                        </Link>
+                    </motion.div>
+                )}
 
                 {/* Stats Cards */}
                 <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
