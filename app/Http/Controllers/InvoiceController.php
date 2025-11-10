@@ -605,6 +605,8 @@ class InvoiceController extends Controller
             ]);
         }
     }
+
+
     public function preview(Shipment $shipment)
     {
         \Log::info('Preview invoice requested', ['shipment_id' => $shipment->id]);
