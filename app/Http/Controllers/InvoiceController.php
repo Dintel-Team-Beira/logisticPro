@@ -541,33 +541,70 @@ class InvoiceController extends Controller
         return Storage::disk('public')->download($invoice->file_path, $invoice->invoice_number . '.pdf');
     }
 
-    /**
+  /**
      * Preview da fatura em PDF
      */
     public function show(Invoice $invoice)
     {
-        $invoice->load(['client', 'shipment', 'items', 'createdBy', 'quote']);
+        try {
+            // Carregar relacionamentos necessários
+            $invoice->load([
+                'client',
+                'shipment.client',
+                'createdBy'
+            ]);
 
-        return Inertia::render('Invoices/Show', [
-            'invoice' => $invoice,
-        ]);
+            // Buscar dados do metadata para exibir na invoice
+            $metadata = $invoice->metadata;
+
+            // Se metadata for string JSON, decodificar
+            if (is_string($metadata)) {
+                $metadata = json_decode($metadata, true);
+            }
+
+            // Extrair invoice_data
+            $invoiceData = $metadata['invoice_data'] ?? null;
+
+            // Se não tiver invoice_data no metadata, criar estrutura básica
+            if (!$invoiceData) {
+                $invoiceData = [
+                    'items' => [],
+                    'costs_by_phase' => [
+                        'coleta_dispersa' => [],
+                        'alfandegas' => [],
+                        'cornelder' => [],
+                        'outros' => [],
+                    ],
+                    'base_rates' => [],
+                    'subtotal' => $invoice->subtotal ?? $invoice->amount,
+                    'margin_amount' => 0,
+                    'margin_percent' => 0,
+                    'total_invoice' => $invoice->amount,
+                ];
+            }
+
+            // Normalizar: base_rates -> base_rates_costs (para compatibilidade com frontend)
+            if (isset($invoiceData['base_rates']) && !isset($invoiceData['base_rates_costs'])) {
+                $invoiceData['base_rates_costs'] = $invoiceData['base_rates'];
+            }
+
+            return Inertia::render('Invoices/Show', [
+                'invoice' => array_merge($invoice->toArray(), [
+                    'invoice_data' => $invoiceData,
+                ]),
+            ]);
+        } catch (\Exception $e) {
+            \Log::error('Erro no show da invoice', [
+                'invoice_id' => $invoice->id,
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            return back()->withErrors([
+                'error' => 'Erro ao carregar fatura: ' . $e->getMessage()
+            ]);
+        }
     }
-
-    // public function markAsPaid(Invoice $invoice)
-    // {
-    //     if ($invoice->status === 'paid') {
-    //         return back()->with('info', 'Esta fatura já está marcada como paga.');
-    //     }
-
-    //     $invoice->update([
-    //         'status' => 'paid',
-    //         'paid_date' => now(),
-    //         'updated_by' => auth()->id(),
-    //     ]);
-
-    //     return back()->with('success', 'Fatura marcada como paga com sucesso!');
-    // }
-
     public function preview(Shipment $shipment)
     {
         \Log::info('Preview invoice requested', ['shipment_id' => $shipment->id]);
