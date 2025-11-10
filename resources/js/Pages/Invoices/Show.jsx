@@ -23,6 +23,42 @@ import {
 export default function InvoiceShow({ invoice }) {
     const [showStatusMenu, setShowStatusMenu] = useState(false);
 
+    // Extrair invoice_data do metadata
+    const invoiceData = invoice.invoice_data || {};
+    const allItems = [];
+
+    // Consolidar todos os custos em items
+    if (invoiceData.costs_by_phase) {
+        Object.entries(invoiceData.costs_by_phase).forEach(([phase, costs]) => {
+            if (costs && costs.length > 0) {
+                costs.forEach(cost => {
+                    allItems.push({
+                        description: cost.description,
+                        payee: cost.payee,
+                        amount: cost.amount,
+                        quantity: 1,
+                        unit_price: cost.amount,
+                        total: cost.amount
+                    });
+                });
+            }
+        });
+    }
+
+    // Adicionar base rates
+    if (invoiceData.base_rates_costs && invoiceData.base_rates_costs.length > 0) {
+        invoiceData.base_rates_costs.forEach(cost => {
+            allItems.push({
+                description: cost.description,
+                payee: cost.payee,
+                amount: cost.amount,
+                quantity: 1,
+                unit_price: cost.amount,
+                total: cost.amount
+            });
+        });
+    }
+
     const formatCurrency = (amount, currency = 'USD') => {
         return new Intl.NumberFormat('pt-MZ', {
             style: 'currency',
@@ -62,7 +98,7 @@ export default function InvoiceShow({ invoice }) {
 
     return (
         <DashboardLayout>
-            <Head title={`Fatura ${invoice.invoice_number}`} />
+            {/* <Head title={`Fatura ${invoice.invoice_number}`} /> */}
 
             <div className="p-6 ml-5 -mt-3 space-y-6 rounded-lg bg-white/50 backdrop-blur-xl border-gray-200/50">
                 {/* Header Actions - Não imprime */}
@@ -279,14 +315,16 @@ export default function InvoiceShow({ invoice }) {
                                             </th>
                                         </tr>
                                     </thead>
-                                    <tbody className="divide-y divide-slate-200">
-                                        {invoice.items && invoice.items.length > 0 ? (
-                                            invoice.items.map((item, index) => (
+                                                                     <tbody className="divide-y divide-slate-200">
+                                        {allItems.length > 0 ? (
+                                            allItems.map((item, index) => (
                                                 <tr key={index}>
                                                     <td className="px-4 py-3 text-sm text-slate-900">
                                                         <p className="font-medium">{item.description}</p>
-                                                        {item.notes && (
-                                                            <p className="mt-1 text-xs text-slate-600">{item.notes}</p>
+                                                        {item.payee && (
+                                                            <p className="mt-1 text-xs text-slate-600">
+                                                                Fornecedor: {item.payee}
+                                                            </p>
                                                         )}
                                                     </td>
                                                     <td className="px-4 py-3 text-sm text-center text-slate-900">
@@ -320,11 +358,21 @@ export default function InvoiceShow({ invoice }) {
                         {/* Totais */}
                         <div className="flex justify-end">
                             <div className="w-full max-w-md space-y-3">
-                                {invoice.subtotal && (
+                           {(invoiceData.subtotal || invoice.subtotal) && (
                                     <div className="flex justify-between text-sm">
                                         <span className="text-slate-600">Subtotal:</span>
                                         <span className="font-medium text-slate-900">
-                                            {formatCurrency(invoice.subtotal, invoice.currency)}
+                                            {formatCurrency(invoiceData.subtotal || invoice.subtotal, invoice.currency)}
+                                        </span>
+                                    </div>
+                                )}
+                                {invoiceData.margin_amount && invoiceData.margin_amount > 0 && (
+                                    <div className="flex justify-between text-sm">
+                                        <span className="text-slate-600">
+                                            Margem {invoiceData.margin_percent && `(${invoiceData.margin_percent}%)`}:
+                                        </span>
+                                        <span className="font-medium text-green-600">
+                                            +{formatCurrency(invoiceData.margin_amount, invoice.currency)}
                                         </span>
                                     </div>
                                 )}
