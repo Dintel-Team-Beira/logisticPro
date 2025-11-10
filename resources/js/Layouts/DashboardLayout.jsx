@@ -208,27 +208,41 @@ export default function DashboardLayout({ children }) {
         // ========== CADASTROS (ADMIN + MANAGER) ==========
         {
             name: 'Clientes',
-            icon: Users,
+            icon: User,
             href: '/clients',
             roles: ['admin', 'manager'],
             badge: null,
 
-        submenu:[
+            submenu:[
             {
-                name: 'Fornecedores',
-                icon: Ship,
-                href: '/shipping-lines',
-                roles: ['admin', 'manager'],
-                badge: null
-            }
-        ]},
-        {
+            name: 'Ver Clientes',
+            icon: Users,
+            href: '/clients',
+            roles: ['admin', 'manager'],
+            badge: null
+            },
+            {
             name: 'Consignatários',
             icon: Building2,
             href: '/consignees',
             roles: ['admin', 'manager'],
             badge: null
+            }
+        ]},
+        {
+           name: 'Fornecedores',
+                icon: Ship,
+                href: '/shipping-lines',
+                roles: ['admin', 'manager'],
+                badge: null
         },
+        // {
+        //     name: 'Consignatários',
+        //     icon: Building2,
+        //     href: '/consignees',
+        //     roles: ['admin', 'manager'],
+        //     badge: null
+        // },
 
         // ========== ADMINISTRAÇÃO (APENAS ADMIN) ==========
         {
