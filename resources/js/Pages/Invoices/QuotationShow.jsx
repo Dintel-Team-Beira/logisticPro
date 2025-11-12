@@ -28,6 +28,32 @@ export default function QuotationShow({ invoice }) {
         notes: ''
     });
 
+
+
+    // Mapeamento de categorias
+
+    const categoryMap = {
+
+        'Tipo de Container': 'Shipping Line Charges',
+
+        'Tipo de Mercadoria': 'Port Charges',
+
+        'Regime': 'Customs Charges',
+
+        'Destino': 'Transport',
+
+        'Serviço Adicional': 'Agency Services and Extra Charges'
+
+    };
+
+
+
+    const getMappedCategory = (category) => {
+
+        return categoryMap[category] || category || 'Geral';
+
+    };
+
     const formatCurrency = (amount) => {
         return new Intl.NumberFormat('pt-MZ', {
             style: 'currency',
@@ -49,7 +75,7 @@ export default function QuotationShow({ invoice }) {
 
         if (isOverdue) {
             return (
-                <span className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold rounded-full bg-red-100 text-red-800">
+                <span className="inline-flex items-center gap-2 px-4 py-2 text-sm font-semibold text-red-800 bg-red-100 rounded-full">
                     <AlertCircle className="w-5 h-5" />
                     Vencida
                 </span>
@@ -259,7 +285,7 @@ export default function QuotationShow({ invoice }) {
                                                 </td>
                                                 <td className="px-4 py-3">
                                                     <span className="inline-flex px-2 py-1 text-xs font-medium rounded-full bg-slate-100 text-slate-700">
-                                                        {item.metadata?.category || 'Geral'}
+                                                       {getMappedCategory(item.metadata?.category)}
                                                     </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-sm text-center text-slate-900">
@@ -345,7 +371,7 @@ export default function QuotationShow({ invoice }) {
                                         <label className="block mb-1 text-xs font-medium uppercase text-slate-500">
                                             Container
                                         </label>
-                                        <p className="text-sm font-mono text-slate-900">
+                                        <p className="font-mono text-sm text-slate-900">
                                             {invoice.shipment.container_number}
                                         </p>
                                     </div>
@@ -388,7 +414,7 @@ export default function QuotationShow({ invoice }) {
 
                         {/* Payment Information */}
                         {invoice.status === 'paid' && (
-                            <div className="p-6 border rounded-xl border-green-200 bg-gradient-to-br from-green-50 to-green-100">
+                            <div className="p-6 border border-green-200 rounded-xl bg-gradient-to-br from-green-50 to-green-100">
                                 <h3 className="flex items-center gap-2 mb-4 text-lg font-semibold text-green-900">
                                     <CheckCircle className="w-5 h-5 text-green-700" />
                                     Pagamento Confirmado
@@ -396,7 +422,7 @@ export default function QuotationShow({ invoice }) {
 
                                 <div className="space-y-3">
                                     <div>
-                                        <label className="block mb-1 text-xs font-medium uppercase text-green-700">
+                                        <label className="block mb-1 text-xs font-medium text-green-700 uppercase">
                                             Data do Pagamento
                                         </label>
                                         <p className="text-sm font-semibold text-green-900">
@@ -406,10 +432,10 @@ export default function QuotationShow({ invoice }) {
 
                                     {invoice.payment_reference && (
                                         <div>
-                                            <label className="block mb-1 text-xs font-medium uppercase text-green-700">
+                                            <label className="block mb-1 text-xs font-medium text-green-700 uppercase">
                                                 Referência
                                             </label>
-                                            <p className="text-sm font-mono font-semibold text-green-900">
+                                            <p className="font-mono text-sm font-semibold text-green-900">
                                                 {invoice.payment_reference}
                                             </p>
                                         </div>
@@ -417,7 +443,7 @@ export default function QuotationShow({ invoice }) {
 
                                     {invoice.notes && (
                                         <div>
-                                            <label className="block mb-1 text-xs font-medium uppercase text-green-700">
+                                            <label className="block mb-1 text-xs font-medium text-green-700 uppercase">
                                                 Observações
                                             </label>
                                             <p className="text-sm text-green-900">

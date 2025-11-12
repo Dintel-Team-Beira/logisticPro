@@ -221,7 +221,7 @@
             @foreach($shipment->quotation_breakdown as $item)
             <tr>
                 <td>{{ $map[$item['category']] ?? $item['category'] }}</td>
-           <td class="col-qty">{{ number_format($item['quantity'] ?? 1, 2) }}</td>
+                       <td class="col-qty">{{ number_format($item['quantity'] ?? 1, 2) }}</td>
                         <td class="col-price">{{ number_format($item['unit_price'] ?? $item['price'], 2) }}</td>
                         <td class="col-price">{{ number_format(($item['quantity'] ?? 1) * ($item['unit_price'] ?? $item['price']), 2) }}</td>
             </tr>
