@@ -676,7 +676,7 @@ class InvoiceController extends Controller
      */
     public function quotationInvoices(Request $request)
     {
-        $query = Invoice::with(['shipment.client', 'shipment.shipping_line', 'createdBy'])
+        $query = Invoice::with(['shipment.client', 'shipment.shippingLine', 'createdBy'])
             ->where('invoice_type', 'quotation')
             ->latest();
 
@@ -817,7 +817,7 @@ class InvoiceController extends Controller
      */
     public function showQuotationInvoice(Invoice $invoice)
     {
-        $invoice->load(['shipment.client', 'shipment.shipping_line', 'items', 'createdBy']);
+        $invoice->load(['shipment.client', 'shipment.shippingLine', 'items', 'createdBy']);
 
         return Inertia::render('Invoices/QuotationShow', [
             'invoice' => $invoice,
