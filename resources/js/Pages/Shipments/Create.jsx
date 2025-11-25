@@ -749,12 +749,14 @@ export default function Create() {
                                                 error={touched.container_type && (validationErrors.container_type || errors.container_type)}
                                                 required
                                             >
-                                                <option value="">{loadingParams ? 'Carregando...' : 'Selecione o tipo'}</option>
-                                                {pricingParams.container_type?.filter(p => p.active).map((param) => (
-                                                    <option key={param.code} value={param.code}>
-                                                        {param.name} - {param.formatted_price}
-                                                    </option>
-                                                ))}
+                                                <option value="">Selecione o tipo</option>
+                                                <option value="20DC">20' Dry Container</option>
+                                                <option value="40DC">40' Dry Container</option>
+                                                <option value="40HC">40' High Cube</option>
+                                                <option value="20RF">20' Reefer (Refrigerado)</option>
+                                                <option value="40RF">40' Reefer (Refrigerado)</option>
+                                                <option value="20OT">20' Open Top</option>
+                                                <option value="40OT">40' Open Top</option>
                                             </Select>
 
                                             <Input
