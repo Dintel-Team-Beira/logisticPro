@@ -405,33 +405,44 @@ class ShipmentController extends Controller
                 ['type' => 'receipt', 'label' => 'Recibo de pagamento', 'required' => false],
             ],
             2 => [ // Legalização
-                ['type' => 'bl_carimbado', 'label' => 'BL Carimbado', 'required' => true],
-                ['type' => 'delivery_order', 'label' => 'Delivery Order', 'required' => true],
+                ['type' => 'bl_legalizado', 'label' => 'BL Legalizado', 'required' => true],
+                ['type' => 'delivery_order', 'label' => 'Delivery Order (DO)', 'required' => true],
+                ['type' => 'outro', 'label' => 'Outro', 'required' => false],
             ],
             3 => [ // Alfândegas
-                ['type' => 'packing_list', 'label' => 'Packing List', 'required' => true],
-                ['type' => 'commercial_invoice', 'label' => 'Commercial Invoice', 'required' => true],
-                ['type' => 'aviso', 'label' => 'Aviso de Taxação', 'required' => false],
-                ['type' => 'autorizacao', 'label' => 'Autorização de Saída', 'required' => false],
+                ['type' => 'aviso_taxacao', 'label' => 'AVISO', 'required' => true],
+                ['type' => 'autorizacao_saida', 'label' => 'Autorização', 'required' => true],
+                ['type' => 'sad', 'label' => 'SAD', 'required' => true],
+                ['type' => 'packing_list', 'label' => 'Packing List', 'required' => false],
+                ['type' => 'commercial_invoice', 'label' => 'Commercial Invoice', 'required' => false],
+                ['type' => 'outro', 'label' => 'Outro', 'required' => false],
             ],
             4 => [ // Cornelder
-                ['type' => 'draft', 'label' => 'Draft Cornelder', 'required' => true],
+                ['type' => 'recibo_cornelder', 'label' => 'RECIBO', 'required' => true],
+                ['type' => 'ido', 'label' => 'IDO', 'required' => true],
+                ['type' => 'processo_completo_cornelder', 'label' => 'PROCESSO COMPLETO', 'required' => true],
+                ['type' => 'appointment', 'label' => 'APPOINTMENT', 'required' => true],
+                ['type' => 'draft_cornelder', 'label' => 'Draft', 'required' => false],
                 ['type' => 'storage', 'label' => 'Storage', 'required' => false],
-                ['type' => 'termo', 'label' => 'Termo da Linha', 'required' => true],
+                ['type' => 'termo_linha', 'label' => 'Termo', 'required' => false],
+                ['type' => 'outro', 'label' => 'Outro', 'required' => false],
             ],
-            5 => [ // Taxação
-                ['type' => 'sad', 'label' => 'SAD (Documento Trânsito)', 'required' => true],
-                ['type' => 'delivery_order', 'label' => 'Delivery Order', 'required' => true]
-                // ['type' => 'bl_carimbado', 'label' => 'BL Carimbado', 'required' => true],
-                // ['type' => 'autorizacao', 'label' => 'Autorização de Saída', 'required' => false],
-                // / $docs = ['sad', 'termo', 'bl_carimbado', 'autorizacao'];
+            5 => [ // Carregamentos/Taxação
+                ['type' => 'sad', 'label' => 'SAD', 'required' => true],
+                ['type' => 'processo_completo_taxacao', 'label' => 'Processos Completo', 'required' => true],
+                ['type' => 'carta_porte', 'label' => 'Carta de Porte', 'required' => false],
+                ['type' => 'outro', 'label' => 'Outro', 'required' => false],
             ],
-            6 => [ // Faturação
-                ['type' => 'invoice', 'label' => 'Fatura ao Cliente', 'required' => false],
+            6 => [ // Facturação
+                ['type' => 'factura_cliente', 'label' => 'Factura', 'required' => true],
+                ['type' => 'pop_cliente', 'label' => 'POP do Cliente', 'required' => false],
+                ['type' => 'outro', 'label' => 'Outro', 'required' => false],
             ],
             7 => [ // POD
-                ['type' => 'pod', 'label' => 'POD (Proof of Delivery)', 'required' => true],
-                ['type' => 'signature', 'label' => 'Assinatura do Cliente', 'required' => false],
+                ['type' => 'pod', 'label' => 'POD', 'required' => true],
+                ['type' => 'devolucao_vazio', 'label' => 'Devolução do Vazio', 'required' => false],
+                ['type' => 'assinatura_cliente', 'label' => 'POP', 'required' => false],
+                ['type' => 'outro', 'label' => 'Outro', 'required' => false],
             ],
         ];
 

@@ -178,32 +178,55 @@ class Shipment extends Model
     {
         $documentsByPhase = [
             1 => ['bl', 'carta_endosso', 'receipt'],
-            2 => ['bl_carimbado', 'delivery_order'],
-            3 => ['packing_list', 'commercial_invoice', 'aviso', 'autorizacao'],
-            4 => ['draft', 'storage', 'termo'],
-            5 => ['sad', 'delivery_order'],
-            6 => ['invoice'],
-            7 => ['pod', 'signature'],
+            2 => ['bl_legalizado', 'delivery_order', 'outro'],
+            3 => ['aviso_taxacao', 'autorizacao_saida', 'sad', 'packing_list', 'commercial_invoice', 'outro'],
+            4 => ['recibo_cornelder', 'ido', 'processo_completo_cornelder', 'appointment', 'draft_cornelder', 'storage', 'termo_linha', 'outro'],
+            5 => ['sad', 'processo_completo_taxacao', 'carta_porte', 'outro'],
+            6 => ['factura_cliente', 'pop_cliente', 'outro'],
+            7 => ['pod', 'devolucao_vazio', 'assinatura_cliente', 'outro'],
         ];
 
         $labels = [
+            // Fase 1
             'bl' => 'BL Original',
             'carta_endosso' => 'Carta de Endosso',
             'receipt' => 'Recibo de pagamento',
-            'bl_carimbado' => 'BL Carimbado',
-            'delivery_order' => 'Delivery Order',
+
+            // Fase 2 - Legalização
+            'bl_legalizado' => 'BL Legalizado',
+            'delivery_order' => 'Delivery Order (DO)',
+
+            // Fase 3 - Alfândegas
+            'aviso_taxacao' => 'AVISO',
+            'autorizacao_saida' => 'Autorização',
+            'sad' => 'SAD',
             'packing_list' => 'Packing List',
             'commercial_invoice' => 'Commercial Invoice',
-            'aviso' => 'Aviso de Taxação',
-            'autorizacao' => 'Autorização de Saída',
-            'draft' => 'Draft Cornelder',
+
+            // Fase 4 - Cornelder
+            'recibo_cornelder' => 'RECIBO',
+            'ido' => 'IDO',
+            'processo_completo_cornelder' => 'PROCESSO COMPLETO',
+            'appointment' => 'APPOINTMENT',
+            'draft_cornelder' => 'Draft Cornelder',
             'storage' => 'Storage',
-            'termo' => 'Termo da Linha',
-            'sad' => 'SAD (Documento Trânsito)',
-            // 'ido' => 'IDO',
-            'invoice' => 'Fatura ao Cliente',
-            'pod' => 'POD (Proof of Delivery)',
-            'signature' => 'Assinatura do Cliente',
+            'termo_linha' => 'Termo da Linha',
+
+            // Fase 5 - Taxação/Carregamentos
+            'processo_completo_taxacao' => 'Processos Completo',
+            'carta_porte' => 'Carta de Porte',
+
+            // Fase 6 - Facturação
+            'factura_cliente' => 'Factura',
+            'pop_cliente' => 'POP do Cliente',
+
+            // Fase 7 - POD
+            'pod' => 'POD',
+            'devolucao_vazio' => 'Devolução do Vazio',
+            'assinatura_cliente' => 'POP',
+
+            // Geral
+            'outro' => 'Outro',
         ];
 
         $requiredTypes = $documentsByPhase[$phase] ?? [];
@@ -221,7 +244,19 @@ class Shipment extends Model
             $checklist[] = [
                 'type' => $type,
                 'label' => $labels[$type] ?? ucfirst($type),
-                'required' => in_array($type, ['bl', 'bl_carimbado', 'delivery_order', 'sad', 'pod']),
+                'required' => in_array($type, [
+                    'bl',
+                    'bl_legalizado',
+                    'delivery_order',
+                    'aviso_taxacao',
+                    'autorizacao_saida',
+                    'sad',
+                    'ido',
+                    'processo_completo_cornelder',
+                    'processo_completo_taxacao',
+                    'factura_cliente',
+                    'pod',
+                ]),
                 'attached' => $document !== null,
                 'document_id' => $document ? $document->id : null,
                 'uploaded_at' => $document ? $document->created_at->toIso8601String() : null,
