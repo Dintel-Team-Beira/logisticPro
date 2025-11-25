@@ -85,32 +85,35 @@ class ShipmentController extends Controller
 
                 // Campos de Import/Export/Transit
                 'shipping_line_id' => $request->type === 'transport' ? 'nullable|exists:shipping_lines,id' : 'required|exists:shipping_lines,id',
-                'bl_number' => 'nullable|string',
-                'bl_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
-                'container_number' => 'nullable|string',
-                'container_type' => 'nullable|string',
-                'vessel_name' => 'nullable|string',
+                'bl_number' => $request->type === 'import' ? 'required|string|max:255' : 'nullable|string|max:255',
+                'bl_file' => $request->type === 'import' ? 'required|file|mimes:pdf,jpg,jpeg,png|max:10240' : 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+                'container_number' => 'nullable|string|max:255',
+                'container_type' => [
+                    $request->type === 'transport' ? 'nullable' : 'required',
+                    'in:20DC,40DC,40HC,20RF,40RF,20OT,40OT'
+                ],
+                'vessel_name' => 'nullable|string|max:255',
                 'arrival_date' => 'nullable|date',
-                'origin_port' => 'nullable|string',
-                'destination_port' => 'nullable|string',
+                'origin_port' => $request->type === 'transport' ? 'nullable|string|max:255' : 'required|string|max:255',
+                'destination_port' => $request->type === 'transport' ? 'nullable|string|max:255' : 'required|string|max:255',
 
                 // Campos comuns de carga
-                'cargo_description' => 'nullable|string',
-                'cargo_type' => 'nullable|string',
-                'cargo_weight' => 'nullable|numeric',
-                'cargo_value' => 'nullable|numeric',
+                'cargo_description' => 'required|string',
+                'cargo_type' => 'nullable|string|max:255',
+                'cargo_weight' => 'nullable|numeric|min:0',
+                'cargo_value' => 'nullable|numeric|min:0',
                 'has_tax_exemption' => 'boolean',
                 'is_reexport' => 'boolean',
 
                 // Campos específicos de Transport
-                'loading_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
-                'unloading_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
-                'distance_km' => $request->type === 'transport' ? 'required|numeric|min:0' : 'nullable|numeric',
-                'empty_return_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string',
+                'loading_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string|max:255',
+                'unloading_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string|max:255',
+                'distance_km' => $request->type === 'transport' ? 'required|numeric|min:0' : 'nullable|numeric|min:0',
+                'empty_return_location' => $request->type === 'transport' ? 'required|string|max:255' : 'nullable|string|max:255',
 
                 // Campos de cotação automática
-                'regime' => 'nullable|string',
-                'final_destination' => 'nullable|string',
+                'regime' => 'nullable|string|max:255',
+                'final_destination' => 'nullable|string|max:255',
                 'additional_services' => 'nullable|array',
                 'quotation_data' => 'nullable|array',
             ]);
