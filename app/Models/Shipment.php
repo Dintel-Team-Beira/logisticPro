@@ -29,6 +29,7 @@ class Shipment extends Model
         'type', // NOVO: import ou export
         'client_id',
         'consignee_id',
+        'transport_id',
         'shipping_line_id',
         'bl_number',
         'container_number',
@@ -243,6 +244,11 @@ class Shipment extends Model
     public function consignee()
     {
         return $this->belongsTo(Consignee::class);
+    }
+
+    public function transport()
+    {
+        return $this->belongsTo(Transport::class);
     }
 
     public function shippingLine()

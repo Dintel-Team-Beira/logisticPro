@@ -21,6 +21,7 @@ enum DocumentType: string
     case RECIBO_LINHA = 'recibo_linha';
 
     // ===== FASE 2: LEGALIZAÇÃO =====
+    case BL_LEGALIZADO = 'bl_legalizado';
     case DELIVERY_ORDER = 'delivery_order';
 
     // ===== FASE 3: ALFÂNDEGAS =====
@@ -37,11 +38,14 @@ enum DocumentType: string
     case POP_CORNELDER = 'pop_cornelder';
     case RECIBO_CORNELDER = 'recibo_cornelder';
     case TERMO_LINHA = 'termo_linha';
+    case PROCESSO_COMPLETO_CORNELDER = 'processo_completo_cornelder';
+    case APPOINTMENT = 'appointment';
 
     // ===== FASE 5: TAXAÇÃO =====
     case IDO = 'ido'; // Interchange Delivery Order
     case SAD = 'sad'; // Single Administrative Document
     case CARTA_PORTE = 'carta_porte';
+    case PROCESSO_COMPLETO_TAXACAO = 'processo_completo_taxacao';
 
     // ===== FASE 6: FATURAÇÃO =====
     case FACTURA_CLIENTE = 'factura_cliente';
@@ -50,6 +54,7 @@ enum DocumentType: string
     // ===== FASE 7: POD =====
     case POD = 'pod'; // Proof of Delivery
     case ASSINATURA_CLIENTE = 'assinatura_cliente';
+    case DEVOLUCAO_VAZIO = 'devolucao_vazio';
 
     // ===== OUTROS =====
     case OUTRO = 'outro';
@@ -72,7 +77,8 @@ enum DocumentType: string
             self::RECIBO_LINHA->value => 'Recibo da Linha',
 
             // Fase 2
-            self::DELIVERY_ORDER->value => 'Delivery Order',
+            self::BL_LEGALIZADO->value => 'BL Legalizado',
+            self::DELIVERY_ORDER->value => 'Delivery Order (DO)',
 
             // Fase 3
             self::PACKING_LIST->value => 'Packing List',
@@ -88,11 +94,14 @@ enum DocumentType: string
             self::POP_CORNELDER->value => 'Comprovativo de Pagamento (Cornelder)',
             self::RECIBO_CORNELDER->value => 'Recibo Cornelder',
             self::TERMO_LINHA->value => 'Termo da Linha',
+            self::PROCESSO_COMPLETO_CORNELDER->value => 'Processo Completo Cornelder',
+            self::APPOINTMENT->value => 'Appointment',
 
             // Fase 5
             self::IDO->value => 'IDO (Interchange Delivery Order)',
             self::SAD->value => 'SAD (Documento de Trânsito)',
             self::CARTA_PORTE->value => 'Carta de Porte',
+            self::PROCESSO_COMPLETO_TAXACAO->value => 'Processo Completo',
 
             // Fase 6
             self::FACTURA_CLIENTE->value => 'Factura ao Cliente',
@@ -101,6 +110,7 @@ enum DocumentType: string
             // Fase 7
             self::POD->value => 'Proof of Delivery',
             self::ASSINATURA_CLIENTE->value => 'Comprovativo de Entrega Assinado',
+            self::DEVOLUCAO_VAZIO->value => 'Devolução do Vazio',
 
             // Outros
             self::OUTRO->value => 'Outro Documento',
@@ -126,6 +136,7 @@ enum DocumentType: string
                 self::RECIBO_LINHA->value,
             ],
             2 => [
+                self::BL_LEGALIZADO->value,
                 self::DELIVERY_ORDER->value,
             ],
             3 => [
@@ -142,11 +153,14 @@ enum DocumentType: string
                 self::POP_CORNELDER->value,
                 self::RECIBO_CORNELDER->value,
                 self::TERMO_LINHA->value,
+                self::PROCESSO_COMPLETO_CORNELDER->value,
+                self::APPOINTMENT->value,
             ],
             5 => [
                 self::IDO->value,
                 self::SAD->value,
                 self::CARTA_PORTE->value,
+                self::PROCESSO_COMPLETO_TAXACAO->value,
             ],
             6 => [
                 self::FACTURA_CLIENTE->value,
@@ -155,6 +169,7 @@ enum DocumentType: string
             7 => [
                 self::POD->value,
                 self::ASSINATURA_CLIENTE->value,
+                self::DEVOLUCAO_VAZIO->value,
             ],
         ];
 
@@ -181,7 +196,7 @@ enum DocumentType: string
                 self::CARTA_ENDOSSO->value,
             ],
             2 => [
-                self::BL_CARIMBADO->value,
+                self::BL_LEGALIZADO->value,
                 self::DELIVERY_ORDER->value,
             ],
             3 => [
@@ -230,6 +245,7 @@ enum DocumentType: string
             self::RECIBO_LINHA->value => 'FileCheck',
 
             // Fase 2
+            self::BL_LEGALIZADO->value => 'FileCheck',
             self::DELIVERY_ORDER->value => 'Truck',
 
             // Fase 3
@@ -246,11 +262,14 @@ enum DocumentType: string
             self::POP_CORNELDER->value => 'DollarSign',
             self::RECIBO_CORNELDER->value => 'CheckCircle',
             self::TERMO_LINHA->value => 'FileContract',
+            self::PROCESSO_COMPLETO_CORNELDER->value => 'FolderCheck',
+            self::APPOINTMENT->value => 'Calendar',
 
             // Fase 5
             self::IDO->value => 'FileKey',
             self::SAD->value => 'FileBarChart',
             self::CARTA_PORTE->value => 'MapPin',
+            self::PROCESSO_COMPLETO_TAXACAO->value => 'FolderCheck',
 
             // Fase 6
             self::FACTURA_CLIENTE->value => 'FileText',
@@ -259,6 +278,7 @@ enum DocumentType: string
             // Fase 7
             self::POD->value => 'PackageCheck',
             self::ASSINATURA_CLIENTE->value => 'PenTool',
+            self::DEVOLUCAO_VAZIO->value => 'PackageX',
 
             // Outros
             self::OUTRO->value => 'File',
@@ -327,6 +347,7 @@ enum DocumentType: string
             self::FATURA_LINHA->value => 'Factura emitida pela linha de navegação',
             self::POP_COLETA->value => 'Comprovativo de pagamento à linha',
             self::RECIBO_LINHA->value => 'Recibo emitido pela linha após pagamento',
+            self::BL_LEGALIZADO->value => 'Bill of Lading legalizado e carimbado',
             self::DELIVERY_ORDER->value => 'Ordem de retirada do contentor',
             self::PACKING_LIST->value => 'Lista detalhada do conteúdo da carga',
             self::COMMERCIAL_INVOICE->value => 'Factura comercial internacional',
@@ -339,13 +360,17 @@ enum DocumentType: string
             self::POP_CORNELDER->value => 'Comprovativo de pagamento à Cornelder',
             self::RECIBO_CORNELDER->value => 'Recibo da Cornelder',
             self::TERMO_LINHA->value => 'Termo emitido pela linha de navegação',
+            self::PROCESSO_COMPLETO_CORNELDER->value => 'Processo completo de despesas de manuseamento',
+            self::APPOINTMENT->value => 'Agendamento para retirada do contentor',
             self::IDO->value => 'Ordem de intercâmbio de entrega',
             self::SAD->value => 'Documento administrativo único para trânsito',
             self::CARTA_PORTE->value => 'Documento de carregamento para motorista',
+            self::PROCESSO_COMPLETO_TAXACAO->value => 'Processo completo de taxação alfandegária',
             self::FACTURA_CLIENTE->value => 'Factura emitida ao cliente final',
             self::POP_CLIENTE->value => 'Comprovativo de pagamento do cliente',
             self::POD->value => 'Comprovativo de entrega da mercadoria',
             self::ASSINATURA_CLIENTE->value => 'Documento assinado pelo cliente confirmando recebimento',
+            self::DEVOLUCAO_VAZIO->value => 'Comprovativo de devolução do contentor vazio',
             self::OUTRO->value => 'Outro documento relacionado ao processo',
         ];
 

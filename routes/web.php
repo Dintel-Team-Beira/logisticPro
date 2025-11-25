@@ -8,6 +8,7 @@ use App\Http\Controllers\UserController;
 use App\Http\Controllers\StageController;
 use App\Http\Controllers\ClientController;
 use App\Http\Controllers\ConsigneeController;
+use App\Http\Controllers\TransportController;
 use App\Http\Controllers\ReportController;
 use App\Http\Controllers\InvoiceController;
 use App\Http\Controllers\ProfileController;
@@ -908,6 +909,27 @@ Route::middleware(['auth'])->group(function () {
     // Obter consignatários por cliente (API)
     Route::get('/api/clients/{client}/consignees', [ConsigneeController::class, 'getByClient'])
         ->name('api.consignees.by-client');
+});
+
+// ============================================================================
+// TRANSPORTES - Gestão de Transportes (Caminhões, Veículos e Destinos)
+// ============================================================================
+Route::middleware(['auth'])->group(function () {
+
+    // CRUD Completo de Transportes
+    Route::resource('transports', TransportController::class);
+
+    // Ativar/Desativar Transporte
+    Route::patch('/transports/{transport}/toggle-active', [TransportController::class, 'toggleActive'])
+        ->name('transports.toggle-active');
+
+    // Obter transportes por destino (API)
+    Route::get('/api/transports/destino/{destino}', [TransportController::class, 'getByDestino'])
+        ->name('api.transports.by-destino');
+
+    // Obter transportes disponíveis (API)
+    Route::get('/api/transports/available', [TransportController::class, 'getAvailable'])
+        ->name('api.transports.available');
 });
 
 // ============================================================================
