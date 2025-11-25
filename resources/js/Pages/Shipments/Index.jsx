@@ -108,7 +108,7 @@ export default function Index({ shipments, filters }) {
                     2: 'Legalização',
                     3: 'Alfândegas',
                     4: 'Cornelder',
-                    5: 'Taxação',
+                    5: 'Carregamentos',
                     6: 'Faturação',
                     7: 'POD',
                 };

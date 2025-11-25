@@ -75,7 +75,7 @@ export default function Show ({
         { id: 2, title: 'Legalização', icon: FileText, color: 'purple' },
         { id: 3, title: 'Alfândegas', icon: CheckCircle2, color: 'amber' },
         { id: 4, title: 'Cornelder', icon: Ship, color: 'cyan' },
-        { id: 5, title: 'Taxação', icon: FileText, color: 'indigo' },
+        { id: 5, title: 'Carregamentos', icon: FileText, color: 'indigo' },
         { id: 6, title: 'Faturação', icon: FileText, color: 'green' },
         { id: 7, title: 'POD', icon: Ship, color: 'emerald' }
     ]

@@ -306,7 +306,7 @@ class ShipmentController extends Controller
             ['id' => 2, 'title' => 'Legalização', 'icon' => 'FileCheck'],
             ['id' => 3, 'title' => 'Alfândegas', 'icon' => 'Building2'],
             ['id' => 4, 'title' => 'Cornelder', 'icon' => 'Container'],
-            ['id' => 5, 'title' => 'Taxação', 'icon' => 'Calculator'],
+            ['id' => 5, 'title' => 'Carregamentos', 'icon' => 'Calculator'],
             ['id' => 6, 'title' => 'Faturação', 'icon' => 'FileText'],
             ['id' => 7, 'title' => 'POD', 'icon' => 'PackageCheck'],
         ];
@@ -794,11 +794,11 @@ class ShipmentController extends Controller
     private function getPhaseName(int $phase): string
     {
         $names = [
-            1 => 'Coleta Dispersa',
+            1 => 'Coleta de despesas',
             2 => 'Legalização',
             3 => 'Alfândegas',
             4 => 'Cornelder',
-            5 => 'Taxação',
+            5 => 'Carregamentos',
             6 => 'Faturação',
             7 => 'POD',
         ];
