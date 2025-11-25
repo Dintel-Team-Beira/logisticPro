@@ -286,7 +286,7 @@ public function show(PaymentRequest $paymentRequest)
             ->get()
             ->map(function ($item) {
                 $phaseNames = [
-                    1 => 'Coleta Dispersa',
+                    1 => 'Coleta de Despesas',
                     2 => 'Legalização',
                     3 => 'Alfândegas',
                     4 => 'Cornelder',

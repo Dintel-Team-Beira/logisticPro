@@ -178,7 +178,7 @@ class DashboardController extends Controller
     private function getStageStats()
     {
         $stages = [
-            'coleta_dispersa' => 'Coleta Dispersa',
+            'coleta_dispersa' => 'Coleta de Despesas',
             'legalizacao' => 'Legalização',
             'alfandegas' => 'Alfândegas',
             'cornelder' => 'Cornelder',

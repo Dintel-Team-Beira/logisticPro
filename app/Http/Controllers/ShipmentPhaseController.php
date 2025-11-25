@@ -180,7 +180,7 @@ class ShipmentPhaseController extends Controller
                 $shipment,
                 ShipmentStatus::COLETA_CONCLUIDA,
                 auth()->id(),
-                'Fase 1 (Coleta de Dispersa) concluída automaticamente'
+                'Fase 1 (Coleta de Despesas) concluída automaticamente'
             );
 
             return back()->with('success', 'Fase 1 concluída! Fase 2 (Legalização) habilitada.');

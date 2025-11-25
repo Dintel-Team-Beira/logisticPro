@@ -302,7 +302,7 @@ class ShipmentController extends Controller
 
         // Preparar dados das fases
         $phases = [
-            ['id' => 1, 'title' => 'Coleta Dispersa', 'icon' => 'Ship'],
+            ['id' => 1, 'title' => 'Coleta de Despesas', 'icon' => 'Ship'],
             ['id' => 2, 'title' => 'Legalização', 'icon' => 'FileCheck'],
             ['id' => 3, 'title' => 'Alfândegas', 'icon' => 'Building2'],
             ['id' => 4, 'title' => 'Cornelder', 'icon' => 'Container'],

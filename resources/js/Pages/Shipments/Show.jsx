@@ -71,7 +71,7 @@ export default function Show ({
         return phases[phaseNumber]
     }
     const phases = [
-        { id: 1, title: 'Coleta Dispersa', icon: Ship, color: 'blue' },
+        { id: 1, title: 'Coleta de Despesas', icon: Ship, color: 'blue' },
         { id: 2, title: 'Legalização', icon: FileText, color: 'purple' },
         { id: 3, title: 'Alfândegas', icon: CheckCircle2, color: 'amber' },
         { id: 4, title: 'Cornelder', icon: Ship, color: 'cyan' },

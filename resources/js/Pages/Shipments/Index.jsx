@@ -104,7 +104,7 @@ export default function Index({ shipments, filters }) {
 
             default: // import
                 const importNames = {
-                    1: 'Coleta Dispersa',
+                    1: 'Coleta de Despesas',
                     2: 'Legalização',
                     3: 'Alfândegas',
                     4: 'Cornelder',
