@@ -29,7 +29,8 @@ import {
     XCircle,
     TrendingUp,
     Clock,
-    Building2
+    Building2,
+    Truck
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
@@ -235,6 +236,13 @@ export default function DashboardLayout({ children }) {
                 href: '/shipping-lines',
                 roles: ['admin', 'manager'],
                 badge: null
+        },
+        {
+            name: 'Transportes',
+            icon: Truck,
+            href: '/transports',
+            roles: ['admin', 'manager', 'operations'],
+            badge: null
         },
         // {
         //     name: 'Consignatários',
