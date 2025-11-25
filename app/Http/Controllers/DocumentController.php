@@ -76,10 +76,10 @@ class DocumentController extends Controller
      * SHOW: Documentos de um Shipment específico
      * 🔧 VERSÃO CORRIGIDA E OTIMIZADA
      */
-    public function show($shipmentId)
+    public function showShipmentDocuments($shipmentId)
     {
         // Log para debug
-        Log::info('DocumentController@show', [
+        Log::info('DocumentController@showShipmentDocuments', [
             'shipment_id' => $shipmentId
         ]);
 
@@ -144,6 +144,40 @@ class DocumentController extends Controller
             'documents' => $documents,
             'documentsByType' => $documentsByType,
         ]);
+    }
+
+    /**
+     * VIEW: Visualizar documento individual
+     */
+    public function show(Document $document)
+    {
+        try {
+            if (!Storage::disk('public')->exists($document->path)) {
+                abort(404, 'Arquivo não encontrado');
+            }
+
+            $filePath = Storage::disk('public')->path($document->path);
+            $mimeType = Storage::disk('public')->mimeType($document->path);
+
+            // Se for PDF ou imagem, mostrar inline
+            if (in_array($mimeType, ['application/pdf', 'image/jpeg', 'image/png', 'image/jpg'])) {
+                return response()->file($filePath, [
+                    'Content-Type' => $mimeType,
+                    'Content-Disposition' => 'inline; filename="' . $document->name . '"'
+                ]);
+            }
+
+            // Outros tipos, fazer download
+            return Storage::disk('public')->download($document->path, $document->name);
+
+        } catch (\Exception $e) {
+            Log::error('Erro ao visualizar documento', [
+                'error' => $e->getMessage(),
+                'document_id' => $document->id,
+            ]);
+
+            abort(404, 'Erro ao visualizar arquivo');
+        }
     }
 
     /**

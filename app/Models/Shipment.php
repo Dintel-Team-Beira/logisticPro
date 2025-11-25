@@ -588,9 +588,17 @@ class Shipment extends Model
 
     public function getPhase2Progress(): float
     {
+        // Verificar se há payment_requests para esta fase
+        $hasRequests = $this->paymentRequests()->where('phase', 2)->exists();
+
+        if ($hasRequests) {
+            return $this->getPhaseProgressFromPaymentRequests(2);
+        }
+
+        // Documentos necessários atualizados
         $steps = [
             $this->documents()->where('type', 'bl')->exists() ? 33 : 0,
-            $this->documents()->where('type', 'bl_carimbado')->exists() ? 34 : 0,
+            $this->documents()->where('type', 'bl_legalizado')->exists() ? 34 : 0,
             $this->documents()->where('type', 'delivery_order')->exists() ? 33 : 0,
         ];
 
@@ -599,24 +607,40 @@ class Shipment extends Model
 
     public function getPhase3Progress(): float
     {
-        $steps = [
-            $this->customs_status === 'declaration_submitted' ? 25 : 0,
-            $this->customs_status === 'notice_received' ? 25 : 0,
-            $this->customs_payment_status === 'paid' ? 25 : 0,
-            $this->documents()->where('type', 'autorizacao')->exists() ? 25 : 0,
-        ];
+        // Verificar se há payment_requests para esta fase
+        $hasRequests = $this->paymentRequests()->where('phase', 3)->exists();
 
+        if ($hasRequests) {
+            return $this->getPhaseProgressFromPaymentRequests(3);
+        }
+
+        // Documentos necessários atualizados
+        $steps = [
+            $this->documents()->where('type', 'aviso_taxacao')->exists() ? 25 : 0,
+            $this->documents()->where('type', 'autorizacao_saida')->exists() ? 25 : 0,
+            $this->documents()->where('type', 'sad')->exists() ? 25 : 0,
+            $this->documents()->whereIn('type', ['packing_list', 'commercial_invoice'])->exists() ? 25 : 0,
+        ];
 
         return array_sum($steps);
     }
 
     public function getPhase4Progress(): float
     {
+        // Verificar se há payment_requests para esta fase
+        $hasRequests = $this->paymentRequests()->where('phase', 4)->exists();
+
+        if ($hasRequests) {
+            return $this->getPhaseProgressFromPaymentRequests(4);
+        }
+
+        // Documentos necessários atualizados
         $steps = [
-            $this->cornelder_status === 'requested' ? 25 : 0,
-            $this->cornelder_status === 'draft_received' ? 25 : 0,
-            $this->cornelder_payment_status === 'paid' ? 25 : 0,
-            $this->documents()->where('type', 'receipt')->where('metadata->phase', 'cornelder')->exists() ? 25 : 0,
+            $this->documents()->where('type', 'recibo_cornelder')->exists() ? 20 : 0,
+            $this->documents()->where('type', 'ido')->exists() ? 20 : 0,
+            $this->documents()->where('type', 'processo_completo_cornelder')->exists() ? 20 : 0,
+            $this->documents()->where('type', 'appointment')->exists() ? 20 : 0,
+            $this->documents()->whereIn('type', ['draft_cornelder', 'storage', 'termo_linha'])->exists() ? 20 : 0,
         ];
 
         return array_sum($steps);
@@ -624,7 +648,15 @@ class Shipment extends Model
 
 public function getPhase5Progress(): float
 {
-    $requiredDocs = ['sad', 'delivery_order'];
+    // Verificar se há payment_requests para esta fase
+    $hasRequests = $this->paymentRequests()->where('phase', 5)->exists();
+
+    if ($hasRequests) {
+        return $this->getPhaseProgressFromPaymentRequests(5);
+    }
+
+    // Documentos necessários atualizados
+    $requiredDocs = ['sad', 'processo_completo_taxacao', 'carta_porte'];
 
     // Documentos anexados
     $attachedDocs = $this->documents()
@@ -633,51 +665,9 @@ public function getPhase5Progress(): float
 
     // Calcular progresso baseado em documentos
     $uploadedCount = $attachedDocs->count();
-    $documentProgress = ($uploadedCount / count($requiredDocs)) * 50; // 50% baseado em documentos
+    $documentProgress = ($uploadedCount / count($requiredDocs)) * 100;
 
-    // Calcular progresso baseado no tempo
-    $stage = $this->stages()->where('stage', 'taxacao')->first();
-
-    $timeProgress = 0;
-    if ($stage && $stage->started_at) {
-        $daysSinceStart = now()->diffInDays($stage->started_at);
-
-        // Limite máximo de 15 dias para considerar 50% de progresso
-        $maxDays = 15;
-        $timeProgress = min(($daysSinceStart / $maxDays) * 50, 50);
-    }
-
-    // Progresso total
-    $totalProgress = $documentProgress + $timeProgress;
-
-    // Debug: adicionar log para entender o cálculo
-    // Log mais detalhado
-    Log::info('Phase 5 Progress Details', [
-        'uploadedCount' => $uploadedCount,
-        'requiredDocsCount' => count($requiredDocs),
-        'documentProgress' => $documentProgress,
-        'timeProgress' => $timeProgress,
-        'totalProgress' => $totalProgress,
-        'stage' => $stage ? $stage->toArray() : 'No stage found'
-    ]);
-    // Se todos documentos estiverem anexados, completar stage
-    if ($uploadedCount === count($requiredDocs)) {
-        if ($stage && $stage->status === 'in_progress') {
-            $stage->update([
-                'status' => 'completed',
-                'completed_at' => now()
-            ]);
-
-            Activity::create([
-                'shipment_id' => $this->id,
-                'user_id' => auth()->id() ?? 1,
-                'action' => 'stage_completed',
-                'description' => 'Fase de Taxação completada automaticamente'
-            ]);
-        }
-    }
-
-    return min($totalProgress, 100);
+    return min($documentProgress, 100);
 }
     // public function getPhase5Progress(): float
     // {
@@ -691,9 +681,17 @@ public function getPhase5Progress(): float
 
     public function getPhase6Progress(): float
     {
+        // Verificar se há payment_requests para esta fase
+        $hasRequests = $this->paymentRequests()->where('phase', 6)->exists();
+
+        if ($hasRequests) {
+            return $this->getPhaseProgressFromPaymentRequests(6);
+        }
+
+        // Documentos necessários atualizados
         $steps = [
-            $this->client_invoice_id !== null ? 50 : 0,
-            $this->client_payment_status === 'paid' ? 50 : 0,
+            $this->documents()->where('type', 'factura_cliente')->exists() ? 50 : 0,
+            $this->documents()->where('type', 'pop_cliente')->exists() ? 50 : 0,
         ];
 
         return array_sum($steps);
@@ -701,10 +699,18 @@ public function getPhase5Progress(): float
 
     public function getPhase7Progress(): float
     {
+        // Verificar se há payment_requests para esta fase
+        $hasRequests = $this->paymentRequests()->where('phase', 7)->exists();
+
+        if ($hasRequests) {
+            return $this->getPhaseProgressFromPaymentRequests(7);
+        }
+
+        // Documentos necessários atualizados
         $steps = [
-            $this->pod_status === 'awaiting' ? 33 : 0,
             $this->documents()->where('type', 'pod')->exists() ? 34 : 0,
-            $this->pod_status === 'confirmed' ? 33 : 0,
+            $this->documents()->where('type', 'devolucao_vazio')->exists() ? 33 : 0,
+            $this->documents()->where('type', 'assinatura_cliente')->exists() ? 33 : 0,
         ];
 
         return array_sum($steps);
