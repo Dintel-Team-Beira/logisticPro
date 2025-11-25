@@ -129,6 +129,24 @@ export default function Show ({
         }
     }
 
+    const handleViewDocument = (documentId) => {
+        if (!documentId) {
+            console.error('Document ID not provided')
+            return
+        }
+        // Abrir documento em nova aba
+        window.open(`/documents/${documentId}`, '_blank')
+    }
+
+    const handleDownloadDocument = (documentId) => {
+        if (!documentId) {
+            console.error('Document ID not provided')
+            return
+        }
+        // Iniciar download do documento
+        window.location.href = `/documents/${documentId}/download`
+    }
+
     return (
         <DashboardLayout>
             <Head title={`Processo ${shipment.reference_number}`} />
@@ -741,20 +759,22 @@ export default function Show ({
                                                                     <button
                                                                         onClick={() =>
                                                                             handleViewDocument(
-                                                                                item.id
+                                                                                item.document_id
                                                                             )
                                                                         }
                                                                         className='p-2 transition-colors rounded-lg hover:bg-slate-100'
+                                                                        title='Visualizar documento'
                                                                     >
                                                                         <Eye className='w-4 h-4 text-slate-600' />
                                                                     </button>
                                                                     <button
                                                                         onClick={() =>
                                                                             handleDownloadDocument(
-                                                                                item.id
+                                                                                item.document_id
                                                                             )
                                                                         }
                                                                         className='p-2 transition-colors rounded-lg hover:bg-slate-100'
+                                                                        title='Baixar documento'
                                                                     >
                                                                         <Download className='w-4 h-4 text-slate-600' />
                                                                     </button>
