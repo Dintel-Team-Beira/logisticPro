@@ -18,16 +18,15 @@ import {
     Building2,
     Upload,
     Check,
-    ChevronRight,
     Globe,
     TrendingUp,
     Truck,
-    Navigation
+    Navigation,
+    AlertCircle
 } from 'lucide-react';
 
 export default function Create() {
     const { shippingLines, clients, consignees } = usePage().props;
-    const [step, setStep] = useState(1);
     const [blFile, setBlFile] = useState(null);
     const [filteredConsignees, setFilteredConsignees] = useState([]);
 
@@ -45,12 +44,16 @@ export default function Create() {
     const [quotationData, setQuotationData] = useState(null);
     const [selectedServices, setSelectedServices] = useState([]);
 
+    // Validação em tempo real
+    const [validationErrors, setValidationErrors] = useState({});
+    const [touched, setTouched] = useState({});
+
     const { data, setData, post, processing, errors } = useForm({
         // Cliente e Consignatário
         client_id: '',
         consignee_id: '',
 
-        // Tipo de Processo (será escolhido no step 2)
+        // Tipo de Processo
         type: '',
 
         // Linha de Navegação e Documentos (Import/Export/Transit)
@@ -72,7 +75,7 @@ export default function Create() {
         cargo_description: '',
         cargo_weight: '',
         cargo_value: '',
-        cargo_type: '',  // Tipo de mercadoria (dos parâmetros)
+        cargo_type: '',
 
         // Campos de cotação
         regime: '',
@@ -80,12 +83,12 @@ export default function Create() {
         additional_services: [],
 
         // Campos específicos de TRANSPORTE
-        loading_location: '',           // Local de carregamento
-        unloading_location: '',         // Local de descarregamento
-        distance_km: '',                // Distância em KM
-        empty_return_location: '',      // Local da devolução do vazio
+        loading_location: '',
+        unloading_location: '',
+        distance_km: '',
+        empty_return_location: '',
 
-        // Dados da cotação (será preenchido automaticamente)
+        // Dados da cotação
         quotation_data: null,
     });
 
@@ -93,7 +96,6 @@ export default function Create() {
     // PORTOS DINÂMICOS
     // ========================================
 
-    // Portos de Moçambique (para Export = origem, Import = destino)
     const mozambiquePorts = [
         { value: 'BEIRA, MOZAMBIQUE', label: 'Beira, Moçambique' },
         { value: 'MAPUTO, MOZAMBIQUE', label: 'Maputo, Moçambique' },
@@ -101,7 +103,6 @@ export default function Create() {
         { value: 'PEMBA, MOZAMBIQUE', label: 'Pemba, Moçambique' },
     ];
 
-    // Portos Internacionais (para Export = destino, Import = origem)
     const internationalPorts = [
         { value: 'SHANGHAI, CHINA', label: 'Shanghai, China' },
         { value: 'QINGDAO, CHINA', label: 'Qingdao, China' },
@@ -115,15 +116,107 @@ export default function Create() {
         { value: 'DUBAI, UAE', label: 'Dubai, EAU' },
     ];
 
-    const containerTypes = [
-        { value: '20DC', label: "20' Dry Container" },
-        { value: '40DC', label: "40' Dry Container" },
-        { value: '40HC', label: "40' High Cube" },
-        { value: '20RF', label: "20' Reefer" },
-        { value: '40RF', label: "40' Reefer" },
-        { value: '20OT', label: "20' Open Top" },
-        { value: '40OT', label: "40' Open Top" },
-    ];
+    // ========================================
+    // VALIDAÇÃO EM TEMPO REAL
+    // ========================================
+
+    const validateField = (field, value) => {
+        const newErrors = { ...validationErrors };
+
+        // Campos obrigatórios gerais
+        if (field === 'client_id' && !value) {
+            newErrors.client_id = 'Cliente é obrigatório';
+        } else if (field === 'client_id') {
+            delete newErrors.client_id;
+        }
+
+        if (field === 'type' && !value) {
+            newErrors.type = 'Tipo de processo é obrigatório';
+        } else if (field === 'type') {
+            delete newErrors.type;
+        }
+
+        if (field === 'cargo_description' && !value) {
+            newErrors.cargo_description = 'Descrição da carga é obrigatória';
+        } else if (field === 'cargo_description') {
+            delete newErrors.cargo_description;
+        }
+
+        // Validações específicas por tipo
+        if (data.type === 'transport') {
+            // Validações para transporte
+            if (field === 'loading_location' && !value) {
+                newErrors.loading_location = 'Local de carregamento é obrigatório';
+            } else if (field === 'loading_location') {
+                delete newErrors.loading_location;
+            }
+
+            if (field === 'unloading_location' && !value) {
+                newErrors.unloading_location = 'Local de descarregamento é obrigatório';
+            } else if (field === 'unloading_location') {
+                delete newErrors.unloading_location;
+            }
+
+            if (field === 'distance_km' && !value) {
+                newErrors.distance_km = 'Distância é obrigatória';
+            } else if (field === 'distance_km' && value <= 0) {
+                newErrors.distance_km = 'Distância deve ser maior que zero';
+            } else if (field === 'distance_km') {
+                delete newErrors.distance_km;
+            }
+
+            if (field === 'empty_return_location' && !value) {
+                newErrors.empty_return_location = 'Local de devolução é obrigatório';
+            } else if (field === 'empty_return_location') {
+                delete newErrors.empty_return_location;
+            }
+        } else {
+            // Validações para import/export/transit
+            if (field === 'shipping_line_id' && !value) {
+                newErrors.shipping_line_id = 'Linha de navegação é obrigatória';
+            } else if (field === 'shipping_line_id') {
+                delete newErrors.shipping_line_id;
+            }
+
+            if (data.type === 'import' && field === 'bl_number' && !value) {
+                newErrors.bl_number = 'Número do BL é obrigatório para importação';
+            } else if (field === 'bl_number') {
+                delete newErrors.bl_number;
+            }
+
+            if (field === 'container_type' && !value) {
+                newErrors.container_type = 'Tipo de container é obrigatório';
+            } else if (field === 'container_type') {
+                delete newErrors.container_type;
+            }
+
+            if (field === 'origin_port' && !value) {
+                newErrors.origin_port = 'Porto de origem é obrigatório';
+            } else if (field === 'origin_port') {
+                delete newErrors.origin_port;
+            }
+
+            if (field === 'destination_port' && !value) {
+                newErrors.destination_port = 'Porto de destino é obrigatório';
+            } else if (field === 'destination_port') {
+                delete newErrors.destination_port;
+            }
+        }
+
+        setValidationErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
+
+    const handleFieldChange = (field, value) => {
+        setData(field, value);
+        setTouched({ ...touched, [field]: true });
+        validateField(field, value);
+    };
+
+    const handleBlur = (field) => {
+        setTouched({ ...touched, [field]: true });
+        validateField(field, data[field]);
+    };
 
     // ========================================
     // EFEITOS E HANDLERS
@@ -148,6 +241,7 @@ export default function Create() {
                 origin_port: '',
                 destination_port: '',
             }));
+            validateField('type', data.type);
         }
     }, [data.type]);
 
@@ -169,16 +263,30 @@ export default function Create() {
     const handleSubmit = (e) => {
         e.preventDefault();
 
+        // Validar todos os campos
+        const allFields = Object.keys(data);
+        let hasErrors = false;
+        allFields.forEach(field => {
+            if (!validateField(field, data[field])) {
+                hasErrors = true;
+            }
+        });
+
         // Validar BL file apenas para importação
         if (data.type === 'import' && !data.bl_file) {
-            alert('Por favor, anexe o BL Original para processos de importação');
+            setValidationErrors(prev => ({
+                ...prev,
+                bl_file: 'BL Original é obrigatório para processos de importação'
+            }));
+            hasErrors = true;
+        }
+
+        if (hasErrors) {
             return;
         }
 
         post('/shipments', {
             forceFormData: true,
-            // O backend já redireciona automaticamente baseado no tipo
-            // Não precisa fazer redirect aqui
         });
     };
 
@@ -187,55 +295,29 @@ export default function Create() {
         if (file) {
             setBlFile(file);
             setData('bl_file', file);
+            setValidationErrors(prev => {
+                const newErrors = { ...prev };
+                delete newErrors.bl_file;
+                return newErrors;
+            });
         }
     };
 
-    // ========================================
-    // VALIDAÇÕES DE STEPS
-    // ========================================
-
-    const canProceedToStep2 = () => {
-        return data.client_id;
-    };
-
-    const canProceedToStep3 = () => {
-        return data.type;
-    };
-
-    const canProceedToStep4 = () => {
-        // Para transport: não exige shipping_line (é opcional)
-        if (data.type === 'transport') {
-            return true; // Sempre pode prosseguir
+    // Verifica se o formulário é válido
+    const isFormValid = () => {
+        if (!data.client_id || !data.type || !data.cargo_description) {
+            return false;
         }
-        // Para importação: exige shipping_line_id, bl_number e bl_file
-        if (data.type === 'import') {
-            return data.shipping_line_id && data.bl_number && data.bl_file;
-        }
-        // Para exportação/transit: apenas shipping_line_id é obrigatório
-        return data.shipping_line_id;
-    };
 
-    const canProceedToStep5 = () => {
-        // Para transport: exige campos específicos
         if (data.type === 'transport') {
             return data.loading_location && data.unloading_location &&
-                   data.cargo_type && data.distance_km && data.empty_return_location;
+                   data.distance_km && data.empty_return_location;
+        } else {
+            return data.shipping_line_id && data.container_type &&
+                   data.origin_port && data.destination_port &&
+                   (data.type !== 'import' || (data.bl_number && data.bl_file));
         }
-        // Para outros tipos: exige container e portos
-        return data.container_type && data.origin_port && data.destination_port;
     };
-
-    // ========================================
-    // STEPS CONFIGURATION
-    // ========================================
-
-    const steps = [
-        { number: 1, title: 'Cliente', icon: User },
-        { number: 2, title: 'Tipo', icon: Globe },
-        { number: 3, title: 'Documentação', icon: FileText },
-        { number: 4, title: 'Container & Rota', icon: Package },
-        { number: 5, title: 'Carga', icon: TrendingUp },
-    ];
 
     return (
         <DashboardLayout>
@@ -255,108 +337,47 @@ export default function Create() {
                         Criar Novo Processo Logístico
                     </h1>
                     <p className="mt-1 text-sm text-slate-500">
-                        {data.type === 'export'
-                            ? 'Processo de Exportação: mercadoria saindo de Moçambique para o exterior'
-                            : data.type === 'import'
-                            ? 'Processo de Importação: mercadoria chegando do exterior para Moçambique'
-                            : data.type === 'transit'
-                            ? 'Processo de Trânsito: mercadoria passando por Moçambique em rota para outro destino'
-                            : data.type === 'transport'
-                            ? 'Processo de Transporte: transporte rodoviário dentro de Moçambique'
-                            : 'Selecione o tipo de processo para começar'
-                        }
+                        Preencha todos os campos abaixo para criar um novo processo.
+                        A validação é feita em tempo real.
                     </p>
                 </div>
 
-                {/* Steps Indicator */}
-                <div className="mb-8">
-                    <div className="flex items-center justify-between">
-                        {steps.map((s, index) => {
-                            const Icon = s.icon;
-                            const isActive = s.number === step;
-                            const isCompleted = s.number < step;
-
-                            return (
-                                <div key={s.number} className="flex items-center flex-1">
-                                    <div className="flex items-center flex-1">
-                                        <div
-                                            className={`
-                                                flex items-center justify-center w-10 h-10 rounded-full
-                                                ${isCompleted ? 'bg-emerald-500' : ''}
-                                                ${isActive ? 'bg-blue-600' : ''}
-                                                ${!isActive && !isCompleted ? 'bg-slate-200' : ''}
-                                                transition-all duration-200
-                                            `}
-                                        >
-                                            {isCompleted ? (
-                                                <Check className="w-5 h-5 text-white" />
-                                            ) : (
-                                                <Icon className={`
-                                                    w-5 h-5
-                                                    ${isActive ? 'text-white' : 'text-slate-400'}
-                                                `} />
-                                            )}
-                                        </div>
-                                        <div className="ml-3">
-                                            <p className={`
-                                                text-xs font-medium
-                                                ${isActive || isCompleted ? 'text-slate-900' : 'text-slate-400'}
-                                            `}>
-                                                Passo {s.number}
-                                            </p>
-                                            <p className={`
-                                                text-sm font-semibold
-                                                ${isActive ? 'text-blue-600' : ''}
-                                                ${isCompleted ? 'text-emerald-600' : ''}
-                                                ${!isActive && !isCompleted ? 'text-slate-400' : ''}
-                                            `}>
-                                                {s.title}
-                                            </p>
-                                        </div>
-                                    </div>
-                                    {index < steps.length - 1 && (
-                                        <ChevronRight className="w-5 h-5 mx-4 text-slate-300" />
-                                    )}
-                                </div>
-                            );
-                        })}
-                    </div>
-                </div>
-
                 {/* Form */}
-                <form onSubmit={handleSubmit}>
-                    {/* STEP 1: SELECIONAR CLIENTE */}
-                    {step === 1 && (
-                        <div className="p-6 bg-white border rounded-lg border-slate-200">
-                            <div className="flex items-center gap-2 mb-6">
-                                <User className="w-5 h-5 text-slate-600" />
-                                <h2 className="text-lg font-semibold text-slate-900">
-                                    Selecionar Cliente
-                                </h2>
+                <form onSubmit={handleSubmit} className="space-y-6">
+                    {/* SEÇÃO 1: CLIENTE */}
+                    <div className="p-6 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center gap-2 mb-6">
+                            <User className="w-5 h-5 text-blue-600" />
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                1. Informações do Cliente
+                            </h2>
+                        </div>
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                            <div>
+                                <Select
+                                    label="Cliente *"
+                                    value={data.client_id}
+                                    onChange={(e) => handleFieldChange('client_id', e.target.value)}
+                                    onBlur={() => handleBlur('client_id')}
+                                    error={touched.client_id && (validationErrors.client_id || errors.client_id)}
+                                    required
+                                >
+                                    <option value="">Selecione o cliente</option>
+                                    {clients?.map((client) => (
+                                        <option key={client.id} value={client.id}>
+                                            {client.name} - {client.email}
+                                        </option>
+                                    ))}
+                                </Select>
                             </div>
 
-                            <Select
-                                label="Cliente *"
-                                value={data.client_id}
-                                onChange={(e) => setData('client_id', e.target.value)}
-                                error={errors.client_id}
-                                required
-                            >
-                                <option value="">Selecione o cliente</option>
-                                {clients?.map((client) => (
-                                    <option key={client.id} value={client.id}>
-                                        {client.name} - {client.email}
-                                    </option>
-                                ))}
-                            </Select>
-
-                            {/* Consignatário (Opcional) */}
                             {data.client_id && (
-                                <div className="mt-4">
+                                <div>
                                     <Select
-                                        label="Consignatário (Destinatário)"
+                                        label="Consignatário (Opcional)"
                                         value={data.consignee_id}
-                                        onChange={(e) => setData('consignee_id', e.target.value)}
+                                        onChange={(e) => handleFieldChange('consignee_id', e.target.value)}
                                         error={errors.consignee_id}
                                     >
                                         <option value="">Nenhum (usar dados do cliente)</option>
@@ -366,611 +387,469 @@ export default function Create() {
                                             </option>
                                         ))}
                                     </Select>
-                                    <p className="mt-1 text-xs text-slate-500">
-                                        O consignatário é o destinatário final da mercadoria. Se não selecionar, os dados do cliente serão usados.
+                                </div>
+                            )}
+                        </div>
+                    </div>
+
+                    {/* SEÇÃO 2: TIPO DE PROCESSO */}
+                    <div className="p-6 bg-white border rounded-lg border-slate-200">
+                        <div className="flex items-center gap-2 mb-6">
+                            <Globe className="w-5 h-5 text-blue-600" />
+                            <h2 className="text-lg font-semibold text-slate-900">
+                                2. Tipo de Processo *
+                            </h2>
+                        </div>
+
+                        {touched.type && validationErrors.type && (
+                            <div className="flex items-center gap-2 p-3 mb-4 text-sm text-red-800 border border-red-200 rounded-lg bg-red-50">
+                                <AlertCircle className="w-4 h-4" />
+                                {validationErrors.type}
+                            </div>
+                        )}
+
+                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            {/* IMPORTAÇÃO */}
+                            <button
+                                type="button"
+                                onClick={() => handleFieldChange('type', 'import')}
+                                onBlur={() => handleBlur('type')}
+                                className={`
+                                    p-4 border-2 rounded-xl text-left transition-all
+                                    ${data.type === 'import'
+                                        ? 'border-blue-500 bg-blue-50 shadow-md'
+                                        : 'border-slate-200 bg-white hover:border-blue-300'
+                                    }
+                                `}
+                            >
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="p-3 bg-blue-100 rounded-lg">
+                                        <Ship className="w-6 h-6 text-blue-600" />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-slate-900">
+                                        Importação
+                                    </h3>
+                                    <p className="text-xs text-center text-slate-600">
+                                        Do exterior para Moçambique
                                     </p>
+                                    {data.type === 'import' && (
+                                        <Check className="w-4 h-4 text-blue-600" />
+                                    )}
                                 </div>
-                            )}
+                            </button>
 
-                            <div className="mt-4 p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                                <p className="text-sm text-blue-800">
-                                    💡 <strong>Dica:</strong> Se o cliente não estiver na lista, você pode cadastrá-lo em{' '}
-                                    <Link href="/clients/create" className="underline font-semibold">
-                                        Gestão de Clientes
-                                    </Link>
-                                </p>
-                            </div>
-
-                            <div className="flex justify-end mt-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(2)}
-                                    disabled={!canProceedToStep2()}
-                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Próximo
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 2: ESCOLHER TIPO (IMPORT/EXPORT) */}
-                    {step === 2 && (
-                        <div className="p-6 bg-white border rounded-lg border-slate-200">
-                            <div className="flex items-center gap-2 mb-6">
-                                <Globe className="w-5 h-5 text-slate-600" />
-                                <h2 className="text-lg font-semibold text-slate-900">
-                                    Tipo de Processo
-                                </h2>
-                            </div>
-
-                            <p className="mb-6 text-sm text-slate-600">
-                                Selecione o tipo de operação logística que deseja realizar:
-                            </p>
-
-                            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                {/* IMPORTAÇÃO */}
-                                <button
-                                    type="button"
-                                    onClick={() => setData('type', 'import')}
-                                    className={`
-                                        p-6 border-2 rounded-xl text-left transition-all transform hover:scale-105
-                                        ${data.type === 'import'
-                                            ? 'border-blue-500 bg-blue-50 shadow-lg'
-                                            : 'border-slate-200 bg-white hover:border-blue-300'
-                                        }
-                                    `}
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-blue-100 rounded-lg">
-                                            <Ship className="w-8 h-8 text-blue-600" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="text-lg font-bold text-slate-900 mb-2">
-                                                📦 Importação
-                                            </h3>
-                                            <p className="text-sm text-slate-600 mb-3">
-                                                Mercadoria chegando <strong>do exterior</strong> para <strong>Moçambique</strong>
-                                            </p>
-                                            <div className="space-y-1 text-xs text-slate-500">
-                                                <p>• Origem: Portos Internacionais</p>
-                                                <p>• Destino: Beira, Maputo, Nacala...</p>
-                                                <p>• Requer: BL Original</p>
-                                            </div>
-                                            {data.type === 'import' && (
-                                                <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 bg-blue-600 text-white text-xs font-semibold rounded-full">
-                                                    <Check className="w-3 h-3" />
-                                                    Selecionado
-                                                </div>
-                                            )}
-                                        </div>
+                            {/* EXPORTAÇÃO */}
+                            <button
+                                type="button"
+                                onClick={() => handleFieldChange('type', 'export')}
+                                onBlur={() => handleBlur('type')}
+                                className={`
+                                    p-4 border-2 rounded-xl text-left transition-all
+                                    ${data.type === 'export'
+                                        ? 'border-emerald-500 bg-emerald-50 shadow-md'
+                                        : 'border-slate-200 bg-white hover:border-emerald-300'
+                                    }
+                                `}
+                            >
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="p-3 rounded-lg bg-emerald-100">
+                                        <TrendingUp className="w-6 h-6 text-emerald-600" />
                                     </div>
-                                </button>
-
-                                {/* EXPORTAÇÃO */}
-                                <button
-                                    type="button"
-                                    onClick={() => setData('type', 'export')}
-                                    className={`
-                                        p-6 border-2 rounded-xl text-left transition-all transform hover:scale-105
-                                        ${data.type === 'export'
-                                            ? 'border-emerald-500 bg-emerald-50 shadow-lg'
-                                            : 'border-slate-200 bg-white hover:border-emerald-300'
-                                        }
-                                    `}
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-emerald-100 rounded-lg">
-                                            <TrendingUp className="w-8 h-8 text-emerald-600" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="text-lg font-bold text-slate-900 mb-2">
-                                                🚢 Exportação
-                                            </h3>
-                                            <p className="text-sm text-slate-600 mb-3">
-                                                Mercadoria saindo <strong>de Moçambique</strong> para <strong>o exterior</strong>
-                                            </p>
-                                            <div className="space-y-1 text-xs text-slate-500">
-                                                <p>• Origem: Beira, Maputo, Nacala...</p>
-                                                <p>• Destino: Portos Internacionais</p>
-                                                <p>• Requer: Fatura Comercial, Packing List</p>
-                                            </div>
-                                            {data.type === 'export' && (
-                                                <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 bg-emerald-600 text-white text-xs font-semibold rounded-full">
-                                                    <Check className="w-3 h-3" />
-                                                    Selecionado
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </button>
-
-                                {/* TRÂNSITO */}
-                                <button
-                                    type="button"
-                                    onClick={() => setData('type', 'transit')}
-                                    className={`
-                                        p-6 border-2 rounded-xl text-left transition-all transform hover:scale-105
-                                        ${data.type === 'transit'
-                                            ? 'border-amber-500 bg-amber-50 shadow-lg'
-                                            : 'border-slate-200 bg-white hover:border-amber-300'
-                                        }
-                                    `}
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-amber-100 rounded-lg">
-                                            <Navigation className="w-8 h-8 text-amber-600" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="text-lg font-bold text-slate-900 mb-2">
-                                                🔄 Trânsito
-                                            </h3>
-                                            <p className="text-sm text-slate-600 mb-3">
-                                                Mercadoria <strong>passando por Moçambique</strong> em rota para <strong>outro destino</strong>
-                                            </p>
-                                            <div className="space-y-1 text-xs text-slate-500">
-                                                <p>• Origem: Qualquer porto</p>
-                                                <p>• Via: Moçambique (Trânsito)</p>
-                                                <p>• Destino: Outro país</p>
-                                                <p>• Requer: Documentação de Trânsito</p>
-                                            </div>
-                                            {data.type === 'transit' && (
-                                                <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 bg-amber-600 text-white text-xs font-semibold rounded-full">
-                                                    <Check className="w-3 h-3" />
-                                                    Selecionado
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </button>
-
-                                {/* TRANSPORTE */}
-                                <button
-                                    type="button"
-                                    onClick={() => setData('type', 'transport')}
-                                    className={`
-                                        p-6 border-2 rounded-xl text-left transition-all transform hover:scale-105
-                                        ${data.type === 'transport'
-                                            ? 'border-purple-500 bg-purple-50 shadow-lg'
-                                            : 'border-slate-200 bg-white hover:border-purple-300'
-                                        }
-                                    `}
-                                >
-                                    <div className="flex items-start gap-4">
-                                        <div className="p-3 bg-purple-100 rounded-lg">
-                                            <Truck className="w-8 h-8 text-purple-600" />
-                                        </div>
-                                        <div className="flex-1">
-                                            <h3 className="text-lg font-bold text-slate-900 mb-2">
-                                                🚚 Transporte
-                                            </h3>
-                                            <p className="text-sm text-slate-600 mb-3">
-                                                Transporte <strong>rodoviário dentro de Moçambique</strong>
-                                            </p>
-                                            <div className="space-y-1 text-xs text-slate-500">
-                                                <p>• 2 Fases: Coleta e Entrega</p>
-                                                <p>• Transporte terrestre</p>
-                                                <p>• Origem/Destino: Qualquer local em MZ</p>
-                                                <p>• Requer: Guia de Remessa</p>
-                                            </div>
-                                            {data.type === 'transport' && (
-                                                <div className="mt-3 inline-flex items-center gap-1 px-3 py-1 bg-purple-600 text-white text-xs font-semibold rounded-full">
-                                                    <Check className="w-3 h-3" />
-                                                    Selecionado
-                                                </div>
-                                            )}
-                                        </div>
-                                    </div>
-                                </button>
-                            </div>
-
-                            <div className="flex justify-between mt-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(1)}
-                                    className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
-                                >
-                                    Voltar
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(3)}
-                                    disabled={!canProceedToStep3()}
-                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Próximo
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 3: DOCUMENTAÇÃO (DINÂMICA) */}
-                    {step === 3 && (
-                        <div className="p-6 bg-white border rounded-lg border-slate-200">
-                            <div className="flex items-center gap-2 mb-6">
-                                <FileText className="w-5 h-5 text-slate-600" />
-                                <h2 className="text-lg font-semibold text-slate-900">
-                                    {data.type === 'transport'
-                                        ? 'Documentação de Transporte'
-                                        : data.type === 'import'
-                                        ? 'Documentação de Importação'
-                                        : 'Documentação de Exportação'}
-                                </h2>
-                            </div>
-
-                            {data.type === 'transport' ? (
-                                // CAMPOS SIMPLIFICADOS PARA TRANSPORTE
-                                <div className="space-y-4">
-                                    <Select
-                                        label="Transportadora (Opcional)"
-                                        value={data.shipping_line_id}
-                                        onChange={(e) => setData('shipping_line_id', e.target.value)}
-                                        error={errors.shipping_line_id}
-                                    >
-                                        <option value="">Selecione uma transportadora</option>
-                                        {shippingLines?.map((line) => (
-                                            <option key={line.id} value={line.id}>
-                                                {line.name}
-                                            </option>
-                                        ))}
-                                    </Select>
-
-                                    <p className="text-sm text-slate-500">
-                                        💡 Para processos de transporte, os detalhes principais serão preenchidos na próxima etapa.
+                                    <h3 className="text-sm font-bold text-slate-900">
+                                        Exportação
+                                    </h3>
+                                    <p className="text-xs text-center text-slate-600">
+                                        De Moçambique para o exterior
                                     </p>
+                                    {data.type === 'export' && (
+                                        <Check className="w-4 h-4 text-emerald-600" />
+                                    )}
                                 </div>
-                            ) : (
-                                // CAMPOS ORIGINAIS PARA IMPORT/EXPORT/TRANSIT
-                                <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                                    <Select
-                                        label="Linha de Navegação *"
-                                        value={data.shipping_line_id}
-                                        onChange={(e) => setData('shipping_line_id', e.target.value)}
-                                        error={errors.shipping_line_id}
-                                        required
-                                    >
-                                        <option value="">Selecione uma linha</option>
-                                        {shippingLines?.map((line) => (
-                                            <option key={line.id} value={line.id}>
-                                                {line.name}
-                                            </option>
-                                        ))}
-                                    </Select>
+                            </button>
 
-                                    <Input
-                                        label={data.type === 'import' ? 'Número do BL *' : 'Número do BL (Opcional)'}
-                                        icon={FileText}
-                                        value={data.bl_number}
-                                        onChange={(e) => setData('bl_number', e.target.value)}
-                                        error={errors.bl_number}
-                                        placeholder="Ex: 253157188"
-                                        required={data.type === 'import'}
-                                    />
+                            {/* TRÂNSITO */}
+                            <button
+                                type="button"
+                                onClick={() => handleFieldChange('type', 'transit')}
+                                onBlur={() => handleBlur('type')}
+                                className={`
+                                    p-4 border-2 rounded-xl text-left transition-all
+                                    ${data.type === 'transit'
+                                        ? 'border-amber-500 bg-amber-50 shadow-md'
+                                        : 'border-slate-200 bg-white hover:border-amber-300'
+                                    }
+                                `}
+                            >
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="p-3 rounded-lg bg-amber-100">
+                                        <Navigation className="w-6 h-6 text-amber-600" />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-slate-900">
+                                        Trânsito
+                                    </h3>
+                                    <p className="text-xs text-center text-slate-600">
+                                        Passando por Moçambique
+                                    </p>
+                                    {data.type === 'transit' && (
+                                        <Check className="w-4 h-4 text-amber-600" />
+                                    )}
                                 </div>
-                            )}
+                            </button>
 
-                            {/* Upload de Documentos - Oculto para Transport */}
-                            {data.type !== 'transport' && (
-                                <div className="mt-6">
-                                    <label className="block mb-2 text-sm font-medium text-slate-700">
-                                        {data.type === 'import'
-                                            ? '📄 Upload do BL Original * (PDF, JPG, PNG)'
-                                            : '📄 Upload de Documentos (Fatura Comercial, Packing List) (PDF, JPG, PNG)'}
-                                    </label>
-                                <div className="flex items-center justify-center w-full">
-                                    <label className={`
-                                        flex flex-col items-center justify-center w-full h-40 border-2 border-dashed rounded-lg cursor-pointer
-                                        ${blFile ? 'border-emerald-500 bg-emerald-50' : 'border-slate-300 bg-slate-50'}
-                                        hover:bg-slate-100 transition-colors
-                                    `}>
-                                        <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                            {blFile ? (
-                                                <>
-                                                    <Check className="w-10 h-10 mb-3 text-emerald-600" />
-                                                    <p className="mb-2 text-sm font-medium text-emerald-700">
-                                                        {blFile.name}
-                                                    </p>
-                                                    <p className="text-xs text-emerald-600">
-                                                        {(blFile.size / 1024 / 1024).toFixed(2)} MB
-                                                    </p>
-                                                </>
-                                            ) : (
-                                                <>
-                                                    <Upload className="w-10 h-10 mb-3 text-slate-400" />
-                                                    <p className="mb-2 text-sm text-slate-500">
-                                                        <span className="font-semibold">Clique para fazer upload</span> ou arraste o arquivo
-                                                    </p>
-                                                    <p className="text-xs text-slate-500">
-                                                        PDF, JPG, PNG (MAX. 10MB)
-                                                    </p>
-                                                </>
-                                            )}
-                                        </div>
-                                        <input
-                                            type="file"
-                                            className="hidden"
-                                            accept=".pdf,.jpg,.jpeg,.png"
-                                            onChange={handleFileChange}
-                                        />
-                                    </label>
+                            {/* TRANSPORTE */}
+                            <button
+                                type="button"
+                                onClick={() => handleFieldChange('type', 'transport')}
+                                onBlur={() => handleBlur('type')}
+                                className={`
+                                    p-4 border-2 rounded-xl text-left transition-all
+                                    ${data.type === 'transport'
+                                        ? 'border-purple-500 bg-purple-50 shadow-md'
+                                        : 'border-slate-200 bg-white hover:border-purple-300'
+                                    }
+                                `}
+                            >
+                                <div className="flex flex-col items-center gap-2">
+                                    <div className="p-3 bg-purple-100 rounded-lg">
+                                        <Truck className="w-6 h-6 text-purple-600" />
+                                    </div>
+                                    <h3 className="text-sm font-bold text-slate-900">
+                                        Transporte
+                                    </h3>
+                                    <p className="text-xs text-center text-slate-600">
+                                        Rodoviário em Moçambique
+                                    </p>
+                                    {data.type === 'transport' && (
+                                        <Check className="w-4 h-4 text-purple-600" />
+                                    )}
                                 </div>
-                                {errors.bl_file && (
-                                    <p className="mt-1 text-xs text-red-600">{errors.bl_file}</p>
-                                )}
-                                </div>
-                            )}
-
-                            <div className="flex justify-between mt-6">
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(2)}
-                                    className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
-                                >
-                                    Voltar
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(4)}
-                                    disabled={!canProceedToStep4()}
-                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Próximo
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
+                            </button>
                         </div>
-                    )}
+                    </div>
 
-                    {/* STEP 4: CONTAINER E ROTA (DINÂMICA) OU TRANSPORTE */}
-                    {step === 4 && (
-                        <div className="space-y-6">
+                    {/* SEÇÃO 3: DOCUMENTAÇÃO E DETALHES (Condicional por tipo) */}
+                    {data.type && (
+                        <>
                             {data.type === 'transport' ? (
-                                // CAMPOS ESPECÍFICOS DE TRANSPORTE
+                                // CAMPOS DE TRANSPORTE
                                 <div className="p-6 bg-white border rounded-lg border-slate-200">
                                     <div className="flex items-center gap-2 mb-6">
                                         <Truck className="w-5 h-5 text-purple-600" />
                                         <h2 className="text-lg font-semibold text-slate-900">
-                                            Detalhes do Transporte Rodoviário
+                                            3. Detalhes do Transporte Rodoviário
                                         </h2>
                                     </div>
 
                                     <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                        {/* Local de Carregamento */}
+                                        <Select
+                                            label="Transportadora (Opcional)"
+                                            value={data.shipping_line_id}
+                                            onChange={(e) => handleFieldChange('shipping_line_id', e.target.value)}
+                                            error={errors.shipping_line_id}
+                                        >
+                                            <option value="">Selecione uma transportadora</option>
+                                            {shippingLines?.map((line) => (
+                                                <option key={line.id} value={line.id}>
+                                                    {line.name}
+                                                </option>
+                                            ))}
+                                        </Select>
+
                                         <Input
                                             label="Local de Carregamento *"
                                             icon={MapPin}
                                             value={data.loading_location}
-                                            onChange={(e) => setData('loading_location', e.target.value)}
-                                            error={errors.loading_location}
+                                            onChange={(e) => handleFieldChange('loading_location', e.target.value)}
+                                            onBlur={() => handleBlur('loading_location')}
+                                            error={touched.loading_location && (validationErrors.loading_location || errors.loading_location)}
                                             placeholder="Ex: Armazém Beira, Rua..."
                                             required
                                         />
 
-                                        {/* Local de Descarregamento */}
                                         <Input
                                             label="Local de Descarregamento *"
                                             icon={MapPin}
                                             value={data.unloading_location}
-                                            onChange={(e) => setData('unloading_location', e.target.value)}
-                                            error={errors.unloading_location}
+                                            onChange={(e) => handleFieldChange('unloading_location', e.target.value)}
+                                            onBlur={() => handleBlur('unloading_location')}
+                                            error={touched.unloading_location && (validationErrors.unloading_location || errors.unloading_location)}
                                             placeholder="Ex: Cliente Final, Maputo..."
                                             required
                                         />
 
-                                        {/* Tipo de Mercadoria */}
-                                        <Input
-                                            label="Tipo de Mercadoria *"
-                                            icon={Package}
-                                            value={data.cargo_type}
-                                            onChange={(e) => setData('cargo_type', e.target.value)}
-                                            error={errors.cargo_type}
-                                            placeholder="Ex: Alimentos, Equipamentos..."
-                                            required
-                                        />
-
-                                        {/* Distância em KM */}
                                         <Input
                                             type="number"
                                             label="Distância (KM) *"
                                             icon={TrendingUp}
                                             value={data.distance_km}
-                                            onChange={(e) => setData('distance_km', e.target.value)}
-                                            error={errors.distance_km}
+                                            onChange={(e) => handleFieldChange('distance_km', e.target.value)}
+                                            onBlur={() => handleBlur('distance_km')}
+                                            error={touched.distance_km && (validationErrors.distance_km || errors.distance_km)}
                                             placeholder="Ex: 580"
                                             required
                                         />
 
-                                        {/* Local da Devolução do Vazio */}
                                         <div className="md:col-span-2">
                                             <Input
                                                 label="Local da Devolução do Vazio *"
                                                 icon={MapPin}
                                                 value={data.empty_return_location}
-                                                onChange={(e) => setData('empty_return_location', e.target.value)}
-                                                error={errors.empty_return_location}
+                                                onChange={(e) => handleFieldChange('empty_return_location', e.target.value)}
+                                                onBlur={() => handleBlur('empty_return_location')}
+                                                error={touched.empty_return_location && (validationErrors.empty_return_location || errors.empty_return_location)}
                                                 placeholder="Ex: Porto de Beira, Depósito..."
                                                 required
                                             />
                                         </div>
                                     </div>
 
-                                    {/* Info Visual - Rota de Transporte */}
-                                    <div className="mt-6 p-4 bg-purple-50 border border-purple-200 rounded-lg">
-                                        <div className="flex items-center justify-between text-sm">
-                                            <div className="flex flex-col items-center gap-1">
-                                                <MapPin className="w-4 h-4 text-purple-600" />
-                                                <span className="font-semibold text-purple-900">
-                                                    {data.loading_location || 'Carregamento'}
-                                                </span>
-                                                <span className="text-xs text-purple-600">Origem</span>
-                                            </div>
-                                            <div className="flex-1 mx-4 border-t-2 border-dashed border-purple-300"></div>
-                                            <Truck className="w-6 h-6 text-purple-500" />
-                                            {data.distance_km && (
-                                                <span className="text-xs font-semibold text-purple-700">{data.distance_km} km</span>
-                                            )}
-                                            <div className="flex-1 mx-4 border-t-2 border-dashed border-purple-300"></div>
-                                            <div className="flex flex-col items-center gap-1">
-                                                <MapPin className="w-4 h-4 text-emerald-600" />
-                                                <span className="font-semibold text-emerald-900">
-                                                    {data.unloading_location || 'Descarregamento'}
-                                                </span>
-                                                <span className="text-xs text-emerald-600">Destino</span>
+                                    {/* Visualização da rota */}
+                                    {data.loading_location && data.unloading_location && (
+                                        <div className="p-4 mt-6 border border-purple-200 rounded-lg bg-purple-50">
+                                            <div className="flex items-center justify-between text-sm">
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <MapPin className="w-4 h-4 text-purple-600" />
+                                                    <span className="font-semibold text-center text-purple-900">
+                                                        {data.loading_location}
+                                                    </span>
+                                                    <span className="text-xs text-purple-600">Origem</span>
+                                                </div>
+                                                <div className="flex-1 mx-4 border-t-2 border-purple-300 border-dashed"></div>
+                                                <Truck className="w-6 h-6 text-purple-500" />
+                                                {data.distance_km && (
+                                                    <span className="text-xs font-semibold text-purple-700">{data.distance_km} km</span>
+                                                )}
+                                                <div className="flex-1 mx-4 border-t-2 border-purple-300 border-dashed"></div>
+                                                <div className="flex flex-col items-center gap-1">
+                                                    <MapPin className="w-4 h-4 text-emerald-600" />
+                                                    <span className="font-semibold text-center text-emerald-900">
+                                                        {data.unloading_location}
+                                                    </span>
+                                                    <span className="text-xs text-emerald-600">Destino</span>
+                                                </div>
                                             </div>
                                         </div>
-                                    </div>
+                                    )}
                                 </div>
                             ) : (
-                                // CAMPOS ORIGINAIS PARA IMPORT/EXPORT/TRANSIT
+                                // CAMPOS IMPORT/EXPORT/TRANSIT
                                 <>
-                                    {/* Container */}
+                                    {/* Documentação */}
                                     <div className="p-6 bg-white border rounded-lg border-slate-200">
                                         <div className="flex items-center gap-2 mb-6">
-                                            <Package className="w-5 h-5 text-slate-600" />
+                                            <FileText className="w-5 h-5 text-blue-600" />
                                             <h2 className="text-lg font-semibold text-slate-900">
-                                                Informações do Container
+                                                3. Documentação e Linha de Navegação
                                             </h2>
                                         </div>
 
                                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    <Input
-                                        label="Número do Container"
-                                        icon={Package}
-                                        value={data.container_number}
-                                        onChange={(e) => setData('container_number', e.target.value)}
-                                        error={errors.container_number}
-                                        placeholder="Ex: TCLU2437301"
-                                    />
+                                            <Select
+                                                label="Linha de Navegação *"
+                                                value={data.shipping_line_id}
+                                                onChange={(e) => handleFieldChange('shipping_line_id', e.target.value)}
+                                                onBlur={() => handleBlur('shipping_line_id')}
+                                                error={touched.shipping_line_id && (validationErrors.shipping_line_id || errors.shipping_line_id)}
+                                                required
+                                            >
+                                                <option value="">Selecione uma linha</option>
+                                                {shippingLines?.map((line) => (
+                                                    <option key={line.id} value={line.id}>
+                                                        {line.name}
+                                                    </option>
+                                                ))}
+                                            </Select>
 
-                                    <Select
-                                        label="Tipo de Container *"
-                                        value={data.container_type}
-                                        onChange={(e) => setData('container_type', e.target.value)}
-                                        error={errors.container_type}
-                                        required
-                                    >
-                                        <option value="">{loadingParams ? 'Carregando...' : 'Selecione o tipo'}</option>
-                                        {pricingParams.container_type?.filter(p => p.active).map((param) => (
-                                            <option key={param.code} value={param.code}>
-                                                {param.name} - {param.formatted_price}
-                                            </option>
-                                        ))}
-                                    </Select>
-
-                                    <Input
-                                        label="Nome do Navio"
-                                        icon={Ship}
-                                        value={data.vessel_name}
-                                        onChange={(e) => setData('vessel_name', e.target.value)}
-                                        error={errors.vessel_name}
-                                        placeholder="Ex: MSC MAYA"
-                                    />
-
-                                    <Input
-                                        type="date"
-                                        label={data.type === 'import' ? 'Data de Chegada (ETA)' : 'Data de Partida (ETD)'}
-                                        icon={Calendar}
-                                        value={data.arrival_date}
-                                        onChange={(e) => setData('arrival_date', e.target.value)}
-                                        error={errors.arrival_date}
-                                    />
-                                </div>
-                            </div>
-
-                            {/* Rota Dinâmica */}
-                            <div className="p-6 bg-white border rounded-lg border-slate-200">
-                                <div className="flex items-center gap-2 mb-6">
-                                    <MapPin className="w-5 h-5 text-slate-600" />
-                                    <h2 className="text-lg font-semibold text-slate-900">
-                                        Rota {data.type === 'export' ? '(Moçambique → Exterior)' : '(Exterior → Moçambique)'}
-                                    </h2>
-                                </div>
-
-                                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                    {/* Porto de Origem (Dinâmico) */}
-                                    <Select
-                                        label="Porto de Origem *"
-                                        value={data.origin_port}
-                                        onChange={(e) => setData('origin_port', e.target.value)}
-                                        error={errors.origin_port}
-                                        required
-                                    >
-                                        <option value="">Selecione o porto de origem</option>
-                                        {(data.type === 'export' ? mozambiquePorts : internationalPorts).map((port) => (
-                                            <option key={port.value} value={port.value}>
-                                                {port.label}
-                                            </option>
-                                        ))}
-                                    </Select>
-
-                                    {/* Porto de Destino (Dinâmico) */}
-                                    <Select
-                                        label="Porto de Destino *"
-                                        value={data.destination_port}
-                                        onChange={(e) => setData('destination_port', e.target.value)}
-                                        error={errors.destination_port}
-                                        required
-                                    >
-                                        <option value="">Selecione o porto de destino</option>
-                                        {(data.type === 'export' ? internationalPorts : mozambiquePorts).map((port) => (
-                                            <option key={port.value} value={port.value}>
-                                                {port.label}
-                                            </option>
-                                        ))}
-                                    </Select>
-                                </div>
-
-                                {/* Info visual */}
-                                <div className="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-lg">
-                                    <div className="flex items-center justify-between text-sm">
-                                        <div className="flex items-center gap-2">
-                                            <MapPin className="w-4 h-4 text-blue-600" />
-                                            <span className="font-semibold">{data.origin_port || 'Origem'}</span>
+                                            <Input
+                                                label={data.type === 'import' ? 'Número do BL *' : 'Número do BL (Opcional)'}
+                                                icon={FileText}
+                                                value={data.bl_number}
+                                                onChange={(e) => handleFieldChange('bl_number', e.target.value)}
+                                                onBlur={() => handleBlur('bl_number')}
+                                                error={touched.bl_number && (validationErrors.bl_number || errors.bl_number)}
+                                                placeholder="Ex: 253157188"
+                                                required={data.type === 'import'}
+                                            />
                                         </div>
-                                        <div className="flex-1 mx-4 border-t-2 border-dashed border-slate-300"></div>
-                                        <Ship className="w-5 h-5 text-slate-400" />
-                                        <div className="flex-1 mx-4 border-t-2 border-dashed border-slate-300"></div>
-                                        <div className="flex items-center gap-2">
-                                            <MapPin className="w-4 h-4 text-emerald-600" />
-                                            <span className="font-semibold">{data.destination_port || 'Destino'}</span>
+
+                                        {/* Upload de BL */}
+                                        <div className="mt-6">
+                                            <label className="block mb-2 text-sm font-medium text-slate-700">
+                                                {data.type === 'import'
+                                                    ? '📄 Upload do BL Original * (PDF, JPG, PNG)'
+                                                    : '📄 Upload de Documentos (Opcional) (PDF, JPG, PNG)'}
+                                            </label>
+                                            <div className="flex items-center justify-center w-full">
+                                                <label className={`
+                                                    flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer
+                                                    ${blFile ? 'border-emerald-500 bg-emerald-50' : 'border-slate-300 bg-slate-50'}
+                                                    hover:bg-slate-100 transition-colors
+                                                `}>
+                                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
+                                                        {blFile ? (
+                                                            <>
+                                                                <Check className="w-8 h-8 mb-2 text-emerald-600" />
+                                                                <p className="mb-1 text-sm font-medium text-emerald-700">
+                                                                    {blFile.name}
+                                                                </p>
+                                                                <p className="text-xs text-emerald-600">
+                                                                    {(blFile.size / 1024 / 1024).toFixed(2)} MB
+                                                                </p>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Upload className="w-8 h-8 mb-2 text-slate-400" />
+                                                                <p className="text-xs text-slate-500">
+                                                                    <span className="font-semibold">Clique para fazer upload</span>
+                                                                </p>
+                                                                <p className="text-xs text-slate-400">
+                                                                    PDF, JPG, PNG (MAX. 10MB)
+                                                                </p>
+                                                            </>
+                                                        )}
+                                                    </div>
+                                                    <input
+                                                        type="file"
+                                                        className="hidden"
+                                                        accept=".pdf,.jpg,.jpeg,.png"
+                                                        onChange={handleFileChange}
+                                                    />
+                                                </label>
+                                            </div>
+                                            {touched.bl_file && validationErrors.bl_file && (
+                                                <p className="mt-1 text-xs text-red-600">{validationErrors.bl_file}</p>
+                                            )}
                                         </div>
                                     </div>
-                                </div>
-                            </div>
+
+                                    {/* Container */}
+                                    <div className="p-6 bg-white border rounded-lg border-slate-200">
+                                        <div className="flex items-center gap-2 mb-6">
+                                            <Package className="w-5 h-5 text-blue-600" />
+                                            <h2 className="text-lg font-semibold text-slate-900">
+                                                4. Informações do Container
+                                            </h2>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <Input
+                                                label="Número do Container"
+                                                icon={Package}
+                                                value={data.container_number}
+                                                onChange={(e) => handleFieldChange('container_number', e.target.value)}
+                                                error={errors.container_number}
+                                                placeholder="Ex: TCLU2437301"
+                                            />
+
+                                            <Select
+                                                label="Tipo de Container *"
+                                                value={data.container_type}
+                                                onChange={(e) => handleFieldChange('container_type', e.target.value)}
+                                                onBlur={() => handleBlur('container_type')}
+                                                error={touched.container_type && (validationErrors.container_type || errors.container_type)}
+                                                required
+                                            >
+                                                <option value="">Selecione o tipo</option>
+                                                <option value="20DC">20' Dry Container</option>
+                                                <option value="40DC">40' Dry Container</option>
+                                                <option value="40HC">40' High Cube</option>
+                                                <option value="20RF">20' Reefer (Refrigerado)</option>
+                                                <option value="40RF">40' Reefer (Refrigerado)</option>
+                                                <option value="20OT">20' Open Top</option>
+                                                <option value="40OT">40' Open Top</option>
+                                            </Select>
+
+                                            <Input
+                                                label="Nome do Navio"
+                                                icon={Ship}
+                                                value={data.vessel_name}
+                                                onChange={(e) => handleFieldChange('vessel_name', e.target.value)}
+                                                error={errors.vessel_name}
+                                                placeholder="Ex: MSC MAYA"
+                                            />
+
+                                            <Input
+                                                type="date"
+                                                label={data.type === 'import' ? 'Data de Chegada (ETA)' : 'Data de Partida (ETD)'}
+                                                icon={Calendar}
+                                                value={data.arrival_date}
+                                                onChange={(e) => handleFieldChange('arrival_date', e.target.value)}
+                                                error={errors.arrival_date}
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Rota */}
+                                    <div className="p-6 bg-white border rounded-lg border-slate-200">
+                                        <div className="flex items-center gap-2 mb-6">
+                                            <MapPin className="w-5 h-5 text-blue-600" />
+                                            <h2 className="text-lg font-semibold text-slate-900">
+                                                5. Rota {data.type === 'export' ? '(Moçambique → Exterior)' : '(Exterior → Moçambique)'}
+                                            </h2>
+                                        </div>
+
+                                        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                                            <Select
+                                                label="Porto de Origem *"
+                                                value={data.origin_port}
+                                                onChange={(e) => handleFieldChange('origin_port', e.target.value)}
+                                                onBlur={() => handleBlur('origin_port')}
+                                                error={touched.origin_port && (validationErrors.origin_port || errors.origin_port)}
+                                                required
+                                            >
+                                                <option value="">Selecione o porto de origem</option>
+                                                {(data.type === 'export' ? mozambiquePorts : internationalPorts).map((port) => (
+                                                    <option key={port.value} value={port.value}>
+                                                        {port.label}
+                                                    </option>
+                                                ))}
+                                            </Select>
+
+                                            <Select
+                                                label="Porto de Destino *"
+                                                value={data.destination_port}
+                                                onChange={(e) => handleFieldChange('destination_port', e.target.value)}
+                                                onBlur={() => handleBlur('destination_port')}
+                                                error={touched.destination_port && (validationErrors.destination_port || errors.destination_port)}
+                                                required
+                                            >
+                                                <option value="">Selecione o porto de destino</option>
+                                                {(data.type === 'export' ? internationalPorts : mozambiquePorts).map((port) => (
+                                                    <option key={port.value} value={port.value}>
+                                                        {port.label}
+                                                    </option>
+                                                ))}
+                                            </Select>
+                                        </div>
+
+                                        {/* Visualização da rota */}
+                                        {data.origin_port && data.destination_port && (
+                                            <div className="p-4 mt-4 border rounded-lg bg-slate-50 border-slate-200">
+                                                <div className="flex items-center justify-between text-sm">
+                                                    <div className="flex items-center gap-2">
+                                                        <MapPin className="w-4 h-4 text-blue-600" />
+                                                        <span className="font-semibold">{data.origin_port}</span>
+                                                    </div>
+                                                    <div className="flex-1 mx-4 border-t-2 border-dashed border-slate-300"></div>
+                                                    <Ship className="w-5 h-5 text-slate-400" />
+                                                    <div className="flex-1 mx-4 border-t-2 border-dashed border-slate-300"></div>
+                                                    <div className="flex items-center gap-2">
+                                                        <MapPin className="w-4 h-4 text-emerald-600" />
+                                                        <span className="font-semibold">{data.destination_port}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        )}
+                                    </div>
                                 </>
                             )}
 
-                            <div className="flex justify-between">
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(3)}
-                                    className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
-                                >
-                                    Voltar
-                                </button>
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(5)}
-                                    disabled={!canProceedToStep5()}
-                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    Próximo
-                                    <ChevronRight className="w-4 h-4" />
-                                </button>
-                            </div>
-                        </div>
-                    )}
-
-                    {/* STEP 5: CARGA */}
-                    {step === 5 && (
-                        <div className="space-y-6">
+                            {/* SEÇÃO 4: CARGA (COMUM A TODOS) */}
                             <div className="p-6 bg-white border rounded-lg border-slate-200">
                                 <div className="flex items-center gap-2 mb-6">
-                                    <TrendingUp className="w-5 h-5 text-slate-600" />
+                                    <TrendingUp className="w-5 h-5 text-blue-600" />
                                     <h2 className="text-lg font-semibold text-slate-900">
-                                        Descrição da Carga
+                                        {data.type === 'transport' ? '4' : '6'}. Descrição da Carga
                                     </h2>
                                 </div>
 
@@ -981,14 +860,17 @@ export default function Create() {
                                         </label>
                                         <textarea
                                             value={data.cargo_description}
-                                            onChange={(e) => setData('cargo_description', e.target.value)}
+                                            onChange={(e) => handleFieldChange('cargo_description', e.target.value)}
+                                            onBlur={() => handleBlur('cargo_description')}
                                             rows="4"
-                                            className="w-full px-3 py-2 text-sm border rounded-lg border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent"
+                                            className={`w-full px-3 py-2 text-sm border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-600 focus:border-transparent
+                                                ${touched.cargo_description && validationErrors.cargo_description ? 'border-red-500' : 'border-slate-300'}
+                                            `}
                                             placeholder="Descreva o conteúdo da carga..."
                                             required
                                         />
-                                        {errors.cargo_description && (
-                                            <p className="mt-1 text-xs text-red-600">{errors.cargo_description}</p>
+                                        {touched.cargo_description && validationErrors.cargo_description && (
+                                            <p className="mt-1 text-xs text-red-600">{validationErrors.cargo_description}</p>
                                         )}
                                     </div>
 
@@ -997,7 +879,7 @@ export default function Create() {
                                             label="Peso Aproximado (kg)"
                                             type="number"
                                             value={data.cargo_weight}
-                                            onChange={(e) => setData('cargo_weight', e.target.value)}
+                                            onChange={(e) => handleFieldChange('cargo_weight', e.target.value)}
                                             error={errors.cargo_weight}
                                             placeholder="Ex: 15000"
                                         />
@@ -1006,7 +888,7 @@ export default function Create() {
                                             label="Valor da Carga (USD)"
                                             type="number"
                                             value={data.cargo_value}
-                                            onChange={(e) => setData('cargo_value', e.target.value)}
+                                            onChange={(e) => handleFieldChange('cargo_value', e.target.value)}
                                             error={errors.cargo_value}
                                             placeholder="Ex: 50000"
                                         />
@@ -1014,23 +896,22 @@ export default function Create() {
                                 </div>
                             </div>
 
-                            {/* Parâmetros de Cotação - Apenas para tipos não-Transport */}
+                            {/* SEÇÃO 5: PARÂMETROS DE COTAÇÃO (Apenas não-transport) */}
                             {data.type !== 'transport' && (
                                 <div className="p-6 bg-white border rounded-lg border-slate-200">
                                     <div className="flex items-center gap-2 mb-6">
-                                        <FileText className="w-5 h-5 text-slate-600" />
+                                        <FileText className="w-5 h-5 text-blue-600" />
                                         <h2 className="text-lg font-semibold text-slate-900">
-                                            Parâmetros de Cotação
+                                            7. Parâmetros de Cotação (Opcional)
                                         </h2>
                                     </div>
 
                                     <div className="space-y-4">
                                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-                                            {/* Tipo de Mercadoria */}
                                             <Select
                                                 label="Tipo de Mercadoria"
                                                 value={data.cargo_type}
-                                                onChange={(e) => setData('cargo_type', e.target.value)}
+                                                onChange={(e) => handleFieldChange('cargo_type', e.target.value)}
                                                 error={errors.cargo_type}
                                             >
                                                 <option value="">{loadingParams ? 'Carregando...' : 'Selecione (opcional)'}</option>
@@ -1041,11 +922,10 @@ export default function Create() {
                                                 ))}
                                             </Select>
 
-                                            {/* Regime */}
                                             <Select
                                                 label="Regime"
                                                 value={data.regime}
-                                                onChange={(e) => setData('regime', e.target.value)}
+                                                onChange={(e) => handleFieldChange('regime', e.target.value)}
                                                 error={errors.regime}
                                             >
                                                 <option value="">{loadingParams ? 'Carregando...' : 'Selecione (opcional)'}</option>
@@ -1057,11 +937,10 @@ export default function Create() {
                                             </Select>
                                         </div>
 
-                                        {/* Destino Final */}
                                         <Select
                                             label="Destino Final"
                                             value={data.final_destination}
-                                            onChange={(e) => setData('final_destination', e.target.value)}
+                                            onChange={(e) => handleFieldChange('final_destination', e.target.value)}
                                             error={errors.final_destination}
                                         >
                                             <option value="">{loadingParams ? 'Carregando...' : 'Selecione (opcional)'}</option>
@@ -1082,7 +961,7 @@ export default function Create() {
                                                     {pricingParams.additional_service.filter(p => p.active).map((service) => (
                                                         <label
                                                             key={service.code}
-                                                            className="flex items-start gap-3 p-3 border rounded-lg cursor-pointer border-slate-200 hover:bg-slate-50 transition-colors"
+                                                            className="flex items-start gap-3 p-3 transition-colors border rounded-lg cursor-pointer border-slate-200 hover:bg-slate-50"
                                                         >
                                                             <input
                                                                 type="checkbox"
@@ -1095,14 +974,14 @@ export default function Create() {
                                                                     setSelectedServices(newServices);
                                                                     setData('additional_services', newServices);
                                                                 }}
-                                                                className="mt-1 w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-600"
+                                                                className="w-4 h-4 mt-1 text-blue-600 rounded border-slate-300 focus:ring-blue-600"
                                                             />
                                                             <div className="flex-1">
                                                                 <p className="text-sm font-medium text-slate-900">{service.name}</p>
                                                                 {service.description && (
                                                                     <p className="text-xs text-slate-500 mt-0.5">{service.description}</p>
                                                                 )}
-                                                                <p className="text-sm font-semibold text-blue-600 mt-1">
+                                                                <p className="mt-1 text-sm font-semibold text-blue-600">
                                                                     {service.formatted_price}
                                                                 </p>
                                                             </div>
@@ -1129,54 +1008,26 @@ export default function Create() {
                                     }}
                                 />
                             )}
+                        </>
+                    )}
 
-                            {/* Resumo Final */}
-                            <div className="p-6 bg-gradient-to-r from-blue-50 to-emerald-50 border border-blue-200 rounded-lg">
-                                <h3 className="text-lg font-bold text-slate-900 mb-4">📋 Resumo do Processo</h3>
-                                <div className="grid grid-cols-2 gap-4 text-sm">
-                                    <div>
-                                        <p className="text-slate-600">Tipo:</p>
-                                        <p className="font-semibold text-slate-900">
-                                            {data.type === 'export' ? '🚢 Exportação' : data.type === 'transit' ? '🔄 Trânsito' : '📦 Importação'}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-600">Rota:</p>
-                                        <p className="font-semibold text-slate-900">
-                                            {data.origin_port} → {data.destination_port}
-                                        </p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-600">Container:</p>
-                                        <p className="font-semibold text-slate-900">{data.container_type || 'N/A'}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-slate-600">Linha:</p>
-                                        <p className="font-semibold text-slate-900">
-                                            {shippingLines?.find(l => l.id == data.shipping_line_id)?.name || 'N/A'}
-                                        </p>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Actions */}
-                            <div className="flex items-center justify-between p-6 bg-white border rounded-lg border-slate-200">
-                                <button
-                                    type="button"
-                                    onClick={() => setStep(4)}
-                                    className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
-                                >
-                                    Voltar
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-gradient-to-r from-blue-600 to-emerald-600 rounded-lg hover:from-blue-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                    <Save className="w-4 h-4" />
-                                    {processing ? 'Criando Processo...' : 'Criar Processo'}
-                                </button>
-                            </div>
+                    {/* Botão de Submissão */}
+                    {data.type && (
+                        <div className="flex items-center justify-between p-6 bg-white border rounded-lg border-slate-200">
+                            <Link
+                                href="/shipments"
+                                className="px-6 py-2.5 text-sm font-medium text-slate-700 transition-colors bg-white border rounded-lg border-slate-300 hover:bg-slate-50"
+                            >
+                                Cancelar
+                            </Link>
+                            <button
+                                type="submit"
+                                disabled={processing || !isFormValid() || Object.keys(validationErrors).length > 0}
+                                className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-gradient-to-r from-blue-600 to-emerald-600 rounded-lg hover:from-blue-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                            >
+                                <Save className="w-4 h-4" />
+                                {processing ? 'Criando Processo...' : 'Criar Processo'}
+                            </button>
                         </div>
                     )}
                 </form>
