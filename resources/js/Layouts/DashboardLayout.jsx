@@ -30,7 +30,11 @@ import {
     TrendingUp,
     Clock,
     Building2,
-    Truck
+    Truck,
+    Receipt,
+    FileCheck,
+    FileDown,
+    FileUp
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
@@ -166,18 +170,44 @@ export default function DashboardLayout({ children }) {
             ]
         },
         {
-            name: 'Facturas',
-            icon: DollarSign,
-            href: '/invoices',
+            name: 'Faturação',
+            icon: Receipt,
             roles: ['admin', 'manager', 'finance'],
             badge: stats?.pendingInvoices || null,
-        },
-        {
-            name: 'Cotações',
-            icon: FileText,
-            href: '/quotes',
-            roles: ['admin', 'manager', 'finance'],
-            badge: null
+            badgeColor: 'orange',
+            submenu: [
+                {
+                    name: 'Faturas',
+                    href: '/invoices',
+                    icon: FileText,
+                    roles: ['admin', 'manager', 'finance'],
+                    badge: stats?.pendingInvoices || null,
+                },
+                {
+                    name: 'Cotações',
+                    href: '/quotes',
+                    icon: FileCheck,
+                    roles: ['admin', 'manager', 'finance'],
+                },
+                {
+                    name: 'Recibos',
+                    href: '/receipts',
+                    icon: Receipt,
+                    roles: ['admin', 'manager', 'finance'],
+                },
+                {
+                    name: 'Notas de Crédito',
+                    href: '/credit-notes',
+                    icon: FileDown,
+                    roles: ['admin', 'manager', 'finance'],
+                },
+                {
+                    name: 'Notas de Débito',
+                    href: '/debit-notes',
+                    icon: FileUp,
+                    roles: ['admin', 'manager', 'finance'],
+                },
+            ]
         },
         {
             name: 'Serviços',

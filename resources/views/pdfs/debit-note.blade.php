@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <title>Nota de Débito {{ $debitNote->debit_note_number }}</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.6;
+            color: #333;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        /* Header */
+        .header {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+            border-bottom: 3px solid #f97316;
+            padding-bottom: 20px;
+        }
+
+        .header-left {
+            display: table-cell;
+            width: 60%;
+            vertical-align: top;
+        }
+
+        .header-right {
+            display: table-cell;
+            width: 40%;
+            text-align: right;
+            vertical-align: top;
+        }
+
+        .company-name {
+            font-size: 24px;
+            font-weight: bold;
+            color: #f97316;
+            margin-bottom: 5px;
+        }
+
+        .company-details {
+            font-size: 10px;
+            color: #666;
+            line-height: 1.4;
+        }
+
+        .doc-title {
+            font-size: 28px;
+            font-weight: bold;
+            color: #1e293b;
+            margin-bottom: 10px;
+        }
+
+        .doc-number {
+            font-size: 14px;
+            color: #666;
+        }
+
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 15px;
+            font-size: 10px;
+            font-weight: bold;
+            margin-top: 5px;
+        }
+
+        .status-issued {
+            background: #dbeafe;
+            color: #1e40af;
+        }
+
+        .status-applied {
+            background: #d1fae5;
+            color: #065f46;
+        }
+
+        /* Info Section */
+        .info-section {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .info-left, .info-right {
+            display: table-cell;
+            width: 48%;
+            vertical-align: top;
+        }
+
+        .info-right {
+            padding-left: 4%;
+        }
+
+        .info-box {
+            background: #fff7ed;
+            border: 1px solid #fed7aa;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .info-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #ea580c;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+        }
+
+        .info-row {
+            margin-bottom: 8px;
+        }
+
+        .info-label {
+            font-size: 10px;
+            color: #666;
+            display: inline-block;
+            width: 100px;
+        }
+
+        .info-value {
+            font-size: 11px;
+            font-weight: 600;
+            color: #333;
+        }
+
+        /* Invoice Reference */
+        .invoice-ref {
+            background: #eff6ff;
+            border-left: 4px solid #2563eb;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+
+        .invoice-ref-title {
+            font-size: 11px;
+            color: #64748b;
+            margin-bottom: 5px;
+        }
+
+        .invoice-ref-value {
+            font-size: 14px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+
+        /* Items Table */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .items-table thead {
+            background: #f97316;
+            color: white;
+        }
+
+        .items-table th {
+            padding: 12px 8px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: bold;
+        }
+
+        .items-table th.text-right {
+            text-align: right;
+        }
+
+        .items-table td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e5e7eb;
+            font-size: 11px;
+        }
+
+        .items-table td.text-right {
+            text-align: right;
+        }
+
+        .items-table tbody tr:hover {
+            background: #fff7ed;
+        }
+
+        /* Totals */
+        .totals-section {
+            float: right;
+            width: 300px;
+            margin-top: 20px;
+        }
+
+        .totals-row {
+            display: table;
+            width: 100%;
+            padding: 8px 0;
+        }
+
+        .totals-label {
+            display: table-cell;
+            text-align: left;
+            font-size: 12px;
+            color: #666;
+        }
+
+        .totals-value {
+            display: table-cell;
+            text-align: right;
+            font-size: 12px;
+            font-weight: 600;
+        }
+
+        .totals-final {
+            border-top: 2px solid #f97316;
+            padding-top: 12px;
+            margin-top: 8px;
+        }
+
+        .totals-final .totals-label {
+            font-size: 14px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .totals-final .totals-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #f97316;
+        }
+
+        .clear {
+            clear: both;
+        }
+
+        /* Notes */
+        .notes-section {
+            background: #fef3c7;
+            border: 1px solid #fde68a;
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 30px;
+        }
+
+        .notes-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #d97706;
+            margin-bottom: 10px;
+        }
+
+        .notes-text {
+            font-size: 11px;
+            color: #92400e;
+            line-height: 1.6;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 50px;
+            padding-top: 20px;
+            border-top: 2px solid #e5e7eb;
+            text-align: center;
+        }
+
+        .footer-text {
+            font-size: 10px;
+            color: #9ca3af;
+            line-height: 1.4;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Header -->
+        <div class="header">
+            <div class="header-left">
+                <div class="company-name">LogisticaPro</div>
+                <div class="company-details">
+                    Rua Exemplo, 123, Maputo - Moçambique<br>
+                    Tel: +258 XX XXX XXXX | Email: info@logisticapro.co.mz<br>
+                    NUIT: XXXXXXXXXX
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="doc-title">NOTA DE DÉBITO</div>
+                <div class="doc-number">{{ $debitNote->debit_note_number }}</div>
+                <div class="status-badge status-{{ $debitNote->status }}">
+                    {{ strtoupper($debitNote->status) }}
+                </div>
+            </div>
+        </div>
+
+        <!-- Client & Document Info -->
+        <div class="info-section">
+            <div class="info-left">
+                <div class="info-box">
+                    <div class="info-title">Cliente</div>
+                    <div class="info-row">
+                        <span class="info-label">Nome:</span>
+                        <span class="info-value">{{ $debitNote->client->name }}</span>
+                    </div>
+                    @if($debitNote->client->email)
+                    <div class="info-row">
+                        <span class="info-label">Email:</span>
+                        <span class="info-value">{{ $debitNote->client->email }}</span>
+                    </div>
+                    @endif
+                    @if($debitNote->client->phone)
+                    <div class="info-row">
+                        <span class="info-label">Telefone:</span>
+                        <span class="info-value">{{ $debitNote->client->phone }}</span>
+                    </div>
+                    @endif
+                </div>
+            </div>
+            <div class="info-right">
+                <div class="info-box">
+                    <div class="info-title">Informações do Documento</div>
+                    <div class="info-row">
+                        <span class="info-label">Data Emissão:</span>
+                        <span class="info-value">{{ \Carbon\Carbon::parse($debitNote->issue_date)->format('d/m/Y') }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Motivo:</span>
+                        <span class="info-value">{{ $debitNote->reason_label }}</span>
+                    </div>
+                    <div class="info-row">
+                        <span class="info-label">Moeda:</span>
+                        <span class="info-value">{{ $debitNote->currency }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Invoice Reference -->
+        <div class="invoice-ref">
+            <div class="invoice-ref-title">Referente à Fatura:</div>
+            <div class="invoice-ref-value">{{ $debitNote->invoice->invoice_number }}</div>
+        </div>
+
+        <!-- Items Table -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 45%">Descrição</th>
+                    <th style="width: 10%;" class="text-right">Qtd</th>
+                    <th style="width: 15%;" class="text-right">Preço Unit.</th>
+                    <th style="width: 10%;" class="text-right">IVA %</th>
+                    <th style="width: 20%;" class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($debitNote->items as $item)
+                <tr>
+                    <td>{{ $item->description }}</td>
+                    <td class="text-right">{{ number_format($item->quantity, 2, ',', '.') }}</td>
+                    <td class="text-right">{{ number_format($item->unit_price, 2, ',', '.') }}</td>
+                    <td class="text-right">{{ number_format($item->tax_rate, 0) }}%</td>
+                    <td class="text-right">{{ number_format($item->total, 2, ',', '.') }}</td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <!-- Totals -->
+        <div class="totals-section">
+            <div class="totals-row">
+                <div class="totals-label">Subtotal:</div>
+                <div class="totals-value">{{ number_format($debitNote->subtotal, 2, ',', '.') }} {{ $debitNote->currency }}</div>
+            </div>
+            <div class="totals-row">
+                <div class="totals-label">IVA:</div>
+                <div class="totals-value">{{ number_format($debitNote->tax_amount, 2, ',', '.') }} {{ $debitNote->currency }}</div>
+            </div>
+            <div class="totals-row totals-final">
+                <div class="totals-label">Total:</div>
+                <div class="totals-value">{{ number_format($debitNote->total, 2, ',', '.') }} {{ $debitNote->currency }}</div>
+            </div>
+        </div>
+        <div class="clear"></div>
+
+        <!-- Notes -->
+        @if($debitNote->notes || $debitNote->reason_description)
+        <div class="notes-section">
+            <div class="notes-title">Observações:</div>
+            <div class="notes-text">
+                @if($debitNote->reason_description)
+                <strong>Motivo:</strong> {{ $debitNote->reason_description }}<br><br>
+                @endif
+                @if($debitNote->notes)
+                {{ $debitNote->notes }}
+                @endif
+            </div>
+        </div>
+        @endif
+
+        <!-- Footer -->
+        <div class="footer">
+            <div class="footer-text">
+                Este documento é uma nota de crédito oficial.<br>
+                Emitido eletronicamente por LogisticaPro - Sistema de Gestão Logística<br>
+                Data de emissão: {{ \Carbon\Carbon::now()->format('d/m/Y H:i:s') }}
+            </div>
+        </div>
+    </div>
+</body>
+</html>
