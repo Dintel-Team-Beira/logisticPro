@@ -821,6 +821,60 @@ Route::middleware(['auth'])->prefix('quotes')->name('quotes.')->group(function (
 });
 
 // ============================================================================
+// RECIBOS - Comprovantes de Pagamento
+// ============================================================================
+Route::middleware(['auth'])->prefix('receipts')->name('receipts.')->group(function () {
+    Route::get('/', [App\Http\Controllers\ReceiptController::class, 'index'])->name('index');
+    Route::get('/create', [App\Http\Controllers\ReceiptController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\ReceiptController::class, 'store'])->name('store');
+    Route::get('/{receipt}', [App\Http\Controllers\ReceiptController::class, 'show'])->name('show');
+    Route::delete('/{receipt}', [App\Http\Controllers\ReceiptController::class, 'destroy'])->name('destroy');
+    Route::get('/{receipt}/pdf', [App\Http\Controllers\ReceiptController::class, 'exportPdf'])->name('pdf');
+});
+
+// ============================================================================
+// NOTAS DE CRÉDITO - Devoluções e Correções
+// ============================================================================
+Route::middleware(['auth'])->prefix('credit-notes')->name('credit-notes.')->group(function () {
+    Route::get('/', [App\Http\Controllers\CreditNoteController::class, 'index'])->name('index');
+    Route::get('/create', [App\Http\Controllers\CreditNoteController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\CreditNoteController::class, 'store'])->name('store');
+    Route::get('/{creditNote}', [App\Http\Controllers\CreditNoteController::class, 'show'])->name('show');
+    Route::get('/{creditNote}/edit', [App\Http\Controllers\CreditNoteController::class, 'edit'])->name('edit');
+    Route::put('/{creditNote}', [App\Http\Controllers\CreditNoteController::class, 'update'])->name('update');
+    Route::delete('/{creditNote}', [App\Http\Controllers\CreditNoteController::class, 'destroy'])->name('destroy');
+
+    // Ações especiais
+    Route::post('/{creditNote}/status', [App\Http\Controllers\CreditNoteController::class, 'updateStatus'])->name('update-status');
+    Route::get('/{creditNote}/pdf', [App\Http\Controllers\CreditNoteController::class, 'exportPdf'])->name('pdf');
+});
+
+// ============================================================================
+// NOTAS DE DÉBITO - Cobranças Adicionais
+// ============================================================================
+Route::middleware(['auth'])->prefix('debit-notes')->name('debit-notes.')->group(function () {
+    Route::get('/', [App\Http\Controllers\DebitNoteController::class, 'index'])->name('index');
+    Route::get('/create', [App\Http\Controllers\DebitNoteController::class, 'create'])->name('create');
+    Route::post('/', [App\Http\Controllers\DebitNoteController::class, 'store'])->name('store');
+    Route::get('/{debitNote}', [App\Http\Controllers\DebitNoteController::class, 'show'])->name('show');
+    Route::get('/{debitNote}/edit', [App\Http\Controllers\DebitNoteController::class, 'edit'])->name('edit');
+    Route::put('/{debitNote}', [App\Http\Controllers\DebitNoteController::class, 'update'])->name('update');
+    Route::delete('/{debitNote}', [App\Http\Controllers\DebitNoteController::class, 'destroy'])->name('destroy');
+
+    // Ações especiais
+    Route::post('/{debitNote}/status', [App\Http\Controllers\DebitNoteController::class, 'updateStatus'])->name('update-status');
+    Route::get('/{debitNote}/pdf', [App\Http\Controllers\DebitNoteController::class, 'exportPdf'])->name('pdf');
+});
+
+// ============================================================================
+// EXTRATOS - Extrato de Conta do Cliente
+// ============================================================================
+Route::middleware(['auth'])->prefix('statements')->name('statements.')->group(function () {
+    Route::get('/client/{client}', [App\Http\Controllers\StatementController::class, 'show'])->name('show');
+    Route::get('/client/{client}/pdf', [App\Http\Controllers\StatementController::class, 'exportPdf'])->name('pdf');
+});
+
+// ============================================================================
 // CATÁLOGO DE SERVIÇOS - Gestão de Serviços para Cotações
 // ============================================================================
 Route::middleware(['auth'])->prefix('services')->name('services.')->group(function () {

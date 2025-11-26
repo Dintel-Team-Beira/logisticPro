@@ -86,6 +86,21 @@ class Invoice extends Model
         return $this->belongsTo(User::class, 'created_by');
     }
 
+    public function receipts()
+    {
+        return $this->hasMany(Receipt::class);
+    }
+
+    public function creditNotes()
+    {
+        return $this->hasMany(CreditNote::class);
+    }
+
+    public function debitNotes()
+    {
+        return $this->hasMany(DebitNote::class);
+    }
+
     // ========================================
     // SCOPES
     // ========================================
