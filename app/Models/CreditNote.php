@@ -27,12 +27,52 @@ class CreditNote extends Model
     ];
 
     protected $casts = [
+    
+    protected $appends = [
+        'reason_label',
+        'status_badge',
+    ];
         'issue_date' => 'date',
+    
+    protected $appends = [
+        'reason_label',
+        'status_badge',
+    ];
         'subtotal' => 'decimal:2',
+    
+    protected $appends = [
+        'reason_label',
+        'status_badge',
+    ];
         'tax_amount' => 'decimal:2',
+    
+    protected $appends = [
+        'reason_label',
+        'status_badge',
+    ];
         'total' => 'decimal:2',
+    
+    protected $appends = [
+        'reason_label',
+        'status_badge',
+    ];
         'created_at' => 'datetime',
+    
+    protected $appends = [
+        'reason_label',
+        'status_badge',
+    ];
         'updated_at' => 'datetime',
+    
+    protected $appends = [
+        'reason_label',
+        'status_badge',
+    ];
+    ];
+    
+    protected $appends = [
+        'reason_label',
+        'status_badge',
     ];
 
     /**

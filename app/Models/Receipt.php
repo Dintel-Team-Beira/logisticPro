@@ -30,6 +30,10 @@ class Receipt extends Model
         'updated_at' => 'datetime',
     ];
 
+    protected $appends = [
+        'payment_method_label',
+    ];
+
     /**
      * Gera número sequencial de recibo
      */

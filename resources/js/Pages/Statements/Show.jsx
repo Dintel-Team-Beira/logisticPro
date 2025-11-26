@@ -27,15 +27,16 @@ export default function Show({ client, transactions, summary, startDate, endDate
 
     const getTransactionBadge = (type) => {
         const badges = {
-            invoice: { label: 'Fatura', color: 'bg-blue-100 text-blue-700' },
-            receipt: { label: 'Recibo', color: 'bg-green-100 text-green-700' },
-            credit_note: { label: 'Nota Crédito', color: 'bg-purple-100 text-purple-700' },
-            debit_note: { label: 'Nota Débito', color: 'bg-orange-100 text-orange-700' },
+            invoice: { label: 'Fatura', color: 'bg-blue-100 text-blue-700', Icon: FileText },
+            receipt: { label: 'Recibo', color: 'bg-green-100 text-green-700', Icon: Receipt },
+            credit_note: { label: 'Nota Crédito', color: 'bg-purple-100 text-purple-700', Icon: FileDown },
+            debit_note: { label: 'Nota Débito', color: 'bg-orange-100 text-orange-700', Icon: FileUp },
         };
         const config = badges[type] || badges.invoice;
+        const Icon = config.Icon;
         return (
             <span className={`inline-flex items-center gap-1 px-2 py-1 text-xs font-medium rounded ${config.color}`}>
-                {React.createElement(getTransactionIcon(type), { className: 'w-3 h-3' })}
+                <Icon className="w-3 h-3" />
                 {config.label}
             </span>
         );

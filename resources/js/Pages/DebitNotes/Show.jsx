@@ -350,7 +350,7 @@ export default function Show({ debitNote }) {
                             <div className="space-y-3 text-sm">
                                 <div>
                                     <div className="text-xs font-medium text-slate-500">Criado por</div>
-                                    <div className="mt-1 text-slate-700">{debitNote.created_by_user?.name || 'Sistema'}</div>
+                                    <div className="mt-1 text-slate-700">{debitNote.created_by?.name || 'Sistema'}</div>
                                 </div>
                                 <div>
                                     <div className="text-xs font-medium text-slate-500">Data de Criação</div>

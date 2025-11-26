@@ -244,7 +244,7 @@ export default function Show({ receipt }) {
                             <div className="space-y-3 text-sm">
                                 <div>
                                     <div className="text-xs font-medium text-slate-500">Criado por</div>
-                                    <div className="mt-1 text-slate-700">{receipt.created_by_user?.name || 'Sistema'}</div>
+                                    <div className="mt-1 text-slate-700">{receipt.created_by?.name || 'Sistema'}</div>
                                 </div>
                                 <div>
                                     <div className="text-xs font-medium text-slate-500">Data de Criação</div>
