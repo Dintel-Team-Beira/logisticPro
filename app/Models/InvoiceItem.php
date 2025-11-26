@@ -81,7 +81,7 @@ class InvoiceItem extends Model
      */
     public static function createFromQuoteItem(QuoteItem $quoteItem): self
     {
-        return static::create([
+        return new static([
             'service_id' => $quoteItem->service_id,
             'service_code' => $quoteItem->service_code,
             'service_name' => $quoteItem->service_name,
