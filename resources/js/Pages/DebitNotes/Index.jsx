@@ -4,7 +4,15 @@ import { FileUp, Plus, Search, Download, Eye, Trash2, Edit } from 'lucide-react'
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 
-export default function Index({ debitNotes, stats, filters }) {
+export default function Index({ debitNotes = { data: [] }, stats = {}, filters = {} }) {
+    // Garantir valores padrão para stats
+    const safeStats = {
+        total: stats?.total || 0,
+        draft: stats?.draft || 0,
+        issued: stats?.issued || 0,
+        total_amount: stats?.total_amount || 0
+    };
+
     const [searchTerm, setSearchTerm] = useState('');
     const [filterStatus, setFilterStatus] = useState(filters?.status || '');
 
@@ -85,7 +93,7 @@ export default function Index({ debitNotes, stats, filters }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-slate-600">Total</p>
-                                <p className="mt-2 text-3xl font-semibold text-slate-900">{stats.total}</p>
+                                <p className="mt-2 text-3xl font-semibold text-slate-900">{safeStats.total}</p>
                             </div>
                             <FileUp className="w-12 h-12 text-orange-500" />
                         </div>
@@ -100,7 +108,7 @@ export default function Index({ debitNotes, stats, filters }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-slate-600">Rascunho</p>
-                                <p className="mt-2 text-3xl font-semibold text-slate-900">{stats.draft}</p>
+                                <p className="mt-2 text-3xl font-semibold text-slate-900">{safeStats.draft}</p>
                             </div>
                             <FileUp className="w-12 h-12 text-gray-500" />
                         </div>
@@ -115,7 +123,7 @@ export default function Index({ debitNotes, stats, filters }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-slate-600">Emitidas</p>
-                                <p className="mt-2 text-3xl font-semibold text-slate-900">{stats.issued}</p>
+                                <p className="mt-2 text-3xl font-semibold text-slate-900">{safeStats.issued}</p>
                             </div>
                             <FileUp className="w-12 h-12 text-orange-500" />
                         </div>
@@ -131,7 +139,7 @@ export default function Index({ debitNotes, stats, filters }) {
                             <div>
                                 <p className="text-sm font-medium text-slate-600">Total Valor</p>
                                 <p className="mt-2 text-2xl font-semibold text-slate-900">
-                                    {Number(stats.total_amount).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} MZN
+                                    {Number(safeStats.total_amount).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} MZN
                                 </p>
                             </div>
                         </div>

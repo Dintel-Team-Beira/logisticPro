@@ -4,7 +4,15 @@ import { Receipt, Plus, Search, Download, Eye, Trash2, Filter } from 'lucide-rea
 import { motion } from 'framer-motion';
 import { useState } from 'react';
 
-export default function Index({ receipts, stats, filters }) {
+export default function Index({ receipts = { data: [] }, stats = {}, filters = {} }) {
+    // Garantir valores padrão para stats
+    const safeStats = {
+        total: stats?.total || 0,
+        this_month: stats?.this_month || 0,
+        total_amount: stats?.total_amount || 0,
+        by_method: stats?.by_method || []
+    };
+
     const [searchTerm, setSearchTerm] = useState('');
     const [filterClient, setFilterClient] = useState(filters?.client_id || '');
     const [filterMethod, setFilterMethod] = useState(filters?.payment_method || '');
@@ -79,7 +87,7 @@ export default function Index({ receipts, stats, filters }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-slate-600">Total de Recibos</p>
-                                <p className="mt-2 text-3xl font-semibold text-slate-900">{stats.total}</p>
+                                <p className="mt-2 text-3xl font-semibold text-slate-900">{safeStats.total}</p>
                             </div>
                             <Receipt className="w-12 h-12 text-blue-500" />
                         </div>
@@ -94,7 +102,7 @@ export default function Index({ receipts, stats, filters }) {
                         <div className="flex items-center justify-between">
                             <div>
                                 <p className="text-sm font-medium text-slate-600">Este Mês</p>
-                                <p className="mt-2 text-3xl font-semibold text-slate-900">{stats.this_month}</p>
+                                <p className="mt-2 text-3xl font-semibold text-slate-900">{safeStats.this_month}</p>
                             </div>
                             <Receipt className="w-12 h-12 text-green-500" />
                         </div>
@@ -110,7 +118,7 @@ export default function Index({ receipts, stats, filters }) {
                             <div>
                                 <p className="text-sm font-medium text-slate-600">Total Recebido (Mês)</p>
                                 <p className="mt-2 text-2xl font-semibold text-slate-900">
-                                    {Number(stats.total_amount).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} MZN
+                                    {Number(safeStats.total_amount).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} MZN
                                 </p>
                             </div>
                         </div>
@@ -125,7 +133,7 @@ export default function Index({ receipts, stats, filters }) {
                         <div>
                             <p className="text-sm font-medium text-slate-600 mb-2">Por Método</p>
                             <div className="space-y-1">
-                                {stats.by_method?.slice(0, 3).map((method, idx) => (
+                                {safeStats.by_method?.slice(0, 3).map((method, idx) => (
                                     <div key={idx} className="flex justify-between text-xs">
                                         <span className="text-slate-600">{method.payment_method}</span>
                                         <span className="font-medium text-slate-900">{method.count}</span>
