@@ -132,7 +132,7 @@ class Quote extends Model
      */
     public function canConvertToInvoice(): bool
     {
-        return $this->status === 'accepted' &&
+        return in_array($this->status, ['draft', 'sent', 'viewed', 'accepted']) &&
                !$this->invoice_id &&
                !$this->isExpired();
     }

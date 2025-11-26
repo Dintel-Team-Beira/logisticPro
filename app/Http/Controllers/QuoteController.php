@@ -295,6 +295,7 @@ class QuoteController extends Controller
                 'client_id' => $quote->client_id,
                 'shipment_id' => $quote->shipment_id,
                 'type' => 'client_invoice',
+                'issuer' => 'Logistica Pro',
                 'description' => $quote->description,
                 'subtotal' => $quote->subtotal,
                 'discount_percentage' => $quote->discount_percentage,

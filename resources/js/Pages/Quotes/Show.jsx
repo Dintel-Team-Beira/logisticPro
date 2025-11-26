@@ -128,8 +128,8 @@ export default function Show({ quote }) {
                             </Link>
                         )}
 
-                        {/* Botão Aceitar (quando enviada) */}
-                        {['sent', 'viewed'].includes(quote.status) && !isExpired && (
+                        {/* Botão Aceitar (antes de enviar email) */}
+                        {['draft', 'sent', 'viewed'].includes(quote.status) && !isExpired && (
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
@@ -141,8 +141,8 @@ export default function Show({ quote }) {
                             </motion.button>
                         )}
 
-                        {/* Botão Rejeitar (quando enviada) */}
-                        {['sent', 'viewed'].includes(quote.status) && !isExpired && (
+                        {/* Botão Rejeitar (antes de enviar email) */}
+                        {['draft', 'sent', 'viewed'].includes(quote.status) && !isExpired && (
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}
@@ -154,8 +154,8 @@ export default function Show({ quote }) {
                             </motion.button>
                         )}
 
-                        {/* Botão Converter em Fatura (quando aceita) */}
-                        {canConvert && (
+                        {/* Botão Converter em Fatura (antes de enviar email) */}
+                        {!quote.invoice_id && ['draft', 'sent', 'viewed', 'accepted'].includes(quote.status) && !isExpired && (
                             <motion.button
                                 whileHover={{ scale: 1.02 }}
                                 whileTap={{ scale: 0.98 }}

@@ -3,275 +3,485 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $quote->quote_number }}</title>
+    <title>Cotação {{ $quote->quote_number }}</title>
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
         }
+
         body {
-            font-family: 'DejaVu Sans', Arial, sans-serif;
-            font-size: 11pt;
-            line-height: 1.5;
+            font-family: 'Arial', sans-serif;
+            font-size: 12px;
+            line-height: 1.6;
             color: #333;
-            padding: 20mm;
         }
+
+        .container {
+            padding: 20px;
+        }
+
+        /* Header */
         .header {
-            border-bottom: 3px solid #1e293b;
-            padding-bottom: 20px;
+            display: table;
+            width: 100%;
             margin-bottom: 30px;
+            border-bottom: 3px solid #0ea5e9;
+            padding-bottom: 20px;
         }
+
+        .header-left {
+            display: table-cell;
+            width: 60%;
+            vertical-align: top;
+        }
+
+        .header-right {
+            display: table-cell;
+            width: 40%;
+            text-align: right;
+            vertical-align: top;
+        }
+
         .company-name {
-            font-size: 24pt;
-            font-weight: bold;
-            color: #1e293b;
-        }
-        .document-title {
-            font-size: 18pt;
+            font-size: 24px;
             font-weight: bold;
             color: #0ea5e9;
-            margin-top: 5px;
+            margin-bottom: 5px;
         }
-        .info-grid {
-            display: table;
-            width: 100%;
-            margin: 20px 0;
+
+        .company-details {
+            font-size: 10px;
+            color: #666;
+            line-height: 1.4;
         }
-        .info-row {
-            display: table-row;
-        }
-        .info-label {
-            display: table-cell;
-            font-weight: bold;
-            padding: 5px 10px 5px 0;
-            width: 30%;
-        }
-        .info-value {
-            display: table-cell;
-            padding: 5px;
-        }
-        .section-title {
-            font-size: 14pt;
+
+        .quote-title {
+            font-size: 32px;
             font-weight: bold;
             color: #1e293b;
-            margin: 20px 0 10px 0;
-            padding-bottom: 5px;
-            border-bottom: 2px solid #e2e8f0;
+            margin-bottom: 10px;
         }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin: 15px 0;
+
+        .quote-number {
+            font-size: 14px;
+            color: #666;
         }
-        table thead {
-            background: #1e293b;
-            color: white;
-        }
-        table th {
-            padding: 10px;
-            text-align: left;
-            font-weight: bold;
-        }
-        table td {
-            padding: 8px 10px;
-            border-bottom: 1px solid #e2e8f0;
-        }
-        table tbody tr:nth-child(even) {
-            background: #f8fafc;
-        }
-        .text-right {
-            text-align: right;
-        }
-        .text-center {
-            text-align: center;
-        }
-        .totals {
-            width: 50%;
-            margin-left: auto;
-            margin-top: 20px;
-        }
-        .totals-row {
-            display: table;
-            width: 100%;
-            padding: 5px 0;
-        }
-        .totals-label {
-            display: table-cell;
-            text-align: right;
-            padding-right: 20px;
-        }
-        .totals-value {
-            display: table-cell;
-            text-align: right;
-            font-weight: bold;
-        }
-        .grand-total {
-            border-top: 2px solid #1e293b;
-            margin-top: 10px;
-            padding-top: 10px;
-            font-size: 14pt;
-        }
-        .notes-box {
-            background: #f8fafc;
-            padding: 15px;
-            margin: 20px 0;
-            border-left: 4px solid #0ea5e9;
-        }
-        .footer {
-            position: fixed;
-            bottom: 10mm;
-            left: 20mm;
-            right: 20mm;
-            border-top: 1px solid #e2e8f0;
-            padding-top: 10px;
-            font-size: 9pt;
-            color: #64748b;
-            text-align: center;
-        }
+
         .status-badge {
             display: inline-block;
-            padding: 5px 15px;
-            border-radius: 20px;
-            font-size: 10pt;
+            padding: 4px 12px;
+            border-radius: 4px;
+            font-size: 10px;
             font-weight: bold;
+            margin-top: 5px;
         }
+
         .status-draft {
             background: #f1f5f9;
             color: #475569;
         }
+
         .status-sent {
             background: #dbeafe;
             color: #1e40af;
         }
+
         .status-accepted {
             background: #dcfce7;
             color: #166534;
         }
-        .page-number:after {
-            content: counter(page);
+
+        .status-viewed {
+            background: #e0e7ff;
+            color: #4338ca;
+        }
+
+        /* Informações */
+        .info-section {
+            display: table;
+            width: 100%;
+            margin-bottom: 30px;
+        }
+
+        .info-left, .info-right {
+            display: table-cell;
+            width: 48%;
+            vertical-align: top;
+        }
+
+        .info-right {
+            padding-left: 4%;
+        }
+
+        .info-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .info-title {
+            font-size: 11px;
+            font-weight: bold;
+            color: #64748b;
+            text-transform: uppercase;
+            margin-bottom: 10px;
+            letter-spacing: 0.5px;
+        }
+
+        .info-content {
+            font-size: 12px;
+            line-height: 1.8;
+        }
+
+        .info-content strong {
+            color: #1e293b;
+        }
+
+        /* Description box */
+        .description-box {
+            background: #eff6ff;
+            border-left: 4px solid #0ea5e9;
+            padding: 15px;
+            margin-bottom: 30px;
+        }
+
+        .description-box h3 {
+            font-size: 13px;
+            color: #0284c7;
+            margin-bottom: 10px;
+        }
+
+        .description-box p {
+            font-size: 11px;
+            color: #1e293b;
+            line-height: 1.6;
+        }
+
+        /* Tabela de Itens */
+        .items-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 20px;
+        }
+
+        .items-table thead {
+            background: #1e293b;
+            color: white;
+        }
+
+        .items-table th {
+            padding: 12px;
+            text-align: left;
+            font-size: 11px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        .items-table tbody tr {
+            border-bottom: 1px solid #e2e8f0;
+        }
+
+        .items-table tbody tr:hover {
+            background: #f8fafc;
+        }
+
+        .items-table td {
+            padding: 10px 12px;
+            font-size: 11px;
+        }
+
+        .items-table .text-right {
+            text-align: right;
+        }
+
+        .items-table .text-center {
+            text-align: center;
+        }
+
+        .items-table td small {
+            color: #64748b;
+            display: block;
+            margin-top: 2px;
+        }
+
+        /* Totais */
+        .totals {
+            margin-top: 30px;
+            float: right;
+            width: 45%;
+        }
+
+        .totals table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .totals td {
+            padding: 8px 12px;
+            font-size: 12px;
+        }
+
+        .totals .subtotal-row {
+            border-top: 1px solid #e2e8f0;
+        }
+
+        .totals .discount-row {
+            color: #dc2626;
+            font-weight: 600;
+        }
+
+        .totals .total-row {
+            background: #0ea5e9;
+            color: white;
+            font-size: 16px;
+            font-weight: bold;
+            border-radius: 8px;
+        }
+
+        .totals .total-row td {
+            padding: 15px 12px;
+        }
+
+        /* Terms and Notes */
+        .terms-section {
+            clear: both;
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 2px solid #e2e8f0;
+        }
+
+        .terms-box {
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
+        }
+
+        .terms-box h4 {
+            font-size: 12px;
+            color: #475569;
+            margin-bottom: 8px;
+        }
+
+        .terms-box p {
+            font-size: 11px;
+            color: #64748b;
+            line-height: 1.6;
+            white-space: pre-wrap;
+        }
+
+        /* Footer */
+        .footer {
+            margin-top: 40px;
+            padding-top: 20px;
+            border-top: 1px solid #e2e8f0;
+            text-align: center;
+            font-size: 10px;
+            color: #94a3b8;
+        }
+
+        .footer strong {
+            color: #475569;
+        }
+
+        /* Validity notice */
+        .validity-notice {
+            background: #fef3c7;
+            border: 1px solid #fde047;
+            border-radius: 6px;
+            padding: 10px 15px;
+            margin: 20px 0;
+            font-size: 11px;
+            color: #854d0e;
+        }
+
+        .validity-notice strong {
+            color: #713f12;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <div class="company-name">LogisticaPro</div>
-        <div class="document-title">COTAÇÃO</div>
-        <div style="margin-top: 10px;">
-            <strong>{{ $quote->quote_number }}</strong>
-            <span class="status-badge status-{{ $quote->status }}">
-                {{ strtoupper($quote->status) }}
-            </span>
+    <div class="container">
+        <!-- HEADER -->
+        <div class="header">
+            <div class="header-left">
+                <div class="company-name">LogisticaPro</div>
+                <div class="company-details">
+                    Beira, Moçambique<br>
+                    Tel: +258 84 123 4567 | Email: info@logisticapro.co.mz<br>
+                    NUIT: 123456789
+                </div>
+            </div>
+            <div class="header-right">
+                <div class="quote-title">COTAÇÃO</div>
+                <div class="quote-number">{{ $quote->quote_number }}</div>
+                <div>
+                    <span class="status-badge status-{{ $quote->status }}">
+                        @switch($quote->status)
+                            @case('draft') RASCUNHO @break
+                            @case('sent') ENVIADA @break
+                            @case('viewed') VISUALIZADA @break
+                            @case('accepted') ACEITA @break
+                            @case('rejected') REJEITADA @break
+                            @case('expired') EXPIRADA @break
+                            @case('converted') CONVERTIDA @break
+                            @default {{ strtoupper($quote->status) }}
+                        @endswitch
+                    </span>
+                </div>
+            </div>
         </div>
-    </div>
 
-    <div class="info-grid">
-        <div class="info-row">
-            <div class="info-label">Cliente:</div>
-            <div class="info-value">{{ $quote->client->name }}</div>
+        <!-- INFORMAÇÕES -->
+        <div class="info-section">
+            <div class="info-left">
+                <div class="info-box">
+                    <div class="info-title">Cliente</div>
+                    <div class="info-content">
+                        <strong>{{ $quote->client->name }}</strong><br>
+                        @if(!empty($quote->client->address))
+                            {{ $quote->client->address }}<br>
+                        @endif
+                        @if(!empty($quote->client->phone))
+                            Tel: {{ $quote->client->phone }}<br>
+                        @endif
+                        @if(!empty($quote->client->email))
+                            Email: {{ $quote->client->email }}
+                        @endif
+                    </div>
+                </div>
+            </div>
+            <div class="info-right">
+                <div class="info-box">
+                    <div class="info-title">Detalhes da Cotação</div>
+                    <div class="info-content">
+                        <strong>Data da Cotação:</strong> {{ \Carbon\Carbon::parse($quote->quote_date)->format('d/m/Y') }}<br>
+                        <strong>Válido Até:</strong> {{ \Carbon\Carbon::parse($quote->valid_until)->format('d/m/Y') }}<br>
+                        <strong>Moeda:</strong> {{ $quote->currency }}<br>
+                        @if($quote->payment_terms)
+                            <strong>Condições de Pagamento:</strong> {{ $quote->payment_terms }}
+                        @endif
+                    </div>
+                </div>
+            </div>
         </div>
-        <div class="info-row">
-            <div class="info-label">Data da Cotação:</div>
-            <div class="info-value">{{ \Carbon\Carbon::parse($quote->quote_date)->format('d/m/Y') }}</div>
-        </div>
-        <div class="info-row">
-            <div class="info-label">Válido Até:</div>
-            <div class="info-value">{{ \Carbon\Carbon::parse($quote->valid_until)->format('d/m/Y') }}</div>
-        </div>
-        @if($quote->payment_terms)
-        <div class="info-row">
-            <div class="info-label">Condições de Pagamento:</div>
-            <div class="info-value">{{ $quote->payment_terms }}</div>
-        </div>
+
+        <!-- VALIDITY NOTICE -->
+        @php
+            $validUntil = \Carbon\Carbon::parse($quote->valid_until);
+            $now = \Carbon\Carbon::now();
+            $daysLeft = $now->diffInDays($validUntil, false);
+        @endphp
+
+        @if($daysLeft >= 0 && $daysLeft <= 7)
+            <div class="validity-notice">
+                <strong>⚠️ Atenção:</strong> Esta cotação é válida por mais {{ $daysLeft }} {{ $daysLeft === 1 ? 'dia' : 'dias' }}.
+            </div>
+        @elseif($daysLeft < 0)
+            <div class="validity-notice" style="background: #fee2e2; border-color: #fca5a5; color: #991b1b;">
+                <strong>❌ Expirada:</strong> Esta cotação expirou em {{ $validUntil->format('d/m/Y') }}.
+            </div>
         @endif
-        <div class="info-row">
-            <div class="info-label">Moeda:</div>
-            <div class="info-value">{{ $quote->currency }}</div>
-        </div>
-    </div>
 
-    <div class="section-title">{{ $quote->title }}</div>
-
-    @if($quote->description)
-    <div class="notes-box">
-        <strong>Descrição:</strong><br>
-        {{ $quote->description }}
-    </div>
-    @endif
-
-    <div class="section-title">Itens da Cotação</div>
-    <table>
-        <thead>
-            <tr>
-                <th style="width: 40%;">Serviço</th>
-                <th style="width: 10%;" class="text-center">Qtd</th>
-                <th style="width: 15%;" class="text-right">Preço Unit.</th>
-                <th style="width: 15%;" class="text-right">Subtotal</th>
-                <th style="width: 10%;" class="text-right">IVA</th>
-                <th style="width: 10%;" class="text-right">Total</th>
-            </tr>
-        </thead>
-        <tbody>
-            @foreach($quote->items as $item)
-            <tr>
-                <td>
-                    <strong>{{ $item->service_name }}</strong>
-                    @if($item->description)
-                        <br><small style="color: #64748b;">{{ $item->description }}</small>
-                    @endif
-                </td>
-                <td class="text-center">{{ number_format($item->quantity, 2) }} {{ $item->unit }}</td>
-                <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
-                <td class="text-right">{{ number_format($item->subtotal, 2) }}</td>
-                <td class="text-right">{{ number_format($item->tax_amount, 2) }}</td>
-                <td class="text-right">{{ number_format($item->total, 2) }}</td>
-            </tr>
-            @endforeach
-        </tbody>
-    </table>
-
-    <div class="totals">
-        <div class="totals-row">
-            <div class="totals-label">Subtotal:</div>
-            <div class="totals-value">{{ number_format($quote->subtotal, 2) }} {{ $quote->currency }}</div>
-        </div>
-        @if($quote->discount_amount > 0)
-        <div class="totals-row">
-            <div class="totals-label">Desconto ({{ $quote->discount_percentage }}%):</div>
-            <div class="totals-value" style="color: #dc2626;">- {{ number_format($quote->discount_amount, 2) }} {{ $quote->currency }}</div>
-        </div>
+        <!-- TÍTULO E DESCRIÇÃO -->
+        @if($quote->title)
+            <div class="description-box">
+                <h3>{{ $quote->title }}</h3>
+                @if($quote->description)
+                    <p>{{ $quote->description }}</p>
+                @endif
+            </div>
         @endif
-        <div class="totals-row">
-            <div class="totals-label">IVA Total:</div>
-            <div class="totals-value">{{ number_format($quote->tax_amount, 2) }} {{ $quote->currency }}</div>
+
+        <!-- TABELA DE ITENS -->
+        <table class="items-table">
+            <thead>
+                <tr>
+                    <th style="width: 40%;">Serviço</th>
+                    <th style="width: 10%;" class="text-center">Qtd</th>
+                    <th style="width: 15%;" class="text-right">Preço Unit.</th>
+                    <th style="width: 13%;" class="text-right">Subtotal</th>
+                    <th style="width: 10%;" class="text-right">IVA</th>
+                    <th style="width: 12%;" class="text-right">Total</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach($quote->items as $item)
+                <tr>
+                    <td>
+                        <strong>{{ $item->service_name }}</strong>
+                        @if($item->description)
+                            <small>{{ $item->description }}</small>
+                        @endif
+                    </td>
+                    <td class="text-center">{{ number_format($item->quantity, 2) }} {{ $item->unit }}</td>
+                    <td class="text-right">{{ number_format($item->unit_price, 2) }}</td>
+                    <td class="text-right">{{ number_format($item->subtotal, 2) }}</td>
+                    <td class="text-right">{{ number_format($item->tax_amount, 2) }}</td>
+                    <td class="text-right"><strong>{{ number_format($item->total, 2) }}</strong></td>
+                </tr>
+                @endforeach
+            </tbody>
+        </table>
+
+        <!-- TOTAIS -->
+        <div class="totals">
+            <table>
+                <tr class="subtotal-row">
+                    <td><strong>Subtotal:</strong></td>
+                    <td class="text-right">{{ number_format($quote->subtotal, 2) }} {{ $quote->currency }}</td>
+                </tr>
+                @if($quote->discount_amount > 0)
+                <tr class="discount-row">
+                    <td><strong>Desconto ({{ $quote->discount_percentage }}%):</strong></td>
+                    <td class="text-right">-{{ number_format($quote->discount_amount, 2) }} {{ $quote->currency }}</td>
+                </tr>
+                @endif
+                <tr>
+                    <td><strong>IVA Total:</strong></td>
+                    <td class="text-right">{{ number_format($quote->tax_amount, 2) }} {{ $quote->currency }}</td>
+                </tr>
+                <tr class="total-row">
+                    <td><strong>TOTAL:</strong></td>
+                    <td class="text-right"><strong>{{ number_format($quote->total, 2) }} {{ $quote->currency }}</strong></td>
+                </tr>
+            </table>
         </div>
-        <div class="totals-row grand-total">
-            <div class="totals-label">TOTAL:</div>
-            <div class="totals-value">{{ number_format($quote->total, 2) }} {{ $quote->currency }}</div>
+
+        <!-- TERMOS E OBSERVAÇÕES -->
+        @if($quote->terms || $quote->customer_notes)
+            <div class="terms-section">
+                @if($quote->terms)
+                    <div class="terms-box">
+                        <h4>📋 Termos e Condições</h4>
+                        <p>{{ $quote->terms }}</p>
+                    </div>
+                @endif
+
+                @if($quote->customer_notes)
+                    <div class="terms-box">
+                        <h4>📝 Observações</h4>
+                        <p>{{ $quote->customer_notes }}</p>
+                    </div>
+                @endif
+            </div>
+        @endif
+
+        <!-- FOOTER -->
+        <div class="footer">
+            <p>
+                <strong>Obrigado pelo seu interesse!</strong><br>
+                Esta cotação foi gerada eletronicamente. Para questões ou esclarecimentos, contacte-nos através de info@logisticapro.co.mz<br>
+                <br>
+                <em>LogisticaPro - Facilitando sua logística com excelência</em><br>
+                Gerado em {{ now()->format('d/m/Y H:i') }}
+            </p>
         </div>
-    </div>
-
-    @if($quote->terms || $quote->customer_notes)
-    <div class="section-title">Termos e Observações</div>
-
-    @if($quote->terms)
-    <div class="notes-box">
-        <strong>Termos e Condições:</strong><br>
-        <div style="white-space: pre-wrap;">{{ $quote->terms }}</div>
-    </div>
-    @endif
-
-    @if($quote->customer_notes)
-    <div class="notes-box">
-        <strong>Observações:</strong><br>
-        <div style="white-space: pre-wrap;">{{ $quote->customer_notes }}</div>
-    </div>
-    @endif
-    @endif
-
-    <div class="footer">
-        <p>LogisticaPro - Sistema de Gestão Logística | Gerado em {{ now()->format('d/m/Y H:i') }}</p>
-        <p>Página <span class="page-number"></span></p>
     </div>
 </body>
 </html>
