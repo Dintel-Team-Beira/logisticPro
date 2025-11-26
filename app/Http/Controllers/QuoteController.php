@@ -287,10 +287,10 @@ class QuoteController extends Controller
 
         DB::beginTransaction();
         try {
-            // Create invoice
+            // Create invoice with all fields from quote
             $invoice = Invoice::create([
                 'invoice_number' => Invoice::generateInvoiceNumber(),
-                'invoice_type' => 'service',
+                'invoice_type' => 'quotation',
                 'quote_id' => $quote->id,
                 'client_id' => $quote->client_id,
                 'shipment_id' => $quote->shipment_id,
@@ -305,9 +305,11 @@ class QuoteController extends Controller
                 'issue_date' => now(),
                 'due_date' => now()->addDays(30),
                 'status' => 'pending',
+                'notes' => $quote->notes,
                 'terms' => $quote->terms,
                 'customer_notes' => $quote->customer_notes,
                 'payment_terms' => $quote->payment_terms,
+                'metadata' => $quote->metadata,
                 'created_by' => auth()->id(),
             ]);
 
