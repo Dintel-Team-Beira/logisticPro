@@ -1219,6 +1219,56 @@ public function getPhase5Progress(): float
     }
 
     /**
+     * Gerar número de referência único para shipment
+     *
+     * @param int $year Ano para o número de referência
+     * @param int $maxRetries Número máximo de tentativas
+     * @return string Número de referência único (ex: ALEK-2025-0001)
+     * @throws \Exception Se não conseguir gerar número único
+     */
+    public static function generateUniqueReferenceNumber(int $year = null, int $maxRetries = 5): string
+    {
+        $year = $year ?? date('Y');
+
+        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
+            // Buscar o último shipment do ano com lock
+            $lastShipment = self::where('reference_number', 'like', "ALEK-{$year}-%")
+                ->orderByRaw('CAST(SUBSTRING(reference_number, 11) AS UNSIGNED) DESC')
+                ->lockForUpdate()
+                ->first();
+
+            if ($lastShipment && preg_match('/ALEK-\d{4}-(\d{4})/', $lastShipment->reference_number, $matches)) {
+                $nextNumber = intval($matches[1]) + 1;
+            } else {
+                $nextNumber = 1;
+            }
+
+            $referenceNumber = 'ALEK-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+
+            // Verificar se o número já existe (dupla verificação)
+            $exists = self::where('reference_number', $referenceNumber)->exists();
+
+            if (!$exists) {
+                return $referenceNumber;
+            }
+
+            Log::warning('Reference number já existe, tentando próximo', [
+                'attempt' => $attempt,
+                'reference' => $referenceNumber
+            ]);
+
+            if ($attempt === $maxRetries) {
+                throw new \Exception('Não foi possível gerar número de referência único após ' . $maxRetries . ' tentativas.');
+            }
+
+            // Pequeno delay antes de tentar novamente
+            usleep(100000); // 100ms
+        }
+
+        throw new \Exception('Falha ao gerar número de referência único.');
+    }
+
+    /**
      * Obter checklist dinâmico para uma fase
      */
     public function getDynamicChecklist(int $phase): array

@@ -120,24 +120,13 @@ class ShipmentController extends Controller
 
             Log::info('Validação passou');
 
-            // 2. Gerar número de referência único
-            // Buscar o último shipment do ano para garantir sequência correta
+            // 2. Gerar número de referência único usando método do modelo
             $year = date('Y');
+            $referenceNumber = Shipment::generateUniqueReferenceNumber($year);
 
-            // Usar lockForUpdate no nível da transação para evitar race conditions
-            $lastShipment = Shipment::whereYear('created_at', $year)
-                ->where('reference_number', 'like', "ALEK-{$year}-%")
-                ->orderBy('id', 'desc') // Usar id ao invés de reference_number para melhor performance
-                ->lockForUpdate()
-                ->first();
-
-            if ($lastShipment && preg_match('/ALEK-\d{4}-(\d{4})/', $lastShipment->reference_number, $matches)) {
-                $nextNumber = intval($matches[1]) + 1;
-            } else {
-                $nextNumber = 1;
-            }
-
-            $referenceNumber = 'ALEK-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+            // Extrair número sequencial para cotação
+            preg_match('/ALEK-\d{4}-(\d{4})/', $referenceNumber, $matches);
+            $nextNumber = intval($matches[1] ?? 1);
 
             // Gerar referência de cotação se houver dados
             $quotationReference = null;
@@ -260,10 +249,43 @@ class ShipmentController extends Controller
                         ->route('shipments.show', $shipment)
                         ->with('success', "Processo de Importação {$referenceNumber} criado com sucesso!");
             }
+        } catch (\Illuminate\Database\QueryException $e) {
+            DB::rollBack();
+
+            // Tratar erro de duplicate entry especificamente
+            if ($e->getCode() === '23000' && str_contains($e->getMessage(), 'Duplicate entry')) {
+                Log::error('Erro de duplicação ao criar shipment', [
+                    'error' => $e->getMessage(),
+                    'reference_number' => $referenceNumber ?? 'não gerado',
+                    'trace' => $e->getTraceAsString()
+                ]);
+
+                if (isset($blPath)) {
+                    Storage::disk('public')->delete($blPath);
+                }
+
+                return back()
+                    ->withErrors(['error' => 'Erro: Número de referência duplicado. Por favor, tente novamente em alguns segundos.'])
+                    ->withInput();
+            }
+
+            // Outros erros de banco de dados
+            Log::error('Erro de banco de dados ao criar shipment', [
+                'error' => $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ]);
+
+            if (isset($blPath)) {
+                Storage::disk('public')->delete($blPath);
+            }
+
+            return back()
+                ->withErrors(['error' => 'Erro no banco de dados: ' . $e->getMessage()])
+                ->withInput();
         } catch (\Exception $e) {
             DB::rollBack();
 
-            Log::error('Erro ao criar shipment', [
+            Log::error('Erro geral ao criar shipment', [
                 'error' => $e->getMessage(),
                 'trace' => $e->getTraceAsString()
             ]);
