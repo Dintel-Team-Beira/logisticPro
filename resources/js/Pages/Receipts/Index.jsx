@@ -69,7 +69,7 @@ export default function Index({ receipts = { data: [] }, stats = {}, filters = {
                         <motion.button
                             whileHover={{ scale: 1.02 }}
                             whileTap={{ scale: 0.98 }}
-                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
+                            className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
                         >
                             <Plus className="w-4 h-4" />
                             Novo Recibo
@@ -131,7 +131,7 @@ export default function Index({ receipts = { data: [] }, stats = {}, filters = {
                         className="p-6 bg-white border rounded-lg border-slate-200"
                     >
                         <div>
-                            <p className="text-sm font-medium text-slate-600 mb-2">Por Método</p>
+                            <p className="mb-2 text-sm font-medium text-slate-600">Por Método</p>
                             <div className="space-y-1">
                                 {safeStats.by_method?.slice(0, 3).map((method, idx) => (
                                     <div key={idx} className="flex justify-between text-xs">
@@ -169,19 +169,19 @@ export default function Index({ receipts = { data: [] }, stats = {}, filters = {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.4 }}
-                    className="bg-white border rounded-lg border-slate-200 overflow-hidden"
+                    className="overflow-hidden bg-white border rounded-lg border-slate-200"
                 >
                     <div className="overflow-x-auto">
                         <table className="w-full">
-                            <thead className="bg-slate-50 border-b border-slate-200">
+                            <thead className="border-b bg-slate-50 border-slate-200">
                                 <tr>
-                                    <th className="px-4 py-3 text-xs font-medium text-left text-slate-600 uppercase">Nº Recibo</th>
-                                    <th className="px-4 py-3 text-xs font-medium text-left text-slate-600 uppercase">Cliente</th>
-                                    <th className="px-4 py-3 text-xs font-medium text-left text-slate-600 uppercase">Fatura</th>
-                                    <th className="px-4 py-3 text-xs font-medium text-left text-slate-600 uppercase">Data</th>
-                                    <th className="px-4 py-3 text-xs font-medium text-left text-slate-600 uppercase">Método</th>
-                                    <th className="px-4 py-3 text-xs font-medium text-right text-slate-600 uppercase">Valor</th>
-                                    <th className="px-4 py-3 text-xs font-medium text-center text-slate-600 uppercase">Ações</th>
+                                    <th className="px-4 py-3 text-xs font-medium text-left uppercase text-slate-600">Nº Recibo</th>
+                                    <th className="px-4 py-3 text-xs font-medium text-left uppercase text-slate-600">Cliente</th>
+                                    <th className="px-4 py-3 text-xs font-medium text-left uppercase text-slate-600">Fatura</th>
+                                    <th className="px-4 py-3 text-xs font-medium text-left uppercase text-slate-600">Data</th>
+                                    <th className="px-4 py-3 text-xs font-medium text-left uppercase text-slate-600">Método</th>
+                                    <th className="px-4 py-3 text-xs font-medium text-right uppercase text-slate-600">Valor</th>
+                                    <th className="px-4 py-3 text-xs font-medium text-center uppercase text-slate-600">Ações</th>
                                 </tr>
                             </thead>
                             <tbody className="divide-y divide-slate-200">
@@ -194,7 +194,7 @@ export default function Index({ receipts = { data: [] }, stats = {}, filters = {
                                             <span className="text-sm text-slate-900">{receipt.client?.name}</span>
                                         </td>
                                         <td className="px-4 py-3">
-                                            <span className="text-sm font-mono text-slate-600">{receipt.invoice?.invoice_number}</span>
+                                            <span className="font-mono text-sm text-slate-600">{receipt.invoice?.invoice_number}</span>
                                         </td>
                                         <td className="px-4 py-3">
                                             <span className="text-sm text-slate-600">
@@ -212,18 +212,18 @@ export default function Index({ receipts = { data: [] }, stats = {}, filters = {
                                         <td className="px-4 py-3">
                                             <div className="flex items-center justify-center gap-2">
                                                 <Link href={`/receipts/${receipt.id}`}>
-                                                    <button className="p-1 text-blue-600 hover:bg-blue-50 rounded">
+                                                    <button className="p-1 text-blue-600 rounded hover:bg-blue-50">
                                                         <Eye className="w-4 h-4" />
                                                     </button>
                                                 </Link>
                                                 <a href={`/receipts/${receipt.id}/pdf`} target="_blank">
-                                                    <button className="p-1 text-green-600 hover:bg-green-50 rounded">
+                                                    <button className="p-1 text-green-600 rounded hover:bg-green-50">
                                                         <Download className="w-4 h-4" />
                                                     </button>
                                                 </a>
                                                 <button
                                                     onClick={() => handleDelete(receipt.id)}
-                                                    className="p-1 text-red-600 hover:bg-red-50 rounded"
+                                                    className="p-1 text-red-600 rounded hover:bg-red-50"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -236,7 +236,7 @@ export default function Index({ receipts = { data: [] }, stats = {}, filters = {
                     </div>
 
                     {/* Pagination */}
-                    {receipts.links && (
+                    {/* {receipts.links && (
                         <div className="flex items-center justify-between px-4 py-3 border-t border-slate-200 bg-slate-50">
                             <div className="text-sm text-slate-600">
                                 Mostrando {receipts.from} a {receipts.to} de {receipts.total} recibos
@@ -256,7 +256,7 @@ export default function Index({ receipts = { data: [] }, stats = {}, filters = {
                                 ))}
                             </div>
                         </div>
-                    )}
+                    )} */}
                 </motion.div>
             </div>
         </DashboardLayout>

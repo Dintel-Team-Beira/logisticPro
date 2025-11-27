@@ -105,7 +105,7 @@ export default function Create({ invoices, clients, nextDebitNoteNumber, reasons
                             </div>
                         </div>
                     </div>
-                    <div className="px-4 py-2 text-sm font-mono text-slate-600 bg-slate-100 rounded-lg">
+                    <div className="px-4 py-2 font-mono text-sm rounded-lg text-slate-600 bg-slate-100">
                         {nextDebitNoteNumber}
                     </div>
                 </div>
@@ -248,7 +248,7 @@ export default function Create({ invoices, clients, nextDebitNoteNumber, reasons
                             <button
                                 type="button"
                                 onClick={addItem}
-                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-orange-600 bg-orange-50 rounded-lg hover:bg-orange-100"
+                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium text-orange-600 rounded-lg bg-orange-50 hover:bg-orange-100"
                             >
                                 <Plus className="w-4 h-4" />
                                 Adicionar Item
@@ -312,7 +312,7 @@ export default function Create({ invoices, clients, nextDebitNoteNumber, reasons
                                         </div>
 
                                         {/* Total */}
-                                        <div className="col-span-6 md:col-span-2 flex items-end gap-2">
+                                        <div className="flex items-end col-span-6 gap-2 md:col-span-2">
                                             <div className="flex-1">
                                                 <label className="block mb-1 text-xs font-medium text-slate-600">Total</label>
                                                 <div className="px-3 py-2 text-sm font-semibold border rounded-lg bg-slate-100 text-slate-900 border-slate-300">
@@ -323,7 +323,7 @@ export default function Create({ invoices, clients, nextDebitNoteNumber, reasons
                                                 <button
                                                     type="button"
                                                     onClick={() => removeItem(index)}
-                                                    className="p-2 text-red-600 hover:bg-red-50 rounded-lg"
+                                                    className="p-2 text-red-600 rounded-lg hover:bg-red-50"
                                                 >
                                                     <Trash2 className="w-4 h-4" />
                                                 </button>
@@ -335,8 +335,8 @@ export default function Create({ invoices, clients, nextDebitNoteNumber, reasons
                         </div>
 
                         {/* Totals Summary */}
-                        <div className="mt-6 p-4 border-t-2 border-slate-200">
-                            <div className="grid grid-cols-2 gap-3 max-w-md ml-auto">
+                        <div className="p-4 mt-6 border-t-2 border-slate-200">
+                            <div className="grid max-w-md grid-cols-2 gap-3 ml-auto">
                                 <div className="text-sm font-medium text-slate-600">Subtotal:</div>
                                 <div className="text-sm font-semibold text-right text-slate-900">
                                     {totals.subtotal.toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} {data.currency}
@@ -358,7 +358,7 @@ export default function Create({ invoices, clients, nextDebitNoteNumber, reasons
                         <Link href="/debit-notes">
                             <button
                                 type="button"
-                                className="px-6 py-2 text-sm font-medium transition-colors border rounded-lg text-slate-700 bg-white border-slate-300 hover:bg-slate-50"
+                                className="px-6 py-2 text-sm font-medium transition-colors bg-white border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
                             >
                                 Cancelar
                             </button>

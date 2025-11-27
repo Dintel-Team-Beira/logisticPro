@@ -207,13 +207,13 @@ export default function Show({ creditNote }) {
 
                             <div className="overflow-x-auto">
                                 <table className="w-full">
-                                    <thead className="bg-slate-50 border-b border-slate-200">
+                                    <thead className="border-b bg-slate-50 border-slate-200">
                                         <tr>
-                                            <th className="px-4 py-3 text-xs font-medium text-left text-slate-600 uppercase">Descrição</th>
-                                            <th className="px-4 py-3 text-xs font-medium text-right text-slate-600 uppercase">Qtd</th>
-                                            <th className="px-4 py-3 text-xs font-medium text-right text-slate-600 uppercase">Preço Unit</th>
-                                            <th className="px-4 py-3 text-xs font-medium text-right text-slate-600 uppercase">IVA %</th>
-                                            <th className="px-4 py-3 text-xs font-medium text-right text-slate-600 uppercase">Total</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-left uppercase text-slate-600">Descrição</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-right uppercase text-slate-600">Qtd</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-right uppercase text-slate-600">Preço Unit</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-right uppercase text-slate-600">IVA %</th>
+                                            <th className="px-4 py-3 text-xs font-medium text-right uppercase text-slate-600">Total</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-slate-200">
@@ -235,8 +235,8 @@ export default function Show({ creditNote }) {
                             </div>
 
                             {/* Totals */}
-                            <div className="mt-6 pt-4 border-t-2 border-slate-200">
-                                <div className="grid grid-cols-2 gap-3 max-w-md ml-auto">
+                            <div className="pt-4 mt-6 border-t-2 border-slate-200">
+                                <div className="grid max-w-md grid-cols-2 gap-3 ml-auto">
                                     <div className="text-sm font-medium text-slate-600">Subtotal:</div>
                                     <div className="text-sm font-semibold text-right text-slate-900">
                                         {Number(creditNote.subtotal).toLocaleString('pt-MZ', { minimumFractionDigits: 2 })} {creditNote.currency}
@@ -321,7 +321,7 @@ export default function Show({ creditNote }) {
                                 transition={{ delay: 0.4 }}
                                 className="p-6 bg-white border rounded-lg border-slate-200"
                             >
-                                <h3 className="mb-4 text-sm font-semibold text-slate-900 flex items-center gap-2">
+                                <h3 className="flex items-center gap-2 mb-4 text-sm font-semibold text-slate-900">
                                     <RefreshCw className="w-4 h-4" />
                                     Alterar Status
                                 </h3>
@@ -330,7 +330,7 @@ export default function Show({ creditNote }) {
                                         <button
                                             key={status}
                                             onClick={() => handleStatusChange(status)}
-                                            className="w-full px-4 py-2 text-sm font-medium text-left transition-colors border rounded-lg text-slate-700 bg-white border-slate-300 hover:bg-slate-50"
+                                            className="w-full px-4 py-2 text-sm font-medium text-left transition-colors bg-white border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
                                         >
                                             Marcar como "{getStatusLabel(status)}"
                                         </button>
