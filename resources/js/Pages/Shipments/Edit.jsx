@@ -298,9 +298,11 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
             return;
         }
 
-        put(`/shipments/${shipment.id}`, {
+        // Usar post com _method PUT para suportar FormData (arquivos)
+        post(`/shipments/${shipment.id}`, {
             forceFormData: true,
             preserveScroll: true,
+            _method: 'PUT',
         });
     };
 
