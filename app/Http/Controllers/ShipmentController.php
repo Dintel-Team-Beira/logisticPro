@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\Shipment;
 use App\Models\Client;
+use App\Models\Consignee;
 use App\Models\PaymentRequest;
 use App\Models\ShippingLine;
 use App\Models\User;
@@ -504,9 +505,10 @@ class ShipmentController extends Controller
     public function edit(Shipment $shipment)
     {
         return Inertia::render('Shipments/Edit', [
-            'shipment' => $shipment->load(['client', 'shippingLine']),
+            'shipment' => $shipment->load(['client', 'shippingLine', 'consignee']),
             'shippingLines' => ShippingLine::where('active', true)->get(),
             'clients' => Client::orderBy('name')->get(),
+            'consignees' => Consignee::orderBy('name')->get(),
         ]);
     }
 
@@ -516,21 +518,80 @@ class ShipmentController extends Controller
     public function update(Request $request, Shipment $shipment)
     {
         $validated = $request->validate([
-            'shipping_line_id' => 'sometimes|exists:shipping_lines,id',
+            // Cliente e Consignatário
+            'client_id' => 'sometimes|exists:clients,id',
+            'consignee_id' => 'nullable|exists:consignees,id',
+
+            // Documentação e Navegação
+            'shipping_line_id' => 'nullable|exists:shipping_lines,id',
             'bl_number' => 'nullable|string',
+            'bl_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
+
+            // Container
             'container_number' => 'nullable|string',
+            'container_type' => 'nullable|string',
             'vessel_name' => 'nullable|string',
             'arrival_date' => 'nullable|date',
+
+            // Rota
             'origin_port' => 'nullable|string',
             'destination_port' => 'nullable|string',
+
+            // Carga
             'cargo_description' => 'nullable|string',
+            'cargo_type' => 'nullable|string',
             'cargo_weight' => 'nullable|numeric',
             'cargo_value' => 'nullable|numeric',
+
+            // Cotação
+            'regime' => 'nullable|string',
+            'final_destination' => 'nullable|string',
+            'additional_services' => 'nullable|array',
+            'quotation_data' => 'nullable|array',
+
+            // Transporte
+            'loading_location' => 'nullable|string',
+            'unloading_location' => 'nullable|string',
+            'distance_km' => 'nullable|numeric',
+            'empty_return_location' => 'nullable|string',
         ]);
+
+        // Processar arquivo BL se enviado
+        if ($request->hasFile('bl_file')) {
+            $blFile = $request->file('bl_file');
+            $blPath = $blFile->store("documents/shipments/{$shipment->id}/bl", 'public');
+
+            $shipment->documents()->create([
+                'type' => 'bl',
+                'name' => $blFile->getClientOriginalName(),
+                'path' => $blPath,
+                'size' => $blFile->getSize(),
+                'mime_type' => $blFile->getMimeType(),
+                'uploaded_by' => auth()->id(),
+                'metadata' => [
+                    'bl_number' => $validated['bl_number'] ?? null,
+                    'uploaded_at_edit' => true,
+                ]
+            ]);
+
+            unset($validated['bl_file']);
+        }
+
+        // Atualizar dados de cotação se fornecidos
+        if (isset($validated['quotation_data'])) {
+            $quotationData = $validated['quotation_data'];
+            $validated['quotation_subtotal'] = $quotationData['subtotal'] ?? $shipment->quotation_subtotal;
+            $validated['quotation_tax'] = $quotationData['tax'] ?? $shipment->quotation_tax;
+            $validated['quotation_total'] = $quotationData['total'] ?? $shipment->quotation_total;
+            $validated['quotation_breakdown'] = $quotationData['breakdown'] ?? $shipment->quotation_breakdown;
+            unset($validated['quotation_data']);
+        }
 
         $shipment->update($validated);
 
-        return back()->with('success', 'Shipment atualizado!');
+        return redirect()
+            ->route('shipments.show', $shipment)
+            ->with('success', 'Processo atualizado com sucesso!');
     }
 
     /**
