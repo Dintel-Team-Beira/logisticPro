@@ -7,6 +7,7 @@ use App\Models\Client;
 use App\Models\Consignee;
 use App\Models\PaymentRequest;
 use App\Models\ShippingLine;
+use App\Models\Transport;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -309,6 +310,7 @@ class ShipmentController extends Controller
         $shipment->load([
             'client',
             'shippingLine',
+            'transport',
             'documents',
             'stages',
             'activities.user',
@@ -505,10 +507,11 @@ class ShipmentController extends Controller
     public function edit(Shipment $shipment)
     {
         return Inertia::render('Shipments/Edit', [
-            'shipment' => $shipment->load(['client', 'shippingLine', 'consignee']),
+            'shipment' => $shipment->load(['client', 'shippingLine', 'consignee', 'transport']),
             'shippingLines' => ShippingLine::where('active', true)->get(),
             'clients' => Client::orderBy('name')->get(),
             'consignees' => Consignee::orderBy('name')->get(),
+            'transports' => Transport::where('ativo', true)->orderBy('matricula')->get(),
         ]);
     }
 
@@ -524,6 +527,7 @@ class ShipmentController extends Controller
 
             // Documentação e Navegação
             'shipping_line_id' => 'nullable|exists:shipping_lines,id',
+            'transport_id' => 'nullable|exists:transports,id',
             'bl_number' => 'nullable|string',
             'bl_file' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:10240',
 

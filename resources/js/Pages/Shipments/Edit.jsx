@@ -25,7 +25,7 @@ import {
     AlertCircle
 } from 'lucide-react';
 
-export default function Edit({ shipment, shippingLines, clients, consignees }) {
+export default function Edit({ shipment, shippingLines, clients, consignees, transports }) {
     const [filteredConsignees, setFilteredConsignees] = useState([]);
 
     // Parâmetros de precificação da API
@@ -55,6 +55,7 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
 
         // Linha de Navegação e Documentos (Import/Export/Transit)
         shipping_line_id: shipment.shipping_line_id || '',
+        transport_id: shipment.transport_id || '',
         bl_number: shipment.bl_number || '',
 
         // Container (Import/Export/Transit)
@@ -518,6 +519,105 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
                             </button>
                         </div>
                     </div>
+
+                    {/* SEÇÃO 2.5: VINCULAÇÃO DE TRANSPORTE/CAMIÃO */}
+                    {data.type && (
+                        <div className="p-6 bg-white border rounded-lg border-slate-200">
+                            <div className="flex items-center gap-2 mb-6">
+                                <Truck className="w-5 h-5 text-emerald-600" />
+                                <h2 className="text-lg font-semibold text-slate-900">
+                                    Transporte / Camião (Opcional)
+                                </h2>
+                            </div>
+
+                            <div className="space-y-4">
+                                <Select
+                                    label="Vincular Camião ao Processo"
+                                    value={data.transport_id}
+                                    onChange={(e) => handleFieldChange('transport_id', e.target.value)}
+                                    error={errors.transport_id}
+                                >
+                                    <option value="">Nenhum camião vinculado</option>
+                                    {transports?.map((transport) => (
+                                        <option key={transport.id} value={transport.id}>
+                                            {transport.tipo_veiculo.toUpperCase()} - {transport.matricula} - {transport.marca} {transport.modelo}
+                                            {transport.motorista_nome && ` (${transport.motorista_nome})`}
+                                        </option>
+                                    ))}
+                                </Select>
+
+                                {/* Mostrar detalhes do camião selecionado */}
+                                {data.transport_id && (() => {
+                                    const selectedTransport = transports?.find(t => t.id === parseInt(data.transport_id));
+                                    if (!selectedTransport) return null;
+
+                                    return (
+                                        <motion.div
+                                            initial={{ opacity: 0, y: -10 }}
+                                            animate={{ opacity: 1, y: 0 }}
+                                            className="p-4 border-2 rounded-lg bg-emerald-50 border-emerald-200"
+                                        >
+                                            <div className="flex items-start gap-3">
+                                                <div className="p-2 rounded-lg bg-emerald-100">
+                                                    <Truck className="w-6 h-6 text-emerald-700" />
+                                                </div>
+                                                <div className="flex-1">
+                                                    <h3 className="mb-2 text-sm font-bold text-emerald-900">
+                                                        🚛 {selectedTransport.tipo_veiculo.toUpperCase()} - {selectedTransport.matricula}
+                                                    </h3>
+                                                    <div className="grid grid-cols-1 gap-2 text-xs md:grid-cols-2">
+                                                        <div>
+                                                            <span className="font-medium text-emerald-800">Marca/Modelo:</span>
+                                                            <span className="ml-1 text-emerald-700">
+                                                                {selectedTransport.marca} {selectedTransport.modelo} ({selectedTransport.ano})
+                                                            </span>
+                                                        </div>
+                                                        {selectedTransport.capacidade_peso && (
+                                                            <div>
+                                                                <span className="font-medium text-emerald-800">Capacidade:</span>
+                                                                <span className="ml-1 text-emerald-700">
+                                                                    {selectedTransport.capacidade_peso} ton
+                                                                    {selectedTransport.capacidade_volume && ` | ${selectedTransport.capacidade_volume} m³`}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {selectedTransport.motorista_nome && (
+                                                            <div>
+                                                                <span className="font-medium text-emerald-800">Motorista:</span>
+                                                                <span className="ml-1 text-emerald-700">
+                                                                    {selectedTransport.motorista_nome}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {selectedTransport.motorista_telefone && (
+                                                            <div>
+                                                                <span className="font-medium text-emerald-800">Telefone:</span>
+                                                                <span className="ml-1 text-emerald-700">
+                                                                    {selectedTransport.motorista_telefone}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                        {selectedTransport.destinos && selectedTransport.destinos.length > 0 && (
+                                                            <div className="md:col-span-2">
+                                                                <span className="font-medium text-emerald-800">Destinos atendidos:</span>
+                                                                <span className="ml-1 text-emerald-700">
+                                                                    {selectedTransport.destinos.join(', ')}
+                                                                </span>
+                                                            </div>
+                                                        )}
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </motion.div>
+                                    );
+                                })()}
+
+                                <p className="text-xs text-slate-500">
+                                    💡 <strong>Dica:</strong> Vincular um camião permite rastrear qual veículo está transportando esta carga.
+                                </p>
+                            </div>
+                        </div>
+                    )}
 
                     {/* SEÇÃO 3: DOCUMENTAÇÃO E DETALHES (Condicional por tipo) */}
                     {data.type && (

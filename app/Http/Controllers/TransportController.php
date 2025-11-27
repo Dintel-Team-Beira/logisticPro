@@ -114,13 +114,26 @@ class TransportController extends Controller
         $transport->load([
             'shipments' => function($query) {
                 $query->with(['client:id,name', 'shippingLine:id,name'])
-                      ->latest()
-                      ->take(10);
+                      ->latest();
             }
         ]);
 
+        // Estatísticas do transporte
+        $stats = [
+            'total_shipments' => $transport->shipments->count(),
+            'completed_shipments' => $transport->shipments()->where('status', 'completed')->count(),
+            'active_shipments' => $transport->shipments()->whereIn('status', ['pending', 'in_progress'])->count(),
+            'total_weight' => $transport->shipments()->sum('cargo_weight'),
+            'total_value' => $transport->shipments()->sum('cargo_value'),
+        ];
+
+        // Agrupar shipments por status
+        $shipmentsByStatus = $transport->shipments->groupBy('status');
+
         return Inertia::render('Transports/Show', [
             'transport' => $transport,
+            'stats' => $stats,
+            'shipmentsByStatus' => $shipmentsByStatus,
         ]);
     }
 

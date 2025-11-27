@@ -27,7 +27,8 @@ import {
     File,
     Edit,
     Save,
-    Calendar
+    Calendar,
+    Truck
 } from 'lucide-react'
 import { PaymentRequestModal } from './PaymentRequestModal'
 import { BulkPaymentRequestModal } from './BulkPaymentRequestModal'
@@ -585,6 +586,44 @@ export default function Show ({
                                     label='Linha de Navegação'
                                     value={shipment.shipping_line?.name}
                                 />
+
+                                {/* Camião Vinculado */}
+                                {shipment.transport ? (
+                                    <div className="md:col-span-2">
+                                        <p className='mb-2 text-xs font-medium text-slate-500'>Camião Vinculado</p>
+                                        <div className="p-3 border-2 rounded-lg bg-emerald-50 border-emerald-200">
+                                            <div className="flex items-start gap-2">
+                                                <Truck className="w-5 h-5 mt-0.5 text-emerald-700" />
+                                                <div className="flex-1">
+                                                    <p className="text-sm font-bold text-emerald-900">
+                                                        {shipment.transport.tipo_veiculo.toUpperCase()} - {shipment.transport.matricula}
+                                                    </p>
+                                                    <p className="text-xs text-emerald-700">
+                                                        {shipment.transport.marca} {shipment.transport.modelo} ({shipment.transport.ano})
+                                                    </p>
+                                                    {shipment.transport.motorista_nome && (
+                                                        <p className="mt-1 text-xs text-emerald-700">
+                                                            <strong>Motorista:</strong> {shipment.transport.motorista_nome}
+                                                            {shipment.transport.motorista_telefone && ` - ${shipment.transport.motorista_telefone}`}
+                                                        </p>
+                                                    )}
+                                                    {shipment.transport.capacidade_peso && (
+                                                        <p className="text-xs text-emerald-700">
+                                                            <strong>Capacidade:</strong> {shipment.transport.capacidade_peso} ton
+                                                            {shipment.transport.capacidade_volume && ` | ${shipment.transport.capacidade_volume} m³`}
+                                                        </p>
+                                                    )}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ) : (
+                                    <InfoItem
+                                        label='Camião'
+                                        value='Nenhum camião vinculado'
+                                    />
+                                )}
+
                                 <InfoItem
                                     label='Tipo de Carga'
                                     value={shipment.cargo_type || 'Normal'}
