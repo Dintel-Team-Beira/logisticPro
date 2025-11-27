@@ -41,6 +41,7 @@ export default function Show ({
     overallProgress,
     canForceAdvance,
     paymentRequests,
+    availableTransports = [],
     auth,
     hasQuotationInvoice = false,
     quotationInvoiceId = null,
@@ -61,6 +62,8 @@ export default function Show ({
     // Estados para edição inline
     const [editingArrivalDate, setEditingArrivalDate] = useState(false)
     const [newArrivalDate, setNewArrivalDate] = useState(shipment.arrival_date || '')
+    const [editingTransport, setEditingTransport] = useState(false)
+    const [selectedTransportId, setSelectedTransportId] = useState(shipment.transport_id || '')
 
     const currentPhaseRequest = paymentRequests?.find(
         pr => pr.phase === getPhaseKey(selectedPhase)
@@ -171,6 +174,22 @@ export default function Show ({
                 },
                 onError: () => {
                     alert('Erro ao atualizar data de chegada')
+                }
+            }
+        )
+    }
+
+    const handleUpdateTransport = () => {
+        router.post(
+            `/shipments/${shipment.id}/update-transport`,
+            { transport_id: selectedTransportId || null },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setEditingTransport(false)
+                },
+                onError: () => {
+                    alert('Erro ao atualizar transporte')
                 }
             }
         )
@@ -588,41 +607,85 @@ export default function Show ({
                                 />
 
                                 {/* Camião Vinculado */}
-                                {shipment.transport ? (
-                                    <div className="md:col-span-2">
-                                        <p className='mb-2 text-xs font-medium text-slate-500'>Camião Vinculado</p>
-                                        <div className="p-3 border-2 rounded-lg bg-emerald-50 border-emerald-200">
-                                            <div className="flex items-start gap-2">
-                                                <Truck className="w-5 h-5 mt-0.5 text-emerald-700" />
-                                                <div className="flex-1">
-                                                    <p className="text-sm font-bold text-emerald-900">
-                                                        {shipment.transport.tipo_veiculo.toUpperCase()} - {shipment.transport.matricula}
-                                                    </p>
-                                                    <p className="text-xs text-emerald-700">
-                                                        {shipment.transport.marca} {shipment.transport.modelo} ({shipment.transport.ano})
-                                                    </p>
-                                                    {shipment.transport.motorista_nome && (
-                                                        <p className="mt-1 text-xs text-emerald-700">
-                                                            <strong>Motorista:</strong> {shipment.transport.motorista_nome}
-                                                            {shipment.transport.motorista_telefone && ` - ${shipment.transport.motorista_telefone}`}
+                                <div className="md:col-span-2">
+                                    <div className="flex items-center justify-between mb-2">
+                                        <p className='text-xs font-medium text-slate-500'>Camião Vinculado</p>
+                                        {!editingTransport && (
+                                            <button
+                                                onClick={() => setEditingTransport(true)}
+                                                className='p-1 transition-colors rounded hover:bg-slate-100'
+                                                title='Editar camião'
+                                            >
+                                                <Edit className='w-3 h-3 text-blue-600' />
+                                            </button>
+                                        )}
+                                    </div>
+
+                                    {!editingTransport ? (
+                                        shipment.transport ? (
+                                            <div className="p-3 border-2 rounded-lg bg-emerald-50 border-emerald-200">
+                                                <div className="flex items-start gap-2">
+                                                    <Truck className="w-5 h-5 mt-0.5 text-emerald-700" />
+                                                    <div className="flex-1">
+                                                        <p className="text-sm font-bold text-emerald-900">
+                                                            {shipment.transport.tipo_veiculo.toUpperCase()} - {shipment.transport.matricula}
                                                         </p>
-                                                    )}
-                                                    {shipment.transport.capacidade_peso && (
                                                         <p className="text-xs text-emerald-700">
-                                                            <strong>Capacidade:</strong> {shipment.transport.capacidade_peso} ton
-                                                            {shipment.transport.capacidade_volume && ` | ${shipment.transport.capacidade_volume} m³`}
+                                                            {shipment.transport.marca} {shipment.transport.modelo} ({shipment.transport.ano})
                                                         </p>
-                                                    )}
+                                                        {shipment.transport.motorista_nome && (
+                                                            <p className="mt-1 text-xs text-emerald-700">
+                                                                <strong>Motorista:</strong> {shipment.transport.motorista_nome}
+                                                                {shipment.transport.motorista_telefone && ` - ${shipment.transport.motorista_telefone}`}
+                                                            </p>
+                                                        )}
+                                                        {shipment.transport.capacidade_peso && (
+                                                            <p className="text-xs text-emerald-700">
+                                                                <strong>Capacidade:</strong> {shipment.transport.capacidade_peso} ton
+                                                                {shipment.transport.capacidade_volume && ` | ${shipment.transport.capacidade_volume} m³`}
+                                                            </p>
+                                                        )}
+                                                    </div>
                                                 </div>
                                             </div>
+                                        ) : (
+                                            <p className='text-sm text-slate-600'>Nenhum camião vinculado</p>
+                                        )
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <select
+                                                value={selectedTransportId}
+                                                onChange={(e) => setSelectedTransportId(e.target.value)}
+                                                className="flex-1 px-3 py-2 text-sm border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            >
+                                                <option value="">Nenhum camião</option>
+                                                {availableTransports.map((transport) => (
+                                                    <option key={transport.id} value={transport.id}>
+                                                        {transport.tipo_veiculo.toUpperCase()} - {transport.matricula} - {transport.marca} {transport.modelo}
+                                                        {transport.motorista_nome && ` (${transport.motorista_nome})`}
+                                                    </option>
+                                                ))}
+                                            </select>
+                                            <button
+                                                onClick={handleUpdateTransport}
+                                                className='p-2 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700'
+                                                title='Salvar'
+                                            >
+                                                <Save className='w-4 h-4' />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingTransport(false)
+                                                    setSelectedTransportId(shipment.transport_id || '')
+                                                }}
+                                                className='p-2 transition-colors rounded-lg text-slate-600 hover:bg-slate-100'
+                                                title='Cancelar'
+                                            >
+                                                <X className='w-4 h-4' />
+                                            </button>
                                         </div>
-                                    </div>
-                                ) : (
-                                    <InfoItem
-                                        label='Camião'
-                                        value='Nenhum camião vinculado'
-                                    />
-                                )}
+                                    )}
+                                </div>
 
                                 <InfoItem
                                     label='Tipo de Carga'

@@ -547,8 +547,8 @@ export default function Edit({ shipment, shippingLines, clients, consignees, tra
                                 </Select>
 
                                 {/* Mostrar detalhes do camião selecionado */}
-                                {data.transport_id && (() => {
-                                    const selectedTransport = transports?.find(t => t.id === parseInt(data.transport_id));
+                                {data.transport_id && transports && (() => {
+                                    const selectedTransport = transports.find(t => t.id == data.transport_id);
                                     if (!selectedTransport) return null;
 
                                     return (
@@ -563,15 +563,17 @@ export default function Edit({ shipment, shippingLines, clients, consignees, tra
                                                 </div>
                                                 <div className="flex-1">
                                                     <h3 className="mb-2 text-sm font-bold text-emerald-900">
-                                                        🚛 {selectedTransport.tipo_veiculo.toUpperCase()} - {selectedTransport.matricula}
+                                                        🚛 {selectedTransport.tipo_veiculo?.toUpperCase() || 'CAMIÃO'} - {selectedTransport.matricula}
                                                     </h3>
                                                     <div className="grid grid-cols-1 gap-2 text-xs md:grid-cols-2">
-                                                        <div>
-                                                            <span className="font-medium text-emerald-800">Marca/Modelo:</span>
-                                                            <span className="ml-1 text-emerald-700">
-                                                                {selectedTransport.marca} {selectedTransport.modelo} ({selectedTransport.ano})
-                                                            </span>
-                                                        </div>
+                                                        {(selectedTransport.marca || selectedTransport.modelo) && (
+                                                            <div>
+                                                                <span className="font-medium text-emerald-800">Marca/Modelo:</span>
+                                                                <span className="ml-1 text-emerald-700">
+                                                                    {selectedTransport.marca || ''} {selectedTransport.modelo || ''} {selectedTransport.ano ? `(${selectedTransport.ano})` : ''}
+                                                                </span>
+                                                            </div>
+                                                        )}
                                                         {selectedTransport.capacidade_peso && (
                                                             <div>
                                                                 <span className="font-medium text-emerald-800">Capacidade:</span>
@@ -597,7 +599,7 @@ export default function Edit({ shipment, shippingLines, clients, consignees, tra
                                                                 </span>
                                                             </div>
                                                         )}
-                                                        {selectedTransport.destinos && selectedTransport.destinos.length > 0 && (
+                                                        {selectedTransport.destinos && Array.isArray(selectedTransport.destinos) && selectedTransport.destinos.length > 0 && (
                                                             <div className="md:col-span-2">
                                                                 <span className="font-medium text-emerald-800">Destinos atendidos:</span>
                                                                 <span className="ml-1 text-emerald-700">

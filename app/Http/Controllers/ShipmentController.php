@@ -398,6 +398,11 @@ class ShipmentController extends Controller
             ->where('invoice_type', 'quotation')
             ->first();
 
+        // Lista de transportes disponíveis para vinculação
+        $availableTransports = Transport::where('ativo', true)
+            ->orderBy('matricula')
+            ->get();
+
         // dd($phaseProgress);
         return Inertia::render('Shipments/Show', [
             'shipment' => $shipment,
@@ -410,6 +415,7 @@ class ShipmentController extends Controller
             'hasQuotationInvoice' => $quotationInvoice !== null,
             'quotationInvoiceId' => $quotationInvoice?->id,
             'quotationInvoiceNumber' => $quotationInvoice?->invoice_number,
+            'availableTransports' => $availableTransports,
         ]);
     }
 
@@ -974,6 +980,24 @@ class ShipmentController extends Controller
             });
 
         return response()->json($paymentRequests);
+    }
+
+    /**
+     * Atualizar transporte vinculado ao shipment
+     */
+    public function updateTransport(Request $request, Shipment $shipment)
+    {
+        $validated = $request->validate([
+            'transport_id' => 'nullable|exists:transports,id',
+        ]);
+
+        $shipment->update([
+            'transport_id' => $validated['transport_id'],
+        ]);
+
+        return back()->with('success', $validated['transport_id']
+            ? 'Camião vinculado com sucesso!'
+            : 'Camião desvinculado com sucesso!');
     }
 
     /**

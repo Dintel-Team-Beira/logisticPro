@@ -382,6 +382,14 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/mark-quotation-paid', [ShipmentController::class, 'markQuotationAsPaid'])
             ->name('shipments.mark-quotation-paid');
 
+        // Atualizar transporte vinculado
+        Route::post('/update-transport', [ShipmentController::class, 'updateTransport'])
+            ->name('shipments.update-transport');
+
+        // Atualizar data de chegada
+        Route::post('/update-arrival-date', [ShipmentController::class, 'updateArrivalDate'])
+            ->name('shipments.update-arrival-date');
+
         // API: Validação de Fase
         Route::get('/phase/{phase}/validation', [ShipmentController::class, 'getPhaseValidation'])
             ->name('shipments.phase-validation');
