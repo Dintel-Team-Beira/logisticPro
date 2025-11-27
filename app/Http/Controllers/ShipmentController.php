@@ -341,13 +341,13 @@ class ShipmentController extends Controller
             $stage = $shipment->stages()->where('stage', $stageName)->first();
 
         $phaseData = [
-    'status' => $stage ? $stage->status : 'pending',
-    'progress' => round($shipment->getPhaseProgress($phaseId), 2), // Arredondar para 2 casas decimais
-    'can_start' => false,
-    'warnings' => [],
-    'missing_items' => [],
-    'show_payment_request' => false,
-];
+            'status' => $stage ? $stage->status : 'pending',
+            'progress' => round($shipment->getPhaseProgress($phaseId), 2), // Arredondar para 2 casas decimais
+            'can_start' => false,
+            'warnings' => [],
+            'missing_items' => [],
+            'show_payment_request' => false,
+        ];
 
             // Verificar requisitos para avançar
             $validation = $shipment->canAdvanceToPhase($phaseId);

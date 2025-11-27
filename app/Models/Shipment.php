@@ -6,7 +6,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Support\Facades\Log;
-
+use Illuminate\Support\Facades\DB;
 /**
  * Model Shipment - VERSÃO MELHORADA
  * Gestão flexível de processos de importação
@@ -1218,55 +1218,66 @@ public function getPhase5Progress(): float
         return $phases[$phase] ?? 'coleta_dispersa';
     }
 
-    /**
-     * Gerar número de referência único para shipment
-     *
-     * @param int $year Ano para o número de referência
-     * @param int $maxRetries Número máximo de tentativas
-     * @return string Número de referência único (ex: ALEK-2025-0001)
-     * @throws \Exception Se não conseguir gerar número único
-     */
-    public static function generateUniqueReferenceNumber(int $year = null, int $maxRetries = 5): string
-    {
-        $year = $year ?? date('Y');
+public static function generateUniqueReferenceNumber(int $year = null): string
+{
+    Log::info('generateUniqueReferenceNumber chamado - USANDO VERSÃO NOVA COM GET_LOCK');
 
-        for ($attempt = 1; $attempt <= $maxRetries; $attempt++) {
-            // Buscar o último shipment do ano com lock
-            $lastShipment = self::where('reference_number', 'like', "ALEK-{$year}-%")
-                ->orderByRaw('CAST(SUBSTRING(reference_number, 11) AS UNSIGNED) DESC')
-                ->lockForUpdate()
-                ->first();
+    $year = $year ?? date('Y');
+    $key = "shipment_{$year}";
 
-            if ($lastShipment && preg_match('/ALEK-\d{4}-(\d{4})/', $lastShipment->reference_number, $matches)) {
-                $nextNumber = intval($matches[1]) + 1;
-            } else {
-                $nextNumber = 1;
-            }
+    return DB::transaction(function () use ($key, $year) {
+        Log::info("Tentando obter lock para: {$key}");
 
-            $referenceNumber = 'ALEK-' . $year . '-' . str_pad($nextNumber, 4, '0', STR_PAD_LEFT);
+        $lock = DB::selectOne("SELECT GET_LOCK(?, 15) as l", [$key]);
 
-            // Verificar se o número já existe (dupla verificação)
-            $exists = self::where('reference_number', $referenceNumber)->exists();
-
-            if (!$exists) {
-                return $referenceNumber;
-            }
-
-            Log::warning('Reference number já existe, tentando próximo', [
-                'attempt' => $attempt,
-                'reference' => $referenceNumber
-            ]);
-
-            if ($attempt === $maxRetries) {
-                throw new \Exception('Não foi possível gerar número de referência único após ' . $maxRetries . ' tentativas.');
-            }
-
-            // Pequeno delay antes de tentar novamente
-            usleep(100000); // 100ms
+        if (!$lock || $lock->l != 1) {
+            Log::error("FALHOU ao obter GET_LOCK para {$key}");
+            throw new \Exception('Sistema ocupado. Tente novamente em 2 segundos.');
         }
 
-        throw new \Exception('Falha ao gerar número de referência único.');
-    }
+        Log::info("Lock obtido com sucesso para {$key}");
+
+        try {
+            $row = DB::table('reference_counters')
+                ->where('key_name', $key)
+                ->first();
+
+            if ($row) {
+                $next = $row->last_number + 1;
+                DB::table('reference_counters')
+                    ->where('key_name', $key)
+                    ->update([
+                        'last_number' => $next,
+                        'updated_at' => now()
+                    ]);
+                Log::info("Incrementado contador existente: {$key} → {$next}");
+            } else {
+                $next = 1;
+                DB::table('reference_counters')->insert([
+                    'key_name' => $key,
+                    'last_number' => 1,
+                    'created_at' => now(),
+                    'updated_at' => now(),
+                ]);
+                Log::info("Criado novo contador: {$key} → 1");
+            }
+
+            $reference = "ALEK-{$year}-" . str_pad($next, 4, '0', STR_PAD_LEFT);
+
+            Log::info("Referência gerada com sucesso: {$reference}");
+
+            DB::selectOne("SELECT RELEASE_LOCK(?)", [$key]);
+            Log::info("Lock liberado: {$key}");
+
+            return $reference;
+
+        } catch (\Exception $e) {
+            DB::selectOne("SELECT RELEASE_LOCK(?)", [$key]);
+            Log::error("Erro no generateUniqueReferenceNumber: " . $e->getMessage());
+            throw $e;
+        }
+    });
+}
 
     /**
      * Obter checklist dinâmico para uma fase
