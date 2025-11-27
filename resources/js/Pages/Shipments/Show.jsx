@@ -694,7 +694,7 @@ export default function Show ({
 
                                 {/* Data de Chegada Editável */}
                                 <div>
-                                    <p className='text-xs font-medium text-slate-500 mb-1'>Data de Chegada</p>
+                                    <p className='mb-1 text-xs font-medium text-slate-500'>Data de Chegada</p>
                                     {!editingArrivalDate ? (
                                         <div className='flex items-center gap-2'>
                                             <p className='text-sm font-medium text-slate-900'>
@@ -755,7 +755,7 @@ export default function Show ({
                                         <DollarSign className='w-5 h-5 text-blue-600' />
                                         Cotação Automática
                                     </h3>
-                                    <div className='flex items-center gap-2 flex-wrap'>
+                                    <div className='flex flex-wrap items-center gap-2'>
                                         <span className={`px-3 py-1 text-xs font-medium rounded-full ${
                                             shipment.quotation_status === 'approved'
                                                 ? 'bg-emerald-100 text-emerald-800'

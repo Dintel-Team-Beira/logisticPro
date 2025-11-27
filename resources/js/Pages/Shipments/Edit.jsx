@@ -547,7 +547,7 @@ export default function Edit({ shipment, shippingLines, clients, consignees, tra
                                 </Select>
 
                                 {/* Mostrar detalhes do camião selecionado */}
-                                {data.transport_id && transports && (() => {
+                                {/* {data.transport_id && transports && (() => {
                                     const selectedTransport = transports.find(t => t.id == data.transport_id);
                                     if (!selectedTransport) return null;
 
@@ -612,7 +612,7 @@ export default function Edit({ shipment, shippingLines, clients, consignees, tra
                                             </div>
                                         </motion.div>
                                     );
-                                })()}
+                                })()} */}
 
                                 <p className="text-xs text-slate-500">
                                     💡 <strong>Dica:</strong> Vincular um camião permite rastrear qual veículo está transportando esta carga.
