@@ -24,7 +24,10 @@ import {
     XCircle,
     DockIcon,
     CheckLine,
-    File
+    File,
+    Edit,
+    Save,
+    Calendar
 } from 'lucide-react'
 import { PaymentRequestModal } from './PaymentRequestModal'
 import { BulkPaymentRequestModal } from './BulkPaymentRequestModal'
@@ -53,6 +56,10 @@ export default function Show ({
         useState(false)
     //  const [activeTab, setActiveTab] = useState('payment_requests');
     const [bulkPaymentModalOpen, setBulkPaymentModalOpen] = useState(false)
+
+    // Estados para edição inline
+    const [editingArrivalDate, setEditingArrivalDate] = useState(false)
+    const [newArrivalDate, setNewArrivalDate] = useState(shipment.arrival_date || '')
 
     const currentPhaseRequest = paymentRequests?.find(
         pr => pr.phase === getPhaseKey(selectedPhase)
@@ -145,6 +152,45 @@ export default function Show ({
         }
         // Iniciar download do documento
         window.location.href = `/documents/${documentId}/download`
+    }
+
+    const handleUpdateArrivalDate = () => {
+        if (!newArrivalDate) {
+            alert('Por favor, selecione uma data válida')
+            return
+        }
+
+        router.put(
+            `/shipments/${shipment.id}`,
+            { arrival_date: newArrivalDate },
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setEditingArrivalDate(false)
+                },
+                onError: () => {
+                    alert('Erro ao atualizar data de chegada')
+                }
+            }
+        )
+    }
+
+    const handleMarkQuotationAsPaid = () => {
+        if (confirm('Confirma marcar a cotação como paga?')) {
+            router.post(
+                `/shipments/${shipment.id}/mark-quotation-paid`,
+                {},
+                {
+                    preserveScroll: true,
+                    onSuccess: () => {
+                        alert('Cotação marcada como paga!')
+                    },
+                    onError: () => {
+                        alert('Erro ao marcar cotação como paga')
+                    }
+                }
+            )
+        }
     }
 
     return (
@@ -543,10 +589,52 @@ export default function Show ({
                                     label='Tipo de Carga'
                                     value={shipment.cargo_type || 'Normal'}
                                 />
-                                <InfoItem
-                                    label='Data de Chegada'
-                                    value={shipment.arrival_date}
-                                />
+
+                                {/* Data de Chegada Editável */}
+                                <div>
+                                    <p className='text-xs font-medium text-slate-500 mb-1'>Data de Chegada</p>
+                                    {!editingArrivalDate ? (
+                                        <div className='flex items-center gap-2'>
+                                            <p className='text-sm font-medium text-slate-900'>
+                                                {shipment.arrival_date ? new Date(shipment.arrival_date).toLocaleDateString('pt-BR') : 'N/A'}
+                                            </p>
+                                            <button
+                                                onClick={() => setEditingArrivalDate(true)}
+                                                className='p-1 transition-colors rounded hover:bg-slate-100'
+                                                title='Editar data de chegada'
+                                            >
+                                                <Edit className='w-4 h-4 text-blue-600' />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div className='flex items-center gap-2'>
+                                            <input
+                                                type='date'
+                                                value={newArrivalDate}
+                                                onChange={(e) => setNewArrivalDate(e.target.value)}
+                                                className='px-3 py-1.5 text-sm border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent'
+                                            />
+                                            <button
+                                                onClick={handleUpdateArrivalDate}
+                                                className='p-1.5 text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700'
+                                                title='Salvar'
+                                            >
+                                                <Save className='w-4 h-4' />
+                                            </button>
+                                            <button
+                                                onClick={() => {
+                                                    setEditingArrivalDate(false)
+                                                    setNewArrivalDate(shipment.arrival_date || '')
+                                                }}
+                                                className='p-1.5 text-slate-600 transition-colors rounded-lg hover:bg-slate-100'
+                                                title='Cancelar'
+                                            >
+                                                <X className='w-4 h-4' />
+                                            </button>
+                                        </div>
+                                    )}
+                                </div>
+
                                 {shipment.has_tax_exemption && (
                                     <div className='col-span-2 p-3 border border-green-200 rounded-lg bg-green-50'>
                                         <p className='text-sm font-medium text-green-800'>
@@ -565,7 +653,7 @@ export default function Show ({
                                         <DollarSign className='w-5 h-5 text-blue-600' />
                                         Cotação Automática
                                     </h3>
-                                    <div className='flex items-center gap-2'>
+                                    <div className='flex items-center gap-2 flex-wrap'>
                                         <span className={`px-3 py-1 text-xs font-medium rounded-full ${
                                             shipment.quotation_status === 'approved'
                                                 ? 'bg-emerald-100 text-emerald-800'
@@ -573,12 +661,27 @@ export default function Show ({
                                                 ? 'bg-red-100 text-red-800'
                                                 : shipment.quotation_status === 'revised'
                                                 ? 'bg-amber-100 text-amber-800'
+                                                : shipment.quotation_status === 'paid'
+                                                ? 'bg-purple-100 text-purple-800'
                                                 : 'bg-blue-100 text-blue-800'
                                         }`}>
                                             {shipment.quotation_status === 'approved' ? 'Aprovada' :
                                              shipment.quotation_status === 'rejected' ? 'Rejeitada' :
-                                             shipment.quotation_status === 'revised' ? 'Revisada' : 'Pendente'}
+                                             shipment.quotation_status === 'revised' ? 'Revisada' :
+                                             shipment.quotation_status === 'paid' ? 'Paga' : 'Pendente'}
                                         </span>
+
+                                        {/* Botão Editar - Antes de gerar fatura */}
+                                        {!hasQuotationInvoice && (
+                                            <Link
+                                                href={`/shipments/${shipment.id}/edit`}
+                                                className='flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-amber-700 transition-colors bg-amber-100 rounded-lg hover:bg-amber-200'
+                                            >
+                                                <Edit className='w-4 h-4' />
+                                                Editar
+                                            </Link>
+                                        )}
+
                                         <a
                                             href={`/quotations/${shipment.id}/pdf`}
                                             target='_blank'
@@ -587,6 +690,17 @@ export default function Show ({
                                             <Download className='w-4 h-4' />
                                             Baixar PDF
                                         </a>
+
+                                        {/* Botão Marcar como Pago - Antes de gerar fatura */}
+                                        {!hasQuotationInvoice && shipment.quotation_status !== 'paid' && (
+                                            <button
+                                                onClick={handleMarkQuotationAsPaid}
+                                                className='flex items-center gap-2 px-3 py-1.5 text-sm font-medium text-white transition-colors bg-purple-600 rounded-lg hover:bg-purple-700'
+                                            >
+                                                <CheckCircle2 className='w-4 h-4' />
+                                                Marcar como Pago
+                                            </button>
+                                        )}
 
                                         {/* Botão Gerar Fatura - Se ainda não existe fatura */}
                                         {!hasQuotationInvoice && (

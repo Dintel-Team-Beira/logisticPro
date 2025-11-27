@@ -888,4 +888,32 @@ class ShipmentController extends Controller
 
         return response()->json($paymentRequests);
     }
+
+    /**
+     * Marcar cotação como paga
+     */
+    public function markQuotationAsPaid(Shipment $shipment)
+    {
+        // Verificar se tem cotação
+        if (!$shipment->quotation_reference) {
+            return back()->with('error', 'Este shipment não possui cotação.');
+        }
+
+        // Verificar se já não tem fatura gerada
+        $hasInvoice = \DB::table('invoices')
+            ->where('shipment_id', $shipment->id)
+            ->where('type', 'quotation')
+            ->exists();
+
+        if ($hasInvoice) {
+            return back()->with('error', 'Não é possível marcar como pago. Fatura já foi gerada.');
+        }
+
+        // Atualizar status da cotação
+        $shipment->update([
+            'quotation_status' => 'paid'
+        ]);
+
+        return back()->with('success', 'Cotação marcada como paga com sucesso!');
+    }
 }

@@ -378,6 +378,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/pause-phase', [ShipmentController::class, 'pausePhase'])
             ->name('shipments.pause-phase');
 
+        // Marcar cotação como paga
+        Route::post('/mark-quotation-paid', [ShipmentController::class, 'markQuotationAsPaid'])
+            ->name('shipments.mark-quotation-paid');
+
         // API: Validação de Fase
         Route::get('/phase/{phase}/validation', [ShipmentController::class, 'getPhaseValidation'])
             ->name('shipments.phase-validation');
