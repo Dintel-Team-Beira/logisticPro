@@ -51,7 +51,7 @@ class DebitNoteController extends Controller
     public function create()
     {
         $clients = Client::active()->orderBy('name')->get();
-        $invoices = Invoice::with('client')->orderBy('issue_date', 'desc')->get();
+        $invoices = Invoice::with(['client', 'items'])->orderBy('issue_date', 'desc')->get();
 
         return Inertia::render('DebitNotes/Create', [
             'nextDebitNoteNumber' => DebitNote::generateDebitNoteNumber(),
@@ -145,7 +145,7 @@ class DebitNoteController extends Controller
 
         $debitNote->load('items');
         $clients = Client::active()->orderBy('name')->get();
-        $invoices = Invoice::with('client')->orderBy('issue_date', 'desc')->get();
+        $invoices = Invoice::with(['client', 'items'])->orderBy('issue_date', 'desc')->get();
 
         return Inertia::render('DebitNotes/Edit', [
             'debitNote' => $debitNote,

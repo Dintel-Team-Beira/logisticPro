@@ -51,7 +51,7 @@ class CreditNoteController extends Controller
     public function create()
     {
         $clients = Client::active()->orderBy('name')->get();
-        $invoices = Invoice::with('client')->orderBy('issue_date', 'desc')->get();
+        $invoices = Invoice::with(['client', 'items'])->orderBy('issue_date', 'desc')->get();
 
         return Inertia::render('CreditNotes/Create', [
             'nextCreditNoteNumber' => CreditNote::generateCreditNoteNumber(),
@@ -145,7 +145,7 @@ class CreditNoteController extends Controller
 
         $creditNote->load('items');
         $clients = Client::active()->orderBy('name')->get();
-        $invoices = Invoice::with('client')->orderBy('issue_date', 'desc')->get();
+        $invoices = Invoice::with(['client', 'items'])->orderBy('issue_date', 'desc')->get();
 
         return Inertia::render('CreditNotes/Edit', [
             'creditNote' => $creditNote,
