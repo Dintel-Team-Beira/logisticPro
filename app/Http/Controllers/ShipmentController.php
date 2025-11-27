@@ -1001,6 +1001,26 @@ class ShipmentController extends Controller
     }
 
     /**
+     * Atualizar informações de devolução do container vazio (POD)
+     */
+    public function updateEmptyReturn(Request $request, Shipment $shipment)
+    {
+        $validated = $request->validate([
+            'location' => 'required|string|max:255',
+            'date' => 'required|date',
+            'notes' => 'nullable|string|max:1000',
+        ]);
+
+        $shipment->update([
+            'empty_container_return_location' => $validated['location'],
+            'empty_container_return_date' => $validated['date'],
+            'empty_container_return_notes' => $validated['notes'],
+        ]);
+
+        return back()->with('success', 'Informações de devolução do container vazio registradas com sucesso!');
+    }
+
+    /**
      * Marcar cotação como paga
      */
     public function markQuotationAsPaid(Shipment $shipment)

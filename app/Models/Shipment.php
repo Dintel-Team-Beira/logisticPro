@@ -74,6 +74,9 @@ class Shipment extends Model
         'client_invoice_id',
         'client_payment_status',
         'pod_status', // NOVO: awaiting, received, confirmed
+        'empty_container_return_location', // Local de devolução do vazio
+        'empty_container_return_date', // Data de devolução do vazio
+        'empty_container_return_notes', // Observações da devolução
         // Campos de status por fase - EXPORTAÇÃO
         'exp_document_prep_status',
         'exp_booking_status',
@@ -147,6 +150,9 @@ class Shipment extends Model
         'tra_departure_date' => 'date',
         'tra_actual_departure_date' => 'date',
         'tra_delivery_date' => 'date',
+
+        // POD - Devolução do vazio
+        'empty_container_return_date' => 'date',
     ];
 
     protected $appends = ['request_type_label'];

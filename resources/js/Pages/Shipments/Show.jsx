@@ -33,6 +33,231 @@ import {
 import { PaymentRequestModal } from './PaymentRequestModal'
 import { BulkPaymentRequestModal } from './BulkPaymentRequestModal'
 import { PaymentRequestsVisualizer } from './PaymentRequestsVisualizer'
+
+// Componente para devolução do container vazio (POD)
+function EmptyContainerReturnCard({ shipment, currentPhaseData }) {
+    const [isEditing, setIsEditing] = useState(false)
+    const [formData, setFormData] = useState({
+        location: shipment.empty_container_return_location || '',
+        date: shipment.empty_container_return_date || '',
+        notes: shipment.empty_container_return_notes || '',
+    })
+    const [isSaving, setIsSaving] = useState(false)
+
+    const locationsPresets = [
+        'Porto de Maputo',
+        'Porto da Beira',
+        'Porto de Nacala',
+        'Porto de Pemba',
+        'Armazém Matola',
+        'Armazém Machava',
+        'Depósito TCO',
+        'Depósito CEAR',
+        'Outro',
+    ]
+
+    const handleSave = () => {
+        if (!formData.location || !formData.date) {
+            alert('Por favor, preencha o local e a data de devolução.')
+            return
+        }
+
+        setIsSaving(true)
+        router.post(
+            `/shipments/${shipment.id}/update-empty-return`,
+            formData,
+            {
+                preserveScroll: true,
+                onSuccess: () => {
+                    setIsEditing(false)
+                    setIsSaving(false)
+                },
+                onError: () => {
+                    alert('Erro ao salvar informações de devolução')
+                    setIsSaving(false)
+                },
+            }
+        )
+    }
+
+    const handleCancel = () => {
+        setFormData({
+            location: shipment.empty_container_return_location || '',
+            date: shipment.empty_container_return_date || '',
+            notes: shipment.empty_container_return_notes || '',
+        })
+        setIsEditing(false)
+    }
+
+    const hasReturnInfo = shipment.empty_container_return_location && shipment.empty_container_return_date
+
+    return (
+        <div className="p-6 border-2 rounded-lg bg-emerald-50 border-emerald-200">
+            <div className="flex items-start justify-between mb-4">
+                <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-emerald-100">
+                        <Package className="w-6 h-6 text-emerald-700" />
+                    </div>
+                    <div>
+                        <h3 className="text-lg font-bold text-emerald-900">
+                            Devolução do Container Vazio
+                        </h3>
+                        <p className="text-sm text-emerald-700">
+                            {hasReturnInfo
+                                ? 'Informações de devolução registradas'
+                                : 'Registre o local e data de devolução do container vazio'}
+                        </p>
+                    </div>
+                </div>
+                {!isEditing && (
+                    <button
+                        onClick={() => setIsEditing(true)}
+                        className="p-2 transition-colors rounded-lg hover:bg-emerald-100"
+                        title={hasReturnInfo ? 'Editar informações' : 'Registrar devolução'}
+                    >
+                        <Edit className="w-5 h-5 text-emerald-700" />
+                    </button>
+                )}
+            </div>
+
+            {!isEditing && hasReturnInfo ? (
+                <div className="p-4 bg-white border rounded-lg border-emerald-200">
+                    <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                        <div>
+                            <p className="text-xs font-medium text-emerald-600">Local de Devolução</p>
+                            <p className="flex items-center gap-2 text-sm font-bold text-emerald-900">
+                                <MapPin className="w-4 h-4" />
+                                {shipment.empty_container_return_location}
+                            </p>
+                        </div>
+                        <div>
+                            <p className="text-xs font-medium text-emerald-600">Data de Devolução</p>
+                            <p className="flex items-center gap-2 text-sm font-bold text-emerald-900">
+                                <Calendar className="w-4 h-4" />
+                                {new Date(shipment.empty_container_return_date).toLocaleDateString('pt-BR')}
+                            </p>
+                        </div>
+                        {shipment.empty_container_return_notes && (
+                            <div className="md:col-span-2">
+                                <p className="text-xs font-medium text-emerald-600">Observações</p>
+                                <p className="text-sm text-emerald-800">{shipment.empty_container_return_notes}</p>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            ) : !isEditing ? (
+                <div className="py-8 text-center">
+                    <Package className="w-12 h-12 mx-auto mb-3 text-emerald-300" />
+                    <p className="mb-4 text-sm font-medium text-emerald-800">
+                        Nenhuma informação de devolução registrada
+                    </p>
+                    <button
+                        onClick={() => setIsEditing(true)}
+                        className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-emerald-600 hover:bg-emerald-700"
+                    >
+                        <Check className="w-4 h-4" />
+                        Registrar Devolução
+                    </button>
+                </div>
+            ) : (
+                <div className="space-y-4">
+                    <div className="p-4 bg-white border rounded-lg border-emerald-200">
+                        <div className="space-y-4">
+                            {/* Local de Devolução */}
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-emerald-900">
+                                    Local de Devolução *
+                                </label>
+                                <select
+                                    value={formData.location}
+                                    onChange={(e) => setFormData({ ...formData, location: e.target.value })}
+                                    className="w-full px-3 py-2 text-sm border rounded-lg border-emerald-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    required
+                                >
+                                    <option value="">Selecione o local</option>
+                                    {locationsPresets.map((loc) => (
+                                        <option key={loc} value={loc}>
+                                            {loc}
+                                        </option>
+                                    ))}
+                                </select>
+                                {formData.location === 'Outro' && (
+                                    <input
+                                        type="text"
+                                        placeholder="Especifique o local"
+                                        value={formData.customLocation || ''}
+                                        onChange={(e) =>
+                                            setFormData({ ...formData, location: e.target.value })
+                                        }
+                                        className="w-full px-3 py-2 mt-2 text-sm border rounded-lg border-emerald-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    />
+                                )}
+                            </div>
+
+                            {/* Data de Devolução */}
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-emerald-900">
+                                    Data de Devolução *
+                                </label>
+                                <input
+                                    type="date"
+                                    value={formData.date}
+                                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
+                                    className="w-full px-3 py-2 text-sm border rounded-lg border-emerald-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                    required
+                                />
+                            </div>
+
+                            {/* Observações */}
+                            <div>
+                                <label className="block mb-2 text-sm font-medium text-emerald-900">
+                                    Observações (Opcional)
+                                </label>
+                                <textarea
+                                    value={formData.notes}
+                                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                                    rows={3}
+                                    placeholder="Ex: Container devolvido em boas condições, sem danos..."
+                                    className="w-full px-3 py-2 text-sm border rounded-lg border-emerald-300 focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                                />
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Botões */}
+                    <div className="flex gap-3">
+                        <button
+                            onClick={handleSave}
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors rounded-lg bg-emerald-600 hover:bg-emerald-700 disabled:bg-slate-300 disabled:cursor-not-allowed"
+                        >
+                            {isSaving ? (
+                                <>
+                                    <Clock className="w-4 h-4 animate-spin" />
+                                    Salvando...
+                                </>
+                            ) : (
+                                <>
+                                    <Save className="w-4 h-4" />
+                                    Salvar Informações
+                                </>
+                            )}
+                        </button>
+                        <button
+                            onClick={handleCancel}
+                            disabled={isSaving}
+                            className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-emerald-700 border-emerald-300 hover:bg-emerald-50 disabled:opacity-50 disabled:cursor-not-allowed"
+                        >
+                            <X className="w-4 h-4" />
+                            Cancelar
+                        </button>
+                    </div>
+                </div>
+            )}
+        </div>
+    )
+}
+
 export default function Show ({
     // paymentRequests = [],
      shipment,
@@ -582,6 +807,14 @@ export default function Show ({
                                 )}
                             </div>
                         </div>
+
+                        {/* Formulário POD - Devolução do Vazio */}
+                        {selectedPhase === 7 && (
+                            <EmptyContainerReturnCard
+                                shipment={shipment}
+                                currentPhaseData={currentPhaseData}
+                            />
+                        )}
 
                         {/* Informações do Processo */}
                         <div className='p-6 bg-white border rounded-lg border-slate-200'>

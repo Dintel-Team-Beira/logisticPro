@@ -390,6 +390,10 @@ Route::middleware(['auth'])->group(function () {
         Route::post('/update-arrival-date', [ShipmentController::class, 'updateArrivalDate'])
             ->name('shipments.update-arrival-date');
 
+        // Atualizar devolução do container vazio (POD)
+        Route::post('/update-empty-return', [ShipmentController::class, 'updateEmptyReturn'])
+            ->name('shipments.update-empty-return');
+
         // API: Validação de Fase
         Route::get('/phase/{phase}/validation', [ShipmentController::class, 'getPhaseValidation'])
             ->name('shipments.phase-validation');
