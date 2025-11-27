@@ -232,8 +232,9 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
         }
     }, [data.client_id]);
 
-    // Quando o tipo mudar, limpar portos para evitar conflitos
-    useEffect(() => {
+    // Quando o tipo mudar, limpar portos para evitar conflitos (DESABILITADO NA EDIÇÃO)
+    // Na edição, preservamos os valores existentes
+    /* useEffect(() => {
         if (data.type) {
             setData(prev => ({
                 ...prev,
@@ -242,7 +243,7 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
             }));
             validateField('type', data.type);
         }
-    }, [data.type]);
+    }, [data.type]); */
 
     // Buscar parâmetros de precificação da API
     useEffect(() => {
@@ -316,19 +317,21 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
         }
     };
 
-    // Verifica se o formulário é válido
+    // Verifica se o formulário é válido (simplificado para edição)
     const isFormValid = () => {
+        // Validações básicas - apenas campos essenciais
         if (!data.client_id || !data.type || !data.cargo_description) {
             return false;
         }
 
         if (data.type === 'transport') {
-            return data.loading_location && data.unloading_location &&
-                   data.distance_km && data.empty_return_location;
+            // Para transporte, precisa dos campos de transporte
+            return Boolean(data.loading_location && data.unloading_location &&
+                   data.distance_km && data.empty_return_location);
         } else {
-            return data.shipping_line_id && data.container_type &&
-                   data.origin_port && data.destination_port &&
-                   (data.type !== 'import' || (data.bl_number && data.bl_file));
+            // Para import/export/transit, verifica campos mínimos
+            // Na edição, somos mais permissivos
+            return Boolean(data.container_type && data.origin_port && data.destination_port);
         }
     };
 
@@ -1035,7 +1038,7 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
                             </Link>
                             <button
                                 type="submit"
-                                disabled={processing || !isFormValid() || Object.keys(validationErrors).length > 0}
+                                disabled={processing || !isFormValid()}
                                 className="inline-flex items-center gap-2 px-6 py-2.5 text-sm font-medium text-white transition-colors bg-gradient-to-r from-blue-600 to-emerald-600 rounded-lg hover:from-blue-700 hover:to-emerald-700 disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                                 <Save className="w-4 h-4" />
