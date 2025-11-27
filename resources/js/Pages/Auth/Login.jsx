@@ -31,7 +31,7 @@ export default function Login({ status, canResetPassword }) {
             {/* Animated Background Icon */}
             <div className="absolute text-gray-300 top-8 left-8 opacity-10 animate-pulse">
                 {/* <Truck size={64} /> */}
-                <img src='background.svg' className='w-50 h-50'/>
+                <img src='background.min.svg' className='w-50 h-50'/>
             </div>
 
             {status && (
