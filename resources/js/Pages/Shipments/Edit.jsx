@@ -26,7 +26,6 @@ import {
 } from 'lucide-react';
 
 export default function Edit({ shipment, shippingLines, clients, consignees }) {
-    const [blFile, setBlFile] = useState(null);
     const [filteredConsignees, setFilteredConsignees] = useState([]);
 
     // Parâmetros de precificação da API
@@ -48,8 +47,7 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
     const [touched, setTouched] = useState({});
 
     const { data, setData, put, processing, errors } = useForm({
-        // Cliente e Consignatário
-        client_id: shipment.client_id || '',
+        // Cliente e Consignatário (client_id NÃO pode ser editado)
         consignee_id: shipment.consignee_id || '',
 
         // Tipo de Processo
@@ -58,7 +56,6 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
         // Linha de Navegação e Documentos (Import/Export/Transit)
         shipping_line_id: shipment.shipping_line_id || '',
         bl_number: shipment.bl_number || '',
-        bl_file: null,
 
         // Container (Import/Export/Transit)
         container_number: shipment.container_number || '',
@@ -123,11 +120,7 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
         const newErrors = { ...validationErrors };
 
         // Campos obrigatórios gerais
-        if (field === 'client_id' && !value) {
-            newErrors.client_id = 'Cliente é obrigatório';
-        } else if (field === 'client_id') {
-            delete newErrors.client_id;
-        }
+        // client_id não é validado pois não é editável
 
         if (field === 'type' && !value) {
             newErrors.type = 'Tipo de processo é obrigatório';
@@ -221,16 +214,13 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
     // EFEITOS E HANDLERS
     // ========================================
 
-    // Filtrar consignatários por cliente selecionado
+    // Filtrar consignatários por cliente (cliente não é editável)
     useEffect(() => {
-        if (data.client_id) {
-            const filtered = consignees?.filter(c => !c.client_id || c.client_id == data.client_id) || [];
+        if (shipment.client_id) {
+            const filtered = consignees?.filter(c => !c.client_id || c.client_id == shipment.client_id) || [];
             setFilteredConsignees(filtered);
-        } else {
-            setFilteredConsignees([]);
-            setData('consignee_id', '');
         }
-    }, [data.client_id]);
+    }, [shipment.client_id]);
 
     // Quando o tipo mudar, limpar portos para evitar conflitos (DESABILITADO NA EDIÇÃO)
     // Na edição, preservamos os valores existentes
@@ -291,38 +281,21 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
             }
         });
 
-        // BL file é opcional na edição (pode já existir)
-        // Não validamos aqui
-
         if (hasErrors) {
             return;
         }
 
-        // Usar post com _method PUT para suportar FormData (arquivos)
-        post(`/shipments/${shipment.id}`, {
-            forceFormData: true,
+        // Usar put() simples - não há upload de arquivos na edição
+        put(`/shipments/${shipment.id}`, {
             preserveScroll: true,
-            _method: 'PUT',
         });
-    };
-
-    const handleFileChange = (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            setBlFile(file);
-            setData('bl_file', file);
-            setValidationErrors(prev => {
-                const newErrors = { ...prev };
-                delete newErrors.bl_file;
-                return newErrors;
-            });
-        }
     };
 
     // Verifica se o formulário é válido (simplificado para edição)
     const isFormValid = () => {
         // Validações básicas - apenas campos essenciais
-        if (!data.client_id || !data.type || !data.cargo_description) {
+        // Cliente já existe (não editável), só valida tipo e descrição
+        if (!data.type || !data.cargo_description) {
             return false;
         }
 
@@ -374,12 +347,10 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
                         <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
                             <div>
                                 <Select
-                                    label="Cliente *"
-                                    value={data.client_id}
-                                    onChange={(e) => handleFieldChange('client_id', e.target.value)}
-                                    onBlur={() => handleBlur('client_id')}
-                                    error={touched.client_id && (validationErrors.client_id || errors.client_id)}
-                                    required
+                                    label="Cliente * (não editável)"
+                                    value={shipment.client_id}
+                                    onChange={() => {}}
+                                    disabled
                                 >
                                     <option value="">Selecione o cliente</option>
                                     {clients?.map((client) => (
@@ -388,9 +359,12 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
                                         </option>
                                     ))}
                                 </Select>
+                                <p className="mt-1 text-xs text-slate-500">
+                                    O cliente não pode ser alterado após a criação do processo
+                                </p>
                             </div>
 
-                            {data.client_id && (
+                            {shipment.client_id && (
                                 <div>
                                     <Select
                                         label="Consignatário (Opcional)"
@@ -690,54 +664,18 @@ export default function Edit({ shipment, shippingLines, clients, consignees }) {
                                             />
                                         </div>
 
-                                        {/* Upload de BL */}
-                                        <div className="mt-6">
-                                            <label className="block mb-2 text-sm font-medium text-slate-700">
-                                                {data.type === 'import'
-                                                    ? '📄 Upload do BL Original * (PDF, JPG, PNG)'
-                                                    : '📄 Upload de Documentos (Opcional) (PDF, JPG, PNG)'}
-                                            </label>
-                                            <div className="flex items-center justify-center w-full">
-                                                <label className={`
-                                                    flex flex-col items-center justify-center w-full h-32 border-2 border-dashed rounded-lg cursor-pointer
-                                                    ${blFile ? 'border-emerald-500 bg-emerald-50' : 'border-slate-300 bg-slate-50'}
-                                                    hover:bg-slate-100 transition-colors
-                                                `}>
-                                                    <div className="flex flex-col items-center justify-center pt-5 pb-6">
-                                                        {blFile ? (
-                                                            <>
-                                                                <Check className="w-8 h-8 mb-2 text-emerald-600" />
-                                                                <p className="mb-1 text-sm font-medium text-emerald-700">
-                                                                    {blFile.name}
-                                                                </p>
-                                                                <p className="text-xs text-emerald-600">
-                                                                    {(blFile.size / 1024 / 1024).toFixed(2)} MB
-                                                                </p>
-                                                            </>
-                                                        ) : (
-                                                            <>
-                                                                <Upload className="w-8 h-8 mb-2 text-slate-400" />
-                                                                <p className="text-xs text-slate-500">
-                                                                    <span className="font-semibold">Clique para fazer upload</span>
-                                                                </p>
-                                                                <p className="text-xs text-slate-400">
-                                                                    PDF, JPG, PNG (MAX. 10MB)
-                                                                </p>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                    <input
-                                                        type="file"
-                                                        className="hidden"
-                                                        accept=".pdf,.jpg,.jpeg,.png"
-                                                        onChange={handleFileChange}
-                                                    />
-                                                </label>
+                                        {/* Informação sobre BL existente */}
+                                        {shipment.bl_number && (
+                                            <div className="p-3 mt-4 border rounded-lg bg-slate-50 border-slate-200">
+                                                <p className="text-xs text-slate-600">
+                                                    📄 <strong>BL já registrado:</strong> {shipment.bl_number}
+                                                    {shipment.bl_document && ' (com arquivo anexado)'}
+                                                </p>
+                                                <p className="mt-1 text-xs text-slate-500">
+                                                    Arquivos BL não podem ser alterados após a criação
+                                                </p>
                                             </div>
-                                            {touched.bl_file && validationErrors.bl_file && (
-                                                <p className="mt-1 text-xs text-red-600">{validationErrors.bl_file}</p>
-                                            )}
-                                        </div>
+                                        )}
                                     </div>
 
                                     {/* Container */}
