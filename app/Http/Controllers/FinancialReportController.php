@@ -243,10 +243,46 @@ class FinancialReportController extends Controller
                 ];
             });
 
+        // Credit Notes
+        $creditNotes = CreditNote::with(['shipment.client'])
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get()
+            ->map(function ($cn) {
+                return [
+                    'date' => $cn->created_at,
+                    'type' => 'credit_note',
+                    'description' => 'Nota de Crédito ' . $cn->credit_note_number,
+                    'client' => optional(optional($cn->shipment)->client)->name ?? 'N/A',
+                    'reference' => optional($cn->shipment)->reference_number ?? 'N/A',
+                    'debit' => $cn->total,
+                    'credit' => 0,
+                    'status' => $cn->status,
+                ];
+            });
+
+        // Debit Notes
+        $debitNotes = DebitNote::with(['shipment.client'])
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get()
+            ->map(function ($dn) {
+                return [
+                    'date' => $dn->created_at,
+                    'type' => 'debit_note',
+                    'description' => 'Nota de Débito ' . $dn->debit_note_number,
+                    'client' => optional(optional($dn->shipment)->client)->name ?? 'N/A',
+                    'reference' => optional($dn->shipment)->reference_number ?? 'N/A',
+                    'debit' => 0,
+                    'credit' => $dn->total,
+                    'status' => $dn->status,
+                ];
+            });
+
         return $transactions
             ->merge($paymentRequests)
             ->merge($invoices)
             ->merge($receipts)
+            ->merge($creditNotes)
+            ->merge($debitNotes)
             ->sortByDesc('date')
             ->values();
     }

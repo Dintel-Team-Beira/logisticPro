@@ -444,10 +444,16 @@ export default function Index({
                                                                 ? 'bg-red-100 text-red-700'
                                                                 : transaction.type === 'invoice'
                                                                 ? 'bg-blue-100 text-blue-700'
-                                                                : 'bg-emerald-100 text-emerald-700'
+                                                                : transaction.type === 'receipt'
+                                                                ? 'bg-emerald-100 text-emerald-700'
+                                                                : transaction.type === 'credit_note'
+                                                                ? 'bg-orange-100 text-orange-700'
+                                                                : 'bg-purple-100 text-purple-700'
                                                         }`}>
                                                             {transaction.type === 'payment_request' ? 'Despesa' :
-                                                             transaction.type === 'invoice' ? 'Fatura' : 'Recibo'}
+                                                             transaction.type === 'invoice' ? 'Fatura' :
+                                                             transaction.type === 'receipt' ? 'Recibo' :
+                                                             transaction.type === 'credit_note' ? 'Nota Crédito' : 'Nota Débito'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-slate-900">
