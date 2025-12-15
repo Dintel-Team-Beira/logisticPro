@@ -99,6 +99,8 @@ class ShippingLineController extends Controller
             'phone' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:500',
             'contact_person' => 'nullable|string|max:255',
+            'services' => 'nullable|array',
+            'services.*' => 'string',
             'active' => 'boolean'
         ]);
 
@@ -152,6 +154,8 @@ class ShippingLineController extends Controller
             'phone' => 'nullable|string|max:50',
             'address' => 'nullable|string|max:500',
             'contact_person' => 'nullable|string|max:255',
+            'services' => 'nullable|array',
+            'services.*' => 'string',
             'active' => 'boolean'
         ]);
 
