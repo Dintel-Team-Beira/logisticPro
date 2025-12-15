@@ -22,6 +22,7 @@ use App\Http\Controllers\PaymentRequestController;
 use App\Http\Controllers\ShippingLineController;
 use App\Http\Controllers\ShipmentPhaseController;
 use App\Http\Controllers\FinancialReportController;
+use App\Http\Controllers\FinancialTransactionController;
 
 /*
 |--------------------------------------------------------------------------
@@ -803,6 +804,11 @@ Route::middleware(['auth'])->prefix('financial')->name('financial.')->group(func
     Route::get('/', [FinancialReportController::class, 'index'])
         ->name('index');
 });
+
+// ============================================================================
+// TRANSAÇÕES FINANCEIRAS AVULSAS - Itens do Extrato
+// ============================================================================
+Route::middleware(['auth'])->resource('financial-transactions', FinancialTransactionController::class);
 
 // ============================================================================
 // COTAÇÕES - Sistema de Orçamentos/Quotations

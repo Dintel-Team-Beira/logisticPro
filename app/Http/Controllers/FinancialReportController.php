@@ -10,6 +10,7 @@ use App\Models\DebitNote;
 use App\Models\Client;
 use App\Models\ShippingLine;
 use App\Models\Shipment;
+use App\Models\FinancialTransaction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -243,10 +244,64 @@ class FinancialReportController extends Controller
                 ];
             });
 
+        // Credit Notes
+        $creditNotes = CreditNote::with(['shipment.client'])
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get()
+            ->map(function ($cn) {
+                return [
+                    'date' => $cn->created_at,
+                    'type' => 'credit_note',
+                    'description' => 'Nota de Crédito ' . $cn->credit_note_number,
+                    'client' => optional(optional($cn->shipment)->client)->name ?? 'N/A',
+                    'reference' => optional($cn->shipment)->reference_number ?? 'N/A',
+                    'debit' => $cn->total,
+                    'credit' => 0,
+                    'status' => $cn->status,
+                ];
+            });
+
+        // Debit Notes
+        $debitNotes = DebitNote::with(['shipment.client'])
+            ->whereBetween('created_at', [$startDate, $endDate])
+            ->get()
+            ->map(function ($dn) {
+                return [
+                    'date' => $dn->created_at,
+                    'type' => 'debit_note',
+                    'description' => 'Nota de Débito ' . $dn->debit_note_number,
+                    'client' => optional(optional($dn->shipment)->client)->name ?? 'N/A',
+                    'reference' => optional($dn->shipment)->reference_number ?? 'N/A',
+                    'debit' => 0,
+                    'credit' => $dn->total,
+                    'status' => $dn->status,
+                ];
+            });
+
+        // Financial Transactions (Avulsas)
+        $financialTransactions = FinancialTransaction::with('client')
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->get()
+            ->map(function ($ft) {
+                return [
+                    'date' => $ft->transaction_date,
+                    'type' => 'financial_transaction',
+                    'description' => $ft->description . ($ft->category ? ' (' . $ft->category . ')' : ''),
+                    'client' => optional($ft->client)->name ?? 'N/A',
+                    'reference' => $ft->reference ?? 'Transação Avulsa',
+                    'debit' => $ft->type === 'expense' ? $ft->amount : 0,
+                    'credit' => $ft->type === 'income' ? $ft->amount : 0,
+                    'status' => 'completed',
+                ];
+            });
+
         return $transactions
             ->merge($paymentRequests)
             ->merge($invoices)
             ->merge($receipts)
+            ->merge($creditNotes)
+            ->merge($debitNotes)
+            ->merge($financialTransactions)
             ->sortByDesc('date')
             ->values();
     }
