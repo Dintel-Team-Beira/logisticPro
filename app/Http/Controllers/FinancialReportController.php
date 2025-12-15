@@ -18,36 +18,65 @@ class FinancialReportController extends Controller
 {
     public function index(Request $request)
     {
-        // Período de análise (padrão: últimos 12 meses)
-        $startDate = $request->input('start_date', now()->subMonths(12)->startOfMonth());
-        $endDate = $request->input('end_date', now()->endOfMonth());
+        try {
+            // Período de análise (padrão: últimos 12 meses)
+            $startDate = $request->input('start_date', now()->subMonths(12)->startOfMonth());
+            $endDate = $request->input('end_date', now()->endOfMonth());
 
-        // Custos por Cliente
-        $costsByClient = $this->getCostsByClient($startDate, $endDate);
+            // Custos por Cliente
+            $costsByClient = $this->getCostsByClient($startDate, $endDate);
 
-        // Custos por Linha de Navegação
-        $costsByShippingLine = $this->getCostsByShippingLine($startDate, $endDate);
+            // Custos por Linha de Navegação
+            $costsByShippingLine = $this->getCostsByShippingLine($startDate, $endDate);
 
-        // Custos por Tipo de Despesa
-        $costsByExpenseType = $this->getCostsByExpenseType($startDate, $endDate);
+            // Custos por Tipo de Despesa
+            $costsByExpenseType = $this->getCostsByExpenseType($startDate, $endDate);
 
-        // Extrato Geral
-        $statement = $this->getGeneralStatement($startDate, $endDate);
+            // Extrato Geral
+            $statement = $this->getGeneralStatement($startDate, $endDate);
 
-        // Resumo Financeiro
-        $summary = $this->getFinancialSummary($startDate, $endDate);
+            // Resumo Financeiro
+            $summary = $this->getFinancialSummary($startDate, $endDate);
 
-        return Inertia::render('Financial/Index', [
-            'costsByClient' => $costsByClient,
-            'costsByShippingLine' => $costsByShippingLine,
-            'costsByExpenseType' => $costsByExpenseType,
-            'statement' => $statement,
-            'summary' => $summary,
-            'filters' => [
-                'start_date' => $startDate,
-                'end_date' => $endDate,
-            ]
-        ]);
+            return Inertia::render('Financial/Index', [
+                'costsByClient' => $costsByClient,
+                'costsByShippingLine' => $costsByShippingLine,
+                'costsByExpenseType' => $costsByExpenseType,
+                'statement' => $statement,
+                'summary' => $summary,
+                'filters' => [
+                    'start_date' => $startDate,
+                    'end_date' => $endDate,
+                ]
+            ]);
+        } catch (\Exception $e) {
+            // Log do erro para debug
+            \Log::error('Financial Report Error: ' . $e->getMessage());
+
+            // Retornar página com dados vazios
+            return Inertia::render('Financial/Index', [
+                'costsByClient' => [],
+                'costsByShippingLine' => [],
+                'costsByExpenseType' => [],
+                'statement' => [],
+                'summary' => [
+                    'total_costs' => 0,
+                    'total_invoiced' => 0,
+                    'total_received' => 0,
+                    'total_credit_notes' => 0,
+                    'total_debit_notes' => 0,
+                    'outstanding' => 0,
+                    'profit_margin' => 0,
+                    'active_processes' => 0,
+                    'completed_processes' => 0,
+                ],
+                'filters' => [
+                    'start_date' => now()->subMonths(12)->startOfMonth(),
+                    'end_date' => now()->endOfMonth(),
+                ],
+                'error' => 'Erro ao carregar dados financeiros. Verifique se todas as tabelas existem.'
+            ]);
+        }
     }
 
     /**
@@ -172,8 +201,8 @@ class FinancialReportController extends Controller
                     'date' => $pr->created_at,
                     'type' => 'payment_request',
                     'description' => $pr->description,
-                    'client' => $pr->shipment->client->name ?? 'N/A',
-                    'reference' => $pr->shipment->reference_number ?? 'N/A',
+                    'client' => optional(optional($pr->shipment)->client)->name ?? 'N/A',
+                    'reference' => optional($pr->shipment)->reference_number ?? 'N/A',
                     'debit' => $pr->amount,
                     'credit' => 0,
                     'status' => $pr->status,
@@ -189,8 +218,8 @@ class FinancialReportController extends Controller
                     'date' => $inv->created_at,
                     'type' => 'invoice',
                     'description' => 'Fatura ' . $inv->invoice_number,
-                    'client' => $inv->shipment->client->name ?? 'N/A',
-                    'reference' => $inv->shipment->reference_number ?? 'N/A',
+                    'client' => optional(optional($inv->shipment)->client)->name ?? 'N/A',
+                    'reference' => optional($inv->shipment)->reference_number ?? 'N/A',
                     'debit' => 0,
                     'credit' => $inv->total,
                     'status' => $inv->status,
@@ -206,8 +235,8 @@ class FinancialReportController extends Controller
                     'date' => $rec->created_at,
                     'type' => 'receipt',
                     'description' => 'Recibo de Pagamento',
-                    'client' => $rec->invoice->shipment->client->name ?? 'N/A',
-                    'reference' => $rec->invoice->shipment->reference_number ?? 'N/A',
+                    'client' => optional(optional(optional($rec->invoice)->shipment)->client)->name ?? 'N/A',
+                    'reference' => optional(optional($rec->invoice)->shipment)->reference_number ?? 'N/A',
                     'debit' => 0,
                     'credit' => $rec->amount,
                     'status' => 'paid',
