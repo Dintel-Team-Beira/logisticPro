@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Head } from '@inertiajs/react'
+import { Head, Link } from '@inertiajs/react'
 import DashboardLayout from '@/Layouts/DashboardLayout'
 import {
     DollarSign,
@@ -13,6 +13,7 @@ import {
     BarChart3,
     PieChart,
     CheckCircle2,
+    Plus,
 } from 'lucide-react'
 
 export default function Index({
@@ -400,9 +401,18 @@ export default function Index({
                     {/* Extrato Geral */}
                     {activeTab === 'statement' && (
                         <div className="bg-white border rounded-lg border-slate-200">
-                            <div className="p-6 border-b border-slate-200">
-                                <h2 className="text-lg font-bold text-slate-900">Extrato Geral</h2>
-                                <p className="text-sm text-slate-500">Todas as transações financeiras</p>
+                            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                                <div>
+                                    <h2 className="text-lg font-bold text-slate-900">Extrato Geral</h2>
+                                    <p className="text-sm text-slate-500">Todas as transações financeiras</p>
+                                </div>
+                                <Link
+                                    href="/financial-transactions/create"
+                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+                                >
+                                    <Plus className="w-4 h-4" />
+                                    Adicionar Transação
+                                </Link>
                             </div>
                             <div className="overflow-x-auto">
                                 <table className="w-full">
@@ -448,12 +458,15 @@ export default function Index({
                                                                 ? 'bg-emerald-100 text-emerald-700'
                                                                 : transaction.type === 'credit_note'
                                                                 ? 'bg-orange-100 text-orange-700'
-                                                                : 'bg-purple-100 text-purple-700'
+                                                                : transaction.type === 'debit_note'
+                                                                ? 'bg-purple-100 text-purple-700'
+                                                                : 'bg-indigo-100 text-indigo-700'
                                                         }`}>
                                                             {transaction.type === 'payment_request' ? 'Despesa' :
                                                              transaction.type === 'invoice' ? 'Fatura' :
                                                              transaction.type === 'receipt' ? 'Recibo' :
-                                                             transaction.type === 'credit_note' ? 'Nota Crédito' : 'Nota Débito'}
+                                                             transaction.type === 'credit_note' ? 'Nota Crédito' :
+                                                             transaction.type === 'debit_note' ? 'Nota Débito' : 'Transação Avulsa'}
                                                         </span>
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-slate-900">

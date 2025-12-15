@@ -10,6 +10,7 @@ use App\Models\DebitNote;
 use App\Models\Client;
 use App\Models\ShippingLine;
 use App\Models\Shipment;
+use App\Models\FinancialTransaction;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
 use Illuminate\Support\Facades\DB;
@@ -277,12 +278,30 @@ class FinancialReportController extends Controller
                 ];
             });
 
+        // Financial Transactions (Avulsas)
+        $financialTransactions = FinancialTransaction::with('client')
+            ->whereBetween('transaction_date', [$startDate, $endDate])
+            ->get()
+            ->map(function ($ft) {
+                return [
+                    'date' => $ft->transaction_date,
+                    'type' => 'financial_transaction',
+                    'description' => $ft->description . ($ft->category ? ' (' . $ft->category . ')' : ''),
+                    'client' => optional($ft->client)->name ?? 'N/A',
+                    'reference' => $ft->reference ?? 'Transação Avulsa',
+                    'debit' => $ft->type === 'expense' ? $ft->amount : 0,
+                    'credit' => $ft->type === 'income' ? $ft->amount : 0,
+                    'status' => 'completed',
+                ];
+            });
+
         return $transactions
             ->merge($paymentRequests)
             ->merge($invoices)
             ->merge($receipts)
             ->merge($creditNotes)
             ->merge($debitNotes)
+            ->merge($financialTransactions)
             ->sortByDesc('date')
             ->values();
     }
