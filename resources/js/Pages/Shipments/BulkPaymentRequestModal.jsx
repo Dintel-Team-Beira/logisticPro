@@ -19,13 +19,13 @@ import {
  *
  * @author Arnaldo Tomo
  */
-export function BulkPaymentRequestModal({ shipment, phase, phaseName, onClose }) {
+export function BulkPaymentRequestModal({ shipment, phase, phaseName, shippingLines = [], onClose }) {
     // 🎯 TIPOS DE DESPESAS DISPONÍVEIS PARA FASE 1
     const expenseTypes = [
         {
             value: 'shipping_line_quotation',
             label: 'Cotação Linha de Navegação',
-            payees: ['CMA CGM', 'PIL', 'MAERSK', 'MSC', 'COSCO', 'ONE DIAMOND', 'MANICA'],
+            payees: shippingLines.map(line => line.name),
             description: 'Pagamento de frete marítimo'
         },
         {
@@ -332,6 +332,56 @@ export function BulkPaymentRequestModal({ shipment, phase, phaseName, onClose })
                                                 </p>
                                             )}
                                         </div>
+
+                                        {/* Serviços da Linha de Navegação */}
+                                        {request.expense_type === 'shipping_line_quotation' && request.payee && (() => {
+                                            const selectedLine = shippingLines.find(line => line.name === request.payee);
+                                            if (!selectedLine || !selectedLine.services || selectedLine.services.length === 0) {
+                                                return null;
+                                            }
+
+                                            const serviceLabels = {
+                                                'freight': 'Frete Marítimo',
+                                                'thc': 'THC',
+                                                'storage': 'Storage',
+                                                'documentation': 'Documentação',
+                                                'bl_fee': 'Taxa BL',
+                                                'seal_fee': 'Taxa Selo',
+                                                'inspection': 'Inspeção',
+                                                'cleaning': 'Limpeza',
+                                                'repair': 'Reparos',
+                                                'demurrage': 'Demurrage',
+                                                'detention': 'Detention',
+                                                'vgm': 'VGM',
+                                                'reefer': 'Reefer',
+                                                'hazmat': 'Hazmat',
+                                                'oversized': 'Oversized',
+                                                'customs_clearance': 'Desembaraço',
+                                                'transport': 'Transporte',
+                                                'other': 'Outros'
+                                            };
+
+                                            return (
+                                                <div className="md:col-span-2">
+                                                    <div className="p-4 border-2 rounded-lg bg-blue-50 border-blue-200">
+                                                        <p className="mb-3 text-sm font-bold text-blue-900">
+                                                            📦 Serviços Oferecidos por {selectedLine.name}:
+                                                        </p>
+                                                        <div className="flex flex-wrap gap-2">
+                                                            {selectedLine.services.map((service) => (
+                                                                <span
+                                                                    key={service}
+                                                                    className="inline-flex items-center gap-1 px-3 py-1 text-xs font-medium rounded-full bg-blue-100 text-blue-800"
+                                                                >
+                                                                    <CheckCircle2 className="w-3 h-3" />
+                                                                    {serviceLabels[service] || service}
+                                                                </span>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            );
+                                        })()}
 
                                         {/* Valor */}
                                         <div>

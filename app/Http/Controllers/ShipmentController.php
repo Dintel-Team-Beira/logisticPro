@@ -403,6 +403,11 @@ class ShipmentController extends Controller
             ->orderBy('matricula')
             ->get();
 
+        // Lista de shipping lines com serviços para modal de orçamentos
+        $shippingLines = ShippingLine::where('active', true)
+            ->orderBy('name')
+            ->get();
+
         // dd($phaseProgress);
         return Inertia::render('Shipments/Show', [
             'shipment' => $shipment,
@@ -416,6 +421,7 @@ class ShipmentController extends Controller
             'quotationInvoiceId' => $quotationInvoice?->id,
             'quotationInvoiceNumber' => $quotationInvoice?->invoice_number,
             'availableTransports' => $availableTransports,
+            'shippingLines' => $shippingLines,
         ]);
     }
 

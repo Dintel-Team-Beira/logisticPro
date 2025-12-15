@@ -269,6 +269,7 @@ export default function Show ({
     canForceAdvance,
     paymentRequests,
     availableTransports = [],
+    shippingLines = [],
     auth,
     hasQuotationInvoice = false,
     quotationInvoiceId = null,
@@ -1350,6 +1351,7 @@ export default function Show ({
                     shipment={shipment}
                     phase={selectedPhase}
                     phaseName={phases.find(p => p.id === selectedPhase)?.title}
+                    shippingLines={shippingLines}
                     onClose={() => setBulkPaymentModalOpen(false)}
                 />
             )}

@@ -10,6 +10,8 @@ import {
     MapPin,
     User,
     Hash,
+    Package,
+    CheckCircle,
 } from 'lucide-react';
 
 export default function Create() {
@@ -20,8 +22,40 @@ export default function Create() {
         phone: '',
         address: '',
         contact_person: '',
+        services: [],
         active: true,
     });
+
+    // Serviços disponíveis
+    const availableServices = [
+        { value: 'freight', label: 'Frete Marítimo' },
+        { value: 'thc', label: 'THC (Terminal Handling Charge)' },
+        { value: 'storage', label: 'Armazenagem/Storage' },
+        { value: 'documentation', label: 'Documentação' },
+        { value: 'bl_fee', label: 'Taxa de BL' },
+        { value: 'seal_fee', label: 'Taxa de Selo' },
+        { value: 'inspection', label: 'Inspeção de Container' },
+        { value: 'cleaning', label: 'Limpeza de Container' },
+        { value: 'repair', label: 'Reparos' },
+        { value: 'demurrage', label: 'Demurrage (Sobrestadia)' },
+        { value: 'detention', label: 'Detention (Detenção)' },
+        { value: 'vgm', label: 'VGM (Verified Gross Mass)' },
+        { value: 'reefer', label: 'Serviço Reefer (Refrigerado)' },
+        { value: 'hazmat', label: 'Cargas Perigosas (Hazmat)' },
+        { value: 'oversized', label: 'Cargas Sobredimensionadas' },
+        { value: 'customs_clearance', label: 'Desembaraço Aduaneiro' },
+        { value: 'transport', label: 'Transporte Terrestre' },
+        { value: 'other', label: 'Outros Serviços' },
+    ];
+
+    const handleServiceToggle = (serviceValue) => {
+        const currentServices = data.services || [];
+        if (currentServices.includes(serviceValue)) {
+            setData('services', currentServices.filter(s => s !== serviceValue));
+        } else {
+            setData('services', [...currentServices, serviceValue]);
+        }
+    };
 
     const handleSubmit = (e) => {
         e.preventDefault();
@@ -177,6 +211,59 @@ export default function Create() {
                                         )}
                                     </div>
                                 </div>
+                            </div>
+
+                            {/* Card 3: Serviços Oferecidos */}
+                            <div className="p-6 bg-white border rounded-lg border-slate-200">
+                                <div className="flex items-center gap-2 mb-6">
+                                    <Package className="w-5 h-5 text-slate-600" />
+                                    <h2 className="text-lg font-semibold text-slate-900">
+                                        Serviços Oferecidos
+                                    </h2>
+                                </div>
+                                <p className="mb-4 text-sm text-slate-600">
+                                    Selecione os serviços que esta linha de navegação oferece
+                                </p>
+
+                                <div className="grid grid-cols-1 gap-3 md:grid-cols-2">
+                                    {availableServices.map((service) => (
+                                        <label
+                                            key={service.value}
+                                            className={`flex items-center gap-3 p-3 border rounded-lg cursor-pointer transition-all ${
+                                                data.services.includes(service.value)
+                                                    ? 'border-blue-500 bg-blue-50'
+                                                    : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'
+                                            }`}
+                                        >
+                                            <input
+                                                type="checkbox"
+                                                checked={data.services.includes(service.value)}
+                                                onChange={() => handleServiceToggle(service.value)}
+                                                className="w-4 h-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500"
+                                            />
+                                            <div className="flex items-center gap-2 flex-1">
+                                                {data.services.includes(service.value) && (
+                                                    <CheckCircle className="w-4 h-4 text-blue-600" />
+                                                )}
+                                                <span className={`text-sm ${
+                                                    data.services.includes(service.value)
+                                                        ? 'font-medium text-blue-900'
+                                                        : 'text-slate-700'
+                                                }`}>
+                                                    {service.label}
+                                                </span>
+                                            </div>
+                                        </label>
+                                    ))}
+                                </div>
+
+                                {data.services.length > 0 && (
+                                    <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+                                        <p className="text-sm font-medium text-blue-900">
+                                            ✓ {data.services.length} serviço(s) selecionado(s)
+                                        </p>
+                                    </div>
+                                )}
                             </div>
 
                             {/* Actions */}
