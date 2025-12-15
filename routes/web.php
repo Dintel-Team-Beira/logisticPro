@@ -21,6 +21,7 @@ use App\Http\Controllers\NotificationController;
 use App\Http\Controllers\PaymentRequestController;
 use App\Http\Controllers\ShippingLineController;
 use App\Http\Controllers\ShipmentPhaseController;
+use App\Http\Controllers\FinancialReportController;
 
 /*
 |--------------------------------------------------------------------------
@@ -794,6 +795,14 @@ Route::middleware(['auth'])->group(function () {
 
     Route::put('/invoices', [SettingsController::class, 'updateInvoiceSettings'])
     ->name('settings.invoices.update');
+
+// ============================================================================
+// RELATÓRIOS FINANCEIROS - Análise de Custos e Extratos
+// ============================================================================
+Route::middleware(['auth'])->prefix('financial')->name('financial.')->group(function () {
+    Route::get('/', [FinancialReportController::class, 'index'])
+        ->name('index');
+});
 
 // ============================================================================
 // COTAÇÕES - Sistema de Orçamentos/Quotations

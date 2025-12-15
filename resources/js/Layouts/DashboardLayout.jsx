@@ -34,7 +34,8 @@ import {
     Receipt,
     FileCheck,
     FileDown,
-    FileUp
+    FileUp,
+    PieChart
 } from 'lucide-react';
 
 export default function DashboardLayout({ children }) {
@@ -165,6 +166,12 @@ export default function DashboardLayout({ children }) {
                     name: 'Relatórios',
                     href: '/finance/reports',
                     icon: BarChart3,
+                    roles: ['admin', 'manager', 'finance'],
+                },
+                {
+                    name: 'Análise de Custos',
+                    href: '/financial',
+                    icon: PieChart,
                     roles: ['admin', 'manager', 'finance'],
                 },
             ]
