@@ -1376,13 +1376,12 @@ function InfoItem ({ label, value }) {
 // ========================================
 // COMPONENTE: Upload Modal
 // ========================================
-function UploadModal ({ shipment, docType, phase, onClose,paymentRequests }) {
+function UploadModal ({ shipment, docType, phase, onClose, paymentRequests }) {
     const [file, setFile] = useState(null)
     const [notes, setNotes] = useState('')
     const [uploading, setUploading] = useState(false)
 
     const handleSubmit = () => {
-
         if (!file) {
             alert('Selecione um arquivo')
             return
@@ -1393,45 +1392,23 @@ function UploadModal ({ shipment, docType, phase, onClose,paymentRequests }) {
         const formData = new FormData()
         formData.append('file', file)
         formData.append('type', docType)
-        formData.append('phase', phase)
         formData.append('notes', notes)
 
-
-        // ✅ ROTA CORRIGIDA
-       // Se for um recibo e tiver uma solicitação de pagamento, adicionar ID
-        if (docType === 'receipt' && paymentRequest) {
-            formData.append('payment_request_id', paymentRequest.id)
-        }
-
-        // ✅ ROTA CORRIGIDA
+        // Upload do documento
         router.post(`/shipments/${shipment.id}/documents`, formData, {
             preserveScroll: true,
             forceFormData: true,
-            onSuccess: (response) => {
-                // Se for um recibo, registrar no backend
-                if (docType === 'receipt' && paymentRequest && response.document) {
-                    router.post(route('payment-requests.register-receipt'), {
-                        payment_request_id: paymentRequest.id,
-                        document_id: response.document.id
-                    }, {
-                        preserveScroll: true,
-                        onSuccess: () => {
-                            onClose()
-                            setUploading(false)
-                        }
-                    })
-                } else {
-                    onClose()
-                    setUploading(false)
-                }
+            onSuccess: () => {
+                onClose()
+                setUploading(false)
             },
             onError: errors => {
                 console.error('Erro no upload:', errors)
+                alert('Erro ao enviar documento. Verifique o console para mais detalhes.')
                 setUploading(false)
             },
             onFinish: () => setUploading(false)
         })
-
     }
 
     return (
@@ -1506,13 +1483,12 @@ function UploadModal ({ shipment, docType, phase, onClose,paymentRequests }) {
 // ====================================
 // COMPONETE: UPOAD ANEXO
 // ==================================
- function ReciboAnexo ({ shipment, docType, phase, onClose,paymentRequests }) {
+ function ReciboAnexo ({ shipment, docType, phase, onClose, paymentRequests }) {
     const [file, setFile] = useState(null)
     const [notes, setNotes] = useState('')
     const [uploading, setUploading] = useState(false)
 
     const handleSubmit = () => {
-
         if (!file) {
             alert('Selecione um arquivo')
             return
@@ -1523,45 +1499,23 @@ function UploadModal ({ shipment, docType, phase, onClose,paymentRequests }) {
         const formData = new FormData()
         formData.append('file', file)
         formData.append('type', docType)
-        formData.append('phase', phase)
         formData.append('notes', notes)
 
-
-        // ✅ ROTA CORRIGIDA
-       // Se for um recibo e tiver uma solicitação de pagamento, adicionar ID
-        if (docType === 'receipt' && paymentRequest) {
-            formData.append('payment_request_id', paymentRequest.id)
-        }
-
-        // ✅ ROTA CORRIGIDA
+        // Upload do documento
         router.post(`/shipments/${shipment.id}/documents`, formData, {
             preserveScroll: true,
             forceFormData: true,
-            onSuccess: (response) => {
-                // Se for um recibo, registrar no backend
-                if (docType === 'receipt' && paymentRequest && response.document) {
-                    router.post(route('payment-requests.register-receipt'), {
-                        payment_request_id: paymentRequest.id,
-                        document_id: response.document.id
-                    }, {
-                        preserveScroll: true,
-                        onSuccess: () => {
-                            onClose()
-                            setUploading(false)
-                        }
-                    })
-                } else {
-                    onClose()
-                    setUploading(false)
-                }
+            onSuccess: () => {
+                onClose()
+                setUploading(false)
             },
             onError: errors => {
                 console.error('Erro no upload:', errors)
+                alert('Erro ao enviar documento. Verifique o console para mais detalhes.')
                 setUploading(false)
             },
             onFinish: () => setUploading(false)
         })
-
     }
 
     return (
