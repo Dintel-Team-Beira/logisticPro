@@ -41,12 +41,15 @@ class DebitNoteItem extends Model
 
     /**
      * Calcular totais do item
+     * Não salva automaticamente - deixa o controller decidir quando salvar
      */
     public function calculateTotals()
     {
         $this->subtotal = $this->quantity * $this->unit_price;
         $this->tax_amount = $this->subtotal * ($this->tax_rate / 100);
         $this->total = $this->subtotal + $this->tax_amount;
-        $this->save();
+
+        // Não chamar save() aqui porque o debit_note_id pode não estar definido ainda
+        // O controller fará o save através de $debitNote->items()->save($item)
     }
 }
