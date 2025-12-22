@@ -89,8 +89,13 @@ export default function InvoiceShow({ invoice }) {
     };
 
     const handleDownload = () => {
-        window.location.href = `/quotations/${invoice.shipment_id}/pdf`;
-
+        // Usar a rota correta baseada no tipo de fatura
+        if (invoice.invoice_type === 'quotation') {
+            window.location.href = `/invoices/quotations/${invoice.id}/pdf`;
+        } else {
+            // Para faturas de processo/shipment
+            window.location.href = `/invoices/${invoice.id}/download`;
+        }
     };
 
     const handlePrint = () => {
