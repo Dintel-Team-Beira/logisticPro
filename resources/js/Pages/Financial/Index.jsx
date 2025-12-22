@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Head, Link } from '@inertiajs/react'
+import { Head } from '@inertiajs/react'
 import DashboardLayout from '@/Layouts/DashboardLayout'
 import {
     DollarSign,
@@ -8,19 +8,16 @@ import {
     Users,
     Ship,
     Receipt,
-    FileText,
     Calendar,
     BarChart3,
     PieChart,
     CheckCircle2,
-    Plus,
 } from 'lucide-react'
 
 export default function Index({
     costsByClient = [],
     costsByShippingLine = [],
     costsByExpenseType = [],
-    statement = [],
     summary = {},
     filters = {}
 }) {
@@ -41,7 +38,6 @@ export default function Index({
         { id: 'clients', label: 'Custos por Cliente', icon: Users },
         { id: 'shipping', label: 'Custos por Linha', icon: Ship },
         { id: 'expenses', label: 'Tipos de Despesa', icon: Receipt },
-        { id: 'statement', label: 'Extrato Geral', icon: FileText },
     ]
 
     return (
@@ -395,111 +391,6 @@ export default function Index({
                                     </div>
                                 </div>
                             )}
-                        </div>
-                    )}
-
-                    {/* Extrato Geral */}
-                    {activeTab === 'statement' && (
-                        <div className="bg-white border rounded-lg border-slate-200">
-                            <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                                <div>
-                                    <h2 className="text-lg font-bold text-slate-900">Extrato Geral</h2>
-                                    <p className="text-sm text-slate-500">Todas as transações financeiras</p>
-                                </div>
-                                <Link
-                                    href="/financial-transactions/create"
-                                    className="inline-flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
-                                >
-                                    <Plus className="w-4 h-4" />
-                                    Adicionar Transação
-                                </Link>
-                            </div>
-                            <div className="overflow-x-auto">
-                                <table className="w-full">
-                                    <thead className="bg-slate-50">
-                                        <tr>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
-                                                Data
-                                            </th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
-                                                Tipo
-                                            </th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
-                                                Descrição
-                                            </th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
-                                                Cliente
-                                            </th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">
-                                                Referência
-                                            </th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">
-                                                Débito
-                                            </th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">
-                                                Crédito
-                                            </th>
-                                        </tr>
-                                    </thead>
-                                    <tbody className="bg-white divide-y divide-slate-200">
-                                        {statement.length > 0 ? (
-                                            statement.map((transaction, idx) => (
-                                                <tr key={idx} className="hover:bg-slate-50">
-                                                    <td className="px-6 py-4 text-sm text-slate-600">
-                                                        {new Date(transaction.date).toLocaleDateString('pt-BR')}
-                                                    </td>
-                                                    <td className="px-6 py-4">
-                                                        <span className={`inline-flex items-center px-2 py-1 text-xs font-medium rounded ${
-                                                            transaction.type === 'payment_request'
-                                                                ? 'bg-red-100 text-red-700'
-                                                                : transaction.type === 'invoice'
-                                                                ? 'bg-blue-100 text-blue-700'
-                                                                : transaction.type === 'receipt'
-                                                                ? 'bg-emerald-100 text-emerald-700'
-                                                                : transaction.type === 'credit_note'
-                                                                ? 'bg-orange-100 text-orange-700'
-                                                                : transaction.type === 'debit_note'
-                                                                ? 'bg-purple-100 text-purple-700'
-                                                                : 'bg-indigo-100 text-indigo-700'
-                                                        }`}>
-                                                            {transaction.type === 'payment_request' ? 'Despesa' :
-                                                             transaction.type === 'invoice' ? 'Fatura' :
-                                                             transaction.type === 'receipt' ? 'Recibo' :
-                                                             transaction.type === 'credit_note' ? 'Nota Crédito' :
-                                                             transaction.type === 'debit_note' ? 'Nota Débito' : 'Transação Avulsa'}
-                                                        </span>
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-900">
-                                                        {transaction.description}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm text-slate-600">
-                                                        {transaction.client}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm font-medium text-blue-600">
-                                                        {transaction.reference}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm font-medium text-right text-red-600">
-                                                        {transaction.debit > 0 ? formatCurrency(transaction.debit) : '-'}
-                                                    </td>
-                                                    <td className="px-6 py-4 text-sm font-medium text-right text-emerald-600">
-                                                        {transaction.credit > 0 ? formatCurrency(transaction.credit) : '-'}
-                                                    </td>
-                                                </tr>
-                                            ))
-                                        ) : (
-                                            <tr>
-                                                <td colSpan="7" className="px-6 py-12 text-center">
-                                                    <div className="flex flex-col items-center gap-3">
-                                                        <FileText className="w-12 h-12 text-slate-300" />
-                                                        <p className="text-sm font-medium text-slate-600">Nenhuma transação encontrada</p>
-                                                        <p className="text-xs text-slate-500">Registre despesas, faturas e recibos para ver o extrato aqui</p>
-                                                    </div>
-                                                </td>
-                                            </tr>
-                                        )}
-                                    </tbody>
-                                </table>
-                            </div>
                         </div>
                     )}
                 </div>
