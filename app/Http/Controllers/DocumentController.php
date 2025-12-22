@@ -185,6 +185,24 @@ class DocumentController extends Controller
      */
     public function store(Request $request, Shipment $shipment)
     {
+        // Log detalhado para debug
+        Log::info('Upload attempt', [
+            'shipment_id' => $shipment->id,
+            'has_file' => $request->hasFile('file'),
+            'type' => $request->input('type'),
+            'php_upload_max' => ini_get('upload_max_filesize'),
+            'php_post_max' => ini_get('post_max_size'),
+        ]);
+
+        // Verificar se o arquivo chegou
+        if (!$request->hasFile('file')) {
+            Log::error('No file in request', [
+                'all_inputs' => $request->all(),
+                'files' => $request->allFiles(),
+            ]);
+            return back()->with('error', 'Nenhum arquivo foi enviado. Verifique o tamanho do arquivo e tente novamente.');
+        }
+
         $validated = $request->validate([
             'file' => 'required|file', // Sem limite de tamanho
             'type' => 'required|string|max:50',
@@ -193,6 +211,12 @@ class DocumentController extends Controller
 
         try {
             $file = $request->file('file');
+
+            Log::info('File details', [
+                'name' => $file->getClientOriginalName(),
+                'size' => $file->getSize(),
+                'mime' => $file->getMimeType(),
+            ]);
 
             // Armazenar arquivo
             $path = $file->store('documents/shipments/' . $shipment->id, 'public');

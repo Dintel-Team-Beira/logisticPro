@@ -1387,6 +1387,10 @@ function UploadModal ({ shipment, docType, phase, onClose, paymentRequests }) {
             return
         }
 
+        // Mostrar tamanho do arquivo
+        const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
+        console.log(`Enviando arquivo: ${file.name} (${fileSizeMB} MB)`)
+
         setUploading(true)
 
         const formData = new FormData()
@@ -1398,13 +1402,28 @@ function UploadModal ({ shipment, docType, phase, onClose, paymentRequests }) {
         router.post(`/shipments/${shipment.id}/documents`, formData, {
             preserveScroll: true,
             forceFormData: true,
-            onSuccess: () => {
+            onSuccess: (response) => {
+                console.log('Upload bem-sucedido!')
                 onClose()
                 setUploading(false)
             },
             onError: errors => {
                 console.error('Erro no upload:', errors)
-                alert('Erro ao enviar documento. Verifique o console para mais detalhes.')
+                let errorMessage = 'Erro ao enviar documento:\n'
+
+                if (errors.file) {
+                    errorMessage += `\n${errors.file}`
+                    if (errors.file.includes('failed to upload')) {
+                        errorMessage += '\n\nO arquivo pode ser muito grande. Por favor:'
+                        errorMessage += '\n1. Verifique se o servidor foi reiniciado'
+                        errorMessage += '\n2. Tamanho do arquivo: ' + fileSizeMB + ' MB'
+                        errorMessage += '\n3. Verifique storage/logs/laravel.log'
+                    }
+                } else {
+                    errorMessage += JSON.stringify(errors)
+                }
+
+                alert(errorMessage)
                 setUploading(false)
             },
             onFinish: () => setUploading(false)
@@ -1494,6 +1513,10 @@ function UploadModal ({ shipment, docType, phase, onClose, paymentRequests }) {
             return
         }
 
+        // Mostrar tamanho do arquivo
+        const fileSizeMB = (file.size / 1024 / 1024).toFixed(2)
+        console.log(`Enviando recibo: ${file.name} (${fileSizeMB} MB)`)
+
         setUploading(true)
 
         const formData = new FormData()
@@ -1505,13 +1528,28 @@ function UploadModal ({ shipment, docType, phase, onClose, paymentRequests }) {
         router.post(`/shipments/${shipment.id}/documents`, formData, {
             preserveScroll: true,
             forceFormData: true,
-            onSuccess: () => {
+            onSuccess: (response) => {
+                console.log('Upload de recibo bem-sucedido!')
                 onClose()
                 setUploading(false)
             },
             onError: errors => {
                 console.error('Erro no upload:', errors)
-                alert('Erro ao enviar documento. Verifique o console para mais detalhes.')
+                let errorMessage = 'Erro ao enviar recibo:\n'
+
+                if (errors.file) {
+                    errorMessage += `\n${errors.file}`
+                    if (errors.file.includes('failed to upload')) {
+                        errorMessage += '\n\nO arquivo pode ser muito grande. Por favor:'
+                        errorMessage += '\n1. Verifique se o servidor foi reiniciado'
+                        errorMessage += '\n2. Tamanho do arquivo: ' + fileSizeMB + ' MB'
+                        errorMessage += '\n3. Verifique storage/logs/laravel.log'
+                    }
+                } else {
+                    errorMessage += JSON.stringify(errors)
+                }
+
+                alert(errorMessage)
                 setUploading(false)
             },
             onFinish: () => setUploading(false)
