@@ -670,6 +670,10 @@ Route::middleware(['auth'])->group(function () {
     Route::get('/documents', [DocumentController::class, 'index'])
         ->name('documents.index');
 
+    // Ver documentos de um processo específico
+    Route::get('/documents/shipment/{shipment}', [DocumentController::class, 'showShipmentDocuments'])
+        ->name('documents.shipment');
+
     // Upload de Documentos
     Route::post('/shipments/{shipment}/documents', [DocumentController::class, 'store'])
         ->name('documents.store');

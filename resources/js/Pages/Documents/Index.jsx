@@ -73,7 +73,7 @@ export default function DocumentsIndex({ shipments, stats, filters }) {
 
     return (
       <Link
-        href={`/documents/${shipment.id}`}
+        href={`/documents/shipment/${shipment.id}`}
         className="relative overflow-hidden transition-all duration-300 bg-white border-2 border-transparent group rounded-xl hover:shadow-2xl hover:border-blue-500"
       >
         {/* Folder Icon Section */}
@@ -140,7 +140,7 @@ export default function DocumentsIndex({ shipments, stats, filters }) {
 
     return (
       <Link
-        href={`/documents/${shipment.id}`}
+        href={`/documents/shipment/${shipment.id}`}
         className="flex items-center gap-4 p-4 transition-all bg-white border rounded-lg border-slate-200 hover:shadow-md hover:border-blue-300"
       >
         {/* Folder Icon */}
