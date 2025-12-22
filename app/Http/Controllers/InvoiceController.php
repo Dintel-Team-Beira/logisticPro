@@ -980,7 +980,17 @@ class InvoiceController extends Controller
      */
     public function downloadQuotationPdf(Invoice $invoice)
     {
-        $invoice->load(['shipment.client', 'items']);
+        // Carregar relacionamentos necessários
+        // Note: shipment pode ser null para cotações standalone
+        $invoice->load([
+            'client',
+            'items',
+        ]);
+
+        // Carregar shipment.client apenas se existir shipment
+        if ($invoice->shipment_id) {
+            $invoice->load('shipment.client');
+        }
 
         $company = $this->getCompanyData();
 

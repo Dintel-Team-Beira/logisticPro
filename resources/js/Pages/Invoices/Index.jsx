@@ -534,7 +534,9 @@ export default function InvoicesIndex({ invoices, stats, filters }) {
 
                           <a
 
-                            href={`/invoices/${invoice.shipment_id}/download`}
+                            href={invoice.invoice_type === 'quotation'
+                              ? `/invoices/quotations/${invoice.id}/pdf`
+                              : `/invoices/${invoice.id}/download`}
 
                             target="_blank"
 
