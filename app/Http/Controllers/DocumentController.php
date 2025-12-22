@@ -185,9 +185,8 @@ class DocumentController extends Controller
      */
     public function store(Request $request, Shipment $shipment)
     {
-
         $validated = $request->validate([
-            'file' => 'required|file|max:10240', // 10MB
+            'file' => 'required|file', // Sem limite de tamanho
             'type' => 'required|string|max:50',
             'notes' => 'nullable|string|max:500',
         ]);
