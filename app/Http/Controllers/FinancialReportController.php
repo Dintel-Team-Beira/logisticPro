@@ -66,6 +66,8 @@ class FinancialReportController extends Controller
                     'total_received' => 0,
                     'total_credit_notes' => 0,
                     'total_debit_notes' => 0,
+                    'total_financial_income' => 0,
+                    'total_financial_expense' => 0,
                     'outstanding' => 0,
                     'profit_margin' => 0,
                     'active_processes' => 0,
@@ -331,6 +333,22 @@ class FinancialReportController extends Controller
         $totalDebitNotes = DebitNote::whereBetween('created_at', [$startDate, $endDate])
             ->sum('total');
 
+        // Transações Financeiras Avulsas (Entradas e Saídas)
+        $totalFinancialIncome = 0;
+        $totalFinancialExpense = 0;
+
+        try {
+            $totalFinancialIncome = FinancialTransaction::where('type', 'income')
+                ->whereBetween('transaction_date', [$startDate, $endDate])
+                ->sum('amount');
+
+            $totalFinancialExpense = FinancialTransaction::where('type', 'expense')
+                ->whereBetween('transaction_date', [$startDate, $endDate])
+                ->sum('amount');
+        } catch (\Exception $e) {
+            \Log::warning('Financial transactions table not available in summary: ' . $e->getMessage());
+        }
+
         $activeProcesses = Shipment::whereBetween('created_at', [$startDate, $endDate])
             ->where('status', '!=', 'completed')
             ->count();
@@ -345,6 +363,8 @@ class FinancialReportController extends Controller
             'total_received' => $totalReceived,
             'total_credit_notes' => $totalCreditNotes,
             'total_debit_notes' => $totalDebitNotes,
+            'total_financial_income' => $totalFinancialIncome,
+            'total_financial_expense' => $totalFinancialExpense,
             'outstanding' => $totalInvoiced - $totalReceived,
             'profit_margin' => $totalInvoiced > 0 ? (($totalInvoiced - $totalCosts) / $totalInvoiced) * 100 : 0,
             'active_processes' => $activeProcesses,

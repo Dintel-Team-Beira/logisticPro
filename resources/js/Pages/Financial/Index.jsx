@@ -804,10 +804,20 @@ export default function Index({
                                                 {formatCurrency(summary.total_debit_notes)}
                                             </span>
                                         </div>
+                                        <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50">
+                                            <span className="text-sm font-medium text-slate-600">Entradas Avulsas</span>
+                                            <span className="text-lg font-bold text-green-600">
+                                                {formatCurrency(summary.total_financial_income || 0)}
+                                            </span>
+                                        </div>
                                         <div className="flex items-center justify-between p-4 bg-green-100 border-2 border-green-300 rounded-lg">
                                             <span className="font-bold text-green-800">Total de Entradas</span>
                                             <span className="text-xl font-bold text-green-800">
-                                                {formatCurrency((summary.total_received || 0) + (summary.total_debit_notes || 0))}
+                                                {formatCurrency(
+                                                    (summary.total_received || 0) +
+                                                    (summary.total_debit_notes || 0) +
+                                                    (summary.total_financial_income || 0)
+                                                )}
                                             </span>
                                         </div>
                                     </div>
@@ -839,10 +849,20 @@ export default function Index({
                                                 {formatCurrency(summary.total_credit_notes)}
                                             </span>
                                         </div>
+                                        <div className="flex items-center justify-between p-4 rounded-lg bg-slate-50">
+                                            <span className="text-sm font-medium text-slate-600">Saídas Avulsas</span>
+                                            <span className="text-lg font-bold text-red-600">
+                                                {formatCurrency(summary.total_financial_expense || 0)}
+                                            </span>
+                                        </div>
                                         <div className="flex items-center justify-between p-4 bg-red-100 border-2 border-red-300 rounded-lg">
                                             <span className="font-bold text-red-800">Total de Saídas</span>
                                             <span className="text-xl font-bold text-red-800">
-                                                {formatCurrency((summary.total_costs || 0) + (summary.total_credit_notes || 0))}
+                                                {formatCurrency(
+                                                    (summary.total_costs || 0) +
+                                                    (summary.total_credit_notes || 0) +
+                                                    (summary.total_financial_expense || 0)
+                                                )}
                                             </span>
                                         </div>
                                     </div>
@@ -858,14 +878,14 @@ export default function Index({
                                     </div>
                                     <div className="text-right">
                                         <p className={`text-4xl font-bold ${
-                                            ((summary.total_received || 0) + (summary.total_debit_notes || 0)) -
-                                            ((summary.total_costs || 0) + (summary.total_credit_notes || 0)) >= 0
+                                            ((summary.total_received || 0) + (summary.total_debit_notes || 0) + (summary.total_financial_income || 0)) -
+                                            ((summary.total_costs || 0) + (summary.total_credit_notes || 0) + (summary.total_financial_expense || 0)) >= 0
                                             ? 'text-green-600'
                                             : 'text-red-600'
                                         }`}>
                                             {formatCurrency(
-                                                ((summary.total_received || 0) + (summary.total_debit_notes || 0)) -
-                                                ((summary.total_costs || 0) + (summary.total_credit_notes || 0))
+                                                ((summary.total_received || 0) + (summary.total_debit_notes || 0) + (summary.total_financial_income || 0)) -
+                                                ((summary.total_costs || 0) + (summary.total_credit_notes || 0) + (summary.total_financial_expense || 0))
                                             )}
                                         </p>
                                     </div>
