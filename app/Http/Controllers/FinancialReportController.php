@@ -278,22 +278,27 @@ class FinancialReportController extends Controller
                 ];
             });
 
-        // Financial Transactions (Avulsas)
-        $financialTransactions = FinancialTransaction::with('client')
-            ->whereBetween('transaction_date', [$startDate, $endDate])
-            ->get()
-            ->map(function ($ft) {
-                return [
-                    'date' => $ft->transaction_date,
-                    'type' => 'financial_transaction',
-                    'description' => $ft->description . ($ft->category ? ' (' . $ft->category . ')' : ''),
-                    'client' => optional($ft->client)->name ?? 'N/A',
-                    'reference' => $ft->reference ?? 'Transação Avulsa',
-                    'debit' => $ft->type === 'expense' ? $ft->amount : 0,
-                    'credit' => $ft->type === 'income' ? $ft->amount : 0,
-                    'status' => 'completed',
-                ];
-            });
+        // Financial Transactions (Avulsas) - Handle gracefully if table doesn't exist
+        try {
+            $financialTransactions = FinancialTransaction::with('client')
+                ->whereBetween('transaction_date', [$startDate, $endDate])
+                ->get()
+                ->map(function ($ft) {
+                    return [
+                        'date' => $ft->transaction_date,
+                        'type' => 'financial_transaction',
+                        'description' => $ft->description . ($ft->category ? ' (' . $ft->category . ')' : ''),
+                        'client' => optional($ft->client)->name ?? 'N/A',
+                        'reference' => $ft->reference ?? 'Transação Avulsa',
+                        'debit' => $ft->type === 'expense' ? $ft->amount : 0,
+                        'credit' => $ft->type === 'income' ? $ft->amount : 0,
+                        'status' => 'completed',
+                    ];
+                });
+        } catch (\Exception $e) {
+            \Log::warning('Financial transactions table not available: ' . $e->getMessage());
+            $financialTransactions = collect();
+        }
 
         return $transactions
             ->merge($paymentRequests)

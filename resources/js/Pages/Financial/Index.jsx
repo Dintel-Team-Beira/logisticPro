@@ -518,14 +518,14 @@ export default function Index({
                                                             <div className="p-2 rounded-lg bg-purple-50">
                                                                 <Receipt className="w-4 h-4 text-purple-600" />
                                                             </div>
-                                                            <span className="font-medium text-slate-900">{expense.type}</span>
+                                                            <span className="font-medium text-slate-900">{expense.label || expense.type}</span>
                                                         </div>
                                                     </td>
                                                     <td className="px-6 py-4 text-sm text-center text-slate-600">
                                                         {expense.count || 0}
                                                     </td>
                                                     <td className="px-6 py-4 text-sm font-medium text-right text-red-600 whitespace-nowrap">
-                                                        {formatCurrency(expense.total)}
+                                                        {formatCurrency(expense.total_amount || expense.total)}
                                                     </td>
                                                     <td className="px-6 py-4 text-sm font-medium text-right text-slate-600 whitespace-nowrap">
                                                         {expense.percentage ? expense.percentage.toFixed(1) : '0.0'}%
