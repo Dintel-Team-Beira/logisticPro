@@ -44,6 +44,13 @@ class FinancialTransactionController extends Controller
 
         FinancialTransaction::create($validated);
 
+        // Se a requisição vem da página financeira (via modal), redireciona de volta
+        if ($request->header('Referer') && str_contains($request->header('Referer'), '/financial')) {
+            return redirect()->back()
+                ->with('success', 'Transação financeira criada com sucesso!');
+        }
+
+        // Caso contrário, redireciona para a lista de transações
         return redirect()->route('financial-transactions.index')
             ->with('success', 'Transação financeira criada com sucesso!');
     }

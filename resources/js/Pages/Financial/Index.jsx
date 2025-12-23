@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Head, Link, router } from '@inertiajs/react'
+import { Head, Link, router, useForm } from '@inertiajs/react'
 import DashboardLayout from '@/Layouts/DashboardLayout'
 import {
     DollarSign,
@@ -19,6 +19,8 @@ import {
     Filter,
     ArrowUpRight,
     ArrowDownRight,
+    X,
+    Plus,
 } from 'lucide-react'
 
 export default function Index({
@@ -27,10 +29,36 @@ export default function Index({
     costsByExpenseType = [],
     statement = [],
     summary = {},
-    filters = {}
+    filters = {},
+    clients = []
 }) {
     const [activeTab, setActiveTab] = useState('summary')
     const [dateRange, setDateRange] = useState('12months')
+    const [showModal, setShowModal] = useState(false)
+
+    // Form para criar transação
+    const { data, setData, post, processing, errors, reset } = useForm({
+        transaction_date: new Date().toISOString().split('T')[0],
+        type: 'income',
+        category: '',
+        description: '',
+        amount: '',
+        client_id: '',
+        reference: '',
+        notes: '',
+    })
+
+    const handleSubmit = (e) => {
+        e.preventDefault()
+        post('/financial-transactions', {
+            preserveScroll: true,
+            onSuccess: () => {
+                reset()
+                setShowModal(false)
+                router.reload({ only: ['statement', 'summary'] })
+            },
+        })
+    }
 
     // Formatar moeda
     const formatCurrency = (value) => {
@@ -116,13 +144,13 @@ export default function Index({
                             <option value="all">Todo Período</option>
                         </select>
 
-                        <Link
-                            href="/financial-transactions/create"
+                        <button
+                            onClick={() => setShowModal(true)}
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
                         >
-                            <DollarSign className="w-4 h-4" />
+                            <Plus className="w-4 h-4" />
                             Nova Transação
-                        </Link>
+                        </button>
                     </div>
                 </div>
 
@@ -652,6 +680,196 @@ export default function Index({
                         </div>
                     )}
                 </div>
+
+                {/* Modal de Nova Transação */}
+                {showModal && (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
+                        <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl">
+                            {/* Header */}
+                            <div className="flex items-center justify-between p-6 border-b border-slate-200">
+                                <div>
+                                    <h3 className="text-xl font-bold text-slate-900">Nova Transação Financeira</h3>
+                                    <p className="mt-1 text-sm text-slate-500">Registre uma entrada ou saída avulsa</p>
+                                </div>
+                                <button
+                                    onClick={() => setShowModal(false)}
+                                    className="p-2 transition-colors rounded-lg hover:bg-slate-100"
+                                >
+                                    <X className="w-5 h-5 text-slate-500" />
+                                </button>
+                            </div>
+
+                            {/* Form */}
+                            <form onSubmit={handleSubmit} className="p-6 space-y-4">
+                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                                    {/* Data */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">
+                                            Data da Transação *
+                                        </label>
+                                        <input
+                                            type="date"
+                                            value={data.transaction_date}
+                                            onChange={e => setData('transaction_date', e.target.value)}
+                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            required
+                                        />
+                                        {errors.transaction_date && (
+                                            <p className="mt-1 text-sm text-red-600">{errors.transaction_date}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Tipo */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">
+                                            Tipo *
+                                        </label>
+                                        <select
+                                            value={data.type}
+                                            onChange={e => setData('type', e.target.value)}
+                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            required
+                                        >
+                                            <option value="income">Entrada (Receita)</option>
+                                            <option value="expense">Saída (Despesa)</option>
+                                        </select>
+                                        {errors.type && (
+                                            <p className="mt-1 text-sm text-red-600">{errors.type}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Categoria */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">
+                                            Categoria
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={data.category}
+                                            onChange={e => setData('category', e.target.value)}
+                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Ex: Aluguel, Salários, Vendas..."
+                                        />
+                                        {errors.category && (
+                                            <p className="mt-1 text-sm text-red-600">{errors.category}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Valor */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">
+                                            Valor (MZN) *
+                                        </label>
+                                        <input
+                                            type="number"
+                                            step="0.01"
+                                            value={data.amount}
+                                            onChange={e => setData('amount', e.target.value)}
+                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="0.00"
+                                            required
+                                        />
+                                        {errors.amount && (
+                                            <p className="mt-1 text-sm text-red-600">{errors.amount}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Cliente */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">
+                                            Cliente (opcional)
+                                        </label>
+                                        <select
+                                            value={data.client_id}
+                                            onChange={e => setData('client_id', e.target.value)}
+                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        >
+                                            <option value="">Selecione um cliente...</option>
+                                            {clients.map(client => (
+                                                <option key={client.id} value={client.id}>
+                                                    {client.name}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        {errors.client_id && (
+                                            <p className="mt-1 text-sm text-red-600">{errors.client_id}</p>
+                                        )}
+                                    </div>
+
+                                    {/* Referência */}
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-700">
+                                            Referência
+                                        </label>
+                                        <input
+                                            type="text"
+                                            value={data.reference}
+                                            onChange={e => setData('reference', e.target.value)}
+                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                            placeholder="Ex: Fatura #123, Nota Fiscal..."
+                                        />
+                                        {errors.reference && (
+                                            <p className="mt-1 text-sm text-red-600">{errors.reference}</p>
+                                        )}
+                                    </div>
+                                </div>
+
+                                {/* Descrição */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Descrição *
+                                    </label>
+                                    <textarea
+                                        value={data.description}
+                                        onChange={e => setData('description', e.target.value)}
+                                        rows={3}
+                                        className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="Descreva a transação..."
+                                        required
+                                    />
+                                    {errors.description && (
+                                        <p className="mt-1 text-sm text-red-600">{errors.description}</p>
+                                    )}
+                                </div>
+
+                                {/* Notas */}
+                                <div>
+                                    <label className="block text-sm font-medium text-slate-700">
+                                        Notas Adicionais
+                                    </label>
+                                    <textarea
+                                        value={data.notes}
+                                        onChange={e => setData('notes', e.target.value)}
+                                        rows={2}
+                                        className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                                        placeholder="Observações adicionais..."
+                                    />
+                                    {errors.notes && (
+                                        <p className="mt-1 text-sm text-red-600">{errors.notes}</p>
+                                    )}
+                                </div>
+
+                                {/* Actions */}
+                                <div className="flex gap-3 pt-4 border-t border-slate-200">
+                                    <button
+                                        type="button"
+                                        onClick={() => setShowModal(false)}
+                                        className="flex-1 px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
+                                    >
+                                        Cancelar
+                                    </button>
+                                    <button
+                                        type="submit"
+                                        disabled={processing}
+                                        className="flex-1 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                        {processing ? 'Salvando...' : 'Salvar Transação'}
+                                    </button>
+                                </div>
+                            </form>
+                        </div>
+                    </div>
+                )}
             </div>
         </DashboardLayout>
     )
