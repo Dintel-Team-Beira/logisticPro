@@ -9,6 +9,7 @@ import {
     Ship,
     Receipt,
     BarChart3,
+    PieChart,
     FileText,
     CheckCircle2,
     Clock,
