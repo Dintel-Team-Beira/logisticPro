@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { Head, Link, router, useForm } from '@inertiajs/react'
+import { useState, useMemo } from 'react'
+import { Head, Link } from '@inertiajs/react'
 import DashboardLayout from '@/Layouts/DashboardLayout'
 import {
     DollarSign,
@@ -8,19 +8,17 @@ import {
     Users,
     Ship,
     Receipt,
-    Calendar,
     BarChart3,
-    PieChart,
     FileText,
-    AlertCircle,
     CheckCircle2,
     Clock,
-    Download,
-    Filter,
     ArrowUpRight,
     ArrowDownRight,
-    X,
-    Plus,
+    Search,
+    Download,
+    ArrowUpDown,
+    ChevronUp,
+    ChevronDown,
 } from 'lucide-react'
 
 export default function Index({
@@ -29,36 +27,12 @@ export default function Index({
     costsByExpenseType = [],
     statement = [],
     summary = {},
-    filters = {},
-    clients = []
+    filters = {}
 }) {
     const [activeTab, setActiveTab] = useState('summary')
     const [dateRange, setDateRange] = useState('12months')
-    const [showModal, setShowModal] = useState(false)
-
-    // Form para criar transação
-    const { data, setData, post, processing, errors, reset } = useForm({
-        transaction_date: new Date().toISOString().split('T')[0],
-        type: 'income',
-        category: '',
-        description: '',
-        amount: '',
-        client_id: '',
-        reference: '',
-        notes: '',
-    })
-
-    const handleSubmit = (e) => {
-        e.preventDefault()
-        post('/financial-transactions', {
-            preserveScroll: true,
-            onSuccess: () => {
-                reset()
-                setShowModal(false)
-                router.reload({ only: ['statement', 'summary'] })
-            },
-        })
-    }
+    const [searchTerm, setSearchTerm] = useState('')
+    const [sortConfig, setSortConfig] = useState({ key: null, direction: 'asc' })
 
     // Formatar moeda
     const formatCurrency = (value) => {
@@ -97,6 +71,106 @@ export default function Index({
         )
     }
 
+    // Função de ordenação
+    const handleSort = (key) => {
+        let direction = 'asc'
+        if (sortConfig.key === key && sortConfig.direction === 'asc') {
+            direction = 'desc'
+        }
+        setSortConfig({ key, direction })
+    }
+
+    // Ícone de ordenação
+    const getSortIcon = (key) => {
+        if (sortConfig.key !== key) {
+            return <ArrowUpDown className="w-4 h-4 ml-1 text-slate-400" />
+        }
+        return sortConfig.direction === 'asc'
+            ? <ChevronUp className="w-4 h-4 ml-1 text-blue-600" />
+            : <ChevronDown className="w-4 h-4 ml-1 text-blue-600" />
+    }
+
+    // Função para exportar para CSV
+    const exportToCSV = (data, filename) => {
+        if (!data || data.length === 0) {
+            alert('Sem dados para exportar')
+            return
+        }
+
+        const headers = Object.keys(data[0])
+        const csvContent = [
+            headers.join(','),
+            ...data.map(row =>
+                headers.map(header => {
+                    const value = row[header]
+                    return typeof value === 'string' && value.includes(',')
+                        ? `"${value}"`
+                        : value
+                }).join(',')
+            )
+        ].join('\n')
+
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+        const link = document.createElement('a')
+        link.href = URL.createObjectURL(blob)
+        link.download = `${filename}_${new Date().toISOString().split('T')[0]}.csv`
+        link.click()
+    }
+
+    // Dados filtrados e ordenados do extrato
+    const filteredStatement = useMemo(() => {
+        let filtered = [...statement]
+
+        // Filtrar por busca
+        if (searchTerm) {
+            filtered = filtered.filter(item =>
+                item.description?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.client?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                item.reference?.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+        }
+
+        // Ordenar
+        if (sortConfig.key) {
+            filtered.sort((a, b) => {
+                const aVal = a[sortConfig.key]
+                const bVal = b[sortConfig.key]
+
+                if (aVal === bVal) return 0
+
+                const comparison = aVal < bVal ? -1 : 1
+                return sortConfig.direction === 'asc' ? comparison : -comparison
+            })
+        }
+
+        return filtered
+    }, [statement, searchTerm, sortConfig])
+
+    // Dados filtrados por cliente
+    const filteredClients = useMemo(() => {
+        let filtered = [...costsByClient]
+
+        if (searchTerm) {
+            filtered = filtered.filter(client =>
+                client.name?.toLowerCase().includes(searchTerm.toLowerCase())
+            )
+        }
+
+        if (sortConfig.key) {
+            filtered.sort((a, b) => {
+                const aVal = a[sortConfig.key]
+                const bVal = b[sortConfig.key]
+
+                if (aVal === bVal) return 0
+
+                const comparison = aVal < bVal ? -1 : 1
+                return sortConfig.direction === 'asc' ? comparison : -comparison
+            })
+        }
+
+        return filtered
+    }, [costsByClient, searchTerm, sortConfig])
+
     // Tabs
     const tabs = [
         { id: 'summary', label: 'Dashboard', icon: BarChart3 },
@@ -107,15 +181,15 @@ export default function Index({
         { id: 'cashflow', label: 'Fluxo de Caixa', icon: TrendingUp },
     ]
 
-    // Calcular estatísticas do extrato
-    const statementStats = {
-        total_debit: statement.reduce((sum, item) => sum + (parseFloat(item.debit) || 0), 0),
-        total_credit: statement.reduce((sum, item) => sum + (parseFloat(item.credit) || 0), 0),
-        balance: statement.reduce((sum, item) => {
+    // Calcular estatísticas do extrato (usando dados filtrados)
+    const statementStats = useMemo(() => ({
+        total_debit: filteredStatement.reduce((sum, item) => sum + (parseFloat(item.debit) || 0), 0),
+        total_credit: filteredStatement.reduce((sum, item) => sum + (parseFloat(item.credit) || 0), 0),
+        balance: filteredStatement.reduce((sum, item) => {
             return sum + (parseFloat(item.credit) || 0) - (parseFloat(item.debit) || 0)
         }, 0),
-        transactions_count: statement.length
-    }
+        transactions_count: filteredStatement.length
+    }), [filteredStatement])
 
     return (
         <DashboardLayout>
@@ -144,13 +218,13 @@ export default function Index({
                             <option value="all">Todo Período</option>
                         </select>
 
-                        <button
-                            onClick={() => setShowModal(true)}
+                        <Link
+                            href="/financial-transactions/create"
                             className="flex items-center gap-2 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
                         >
-                            <Plus className="w-4 h-4" />
+                            <DollarSign className="w-4 h-4" />
                             Nova Transação
-                        </button>
+                        </Link>
                     </div>
                 </div>
 
@@ -173,6 +247,45 @@ export default function Index({
                         ))}
                     </div>
                 </div>
+
+                {/* Barra de Ferramentas (mostrar apenas nas tabs com tabelas) */}
+                {['statement', 'clients', 'shipping', 'expenses'].includes(activeTab) && (
+                    <div className="flex flex-col gap-3 p-4 bg-white border rounded-lg sm:flex-row sm:items-center sm:justify-between border-slate-200">
+                        <div className="relative flex-1 max-w-md">
+                            <Search className="absolute w-5 h-5 transform -translate-y-1/2 left-3 top-1/2 text-slate-400" />
+                            <input
+                                type="text"
+                                placeholder="Buscar..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="w-full py-2 pl-10 pr-4 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                            />
+                        </div>
+                        <div className="flex gap-2">
+                            <button
+                                onClick={() => {
+                                    const data = activeTab === 'statement' ? filteredStatement :
+                                                 activeTab === 'clients' ? filteredClients :
+                                                 activeTab === 'shipping' ? costsByShippingLine :
+                                                 costsByExpenseType
+                                    exportToCSV(data, `financial_${activeTab}`)
+                                }}
+                                className="flex items-center gap-2 px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
+                            >
+                                <Download className="w-4 h-4" />
+                                Exportar CSV
+                            </button>
+                            {searchTerm && (
+                                <button
+                                    onClick={() => setSearchTerm('')}
+                                    className="px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700"
+                                >
+                                    Limpar Busca
+                                </button>
+                            )}
+                        </div>
+                    </div>
+                )}
 
                 {/* Tab Content */}
                 <div className="space-y-6">
@@ -328,18 +441,50 @@ export default function Index({
                                     <table className="w-full">
                                         <thead className="bg-slate-50">
                                             <tr>
-                                                <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">Data</th>
+                                                <th
+                                                    className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                    onClick={() => handleSort('date')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Data
+                                                        {getSortIcon('date')}
+                                                    </div>
+                                                </th>
                                                 <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">Tipo</th>
                                                 <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">Descrição</th>
-                                                <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">Cliente</th>
-                                                <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">Débito</th>
-                                                <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">Crédito</th>
+                                                <th
+                                                    className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                    onClick={() => handleSort('client')}
+                                                >
+                                                    <div className="flex items-center">
+                                                        Cliente
+                                                        {getSortIcon('client')}
+                                                    </div>
+                                                </th>
+                                                <th
+                                                    className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                    onClick={() => handleSort('debit')}
+                                                >
+                                                    <div className="flex items-center justify-end">
+                                                        Débito
+                                                        {getSortIcon('debit')}
+                                                    </div>
+                                                </th>
+                                                <th
+                                                    className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                    onClick={() => handleSort('credit')}
+                                                >
+                                                    <div className="flex items-center justify-end">
+                                                        Crédito
+                                                        {getSortIcon('credit')}
+                                                    </div>
+                                                </th>
                                                 <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">Referência</th>
                                             </tr>
                                         </thead>
                                         <tbody className="bg-white divide-y divide-slate-200">
-                                            {statement.length > 0 ? (
-                                                statement.map((item, index) => (
+                                            {filteredStatement.length > 0 ? (
+                                                filteredStatement.map((item, index) => (
                                                     <tr key={index} className="hover:bg-slate-50">
                                                         <td className="px-6 py-4 text-sm text-slate-600 whitespace-nowrap">
                                                             {formatDate(item.date)}
@@ -393,18 +538,66 @@ export default function Index({
                                 <table className="w-full">
                                     <thead className="bg-slate-50">
                                         <tr>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase text-slate-500">Cliente</th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-center uppercase text-slate-500">Processos</th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">Custos</th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">Faturado</th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">Pago</th>
-                                            <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">Em Aberto</th>
+                                            <th
+                                                className="px-6 py-3 text-xs font-medium tracking-wider text-left uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                onClick={() => handleSort('name')}
+                                            >
+                                                <div className="flex items-center">
+                                                    Cliente
+                                                    {getSortIcon('name')}
+                                                </div>
+                                            </th>
+                                            <th
+                                                className="px-6 py-3 text-xs font-medium tracking-wider text-center uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                onClick={() => handleSort('shipments_count')}
+                                            >
+                                                <div className="flex items-center justify-center">
+                                                    Processos
+                                                    {getSortIcon('shipments_count')}
+                                                </div>
+                                            </th>
+                                            <th
+                                                className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                onClick={() => handleSort('total_costs')}
+                                            >
+                                                <div className="flex items-center justify-end">
+                                                    Custos
+                                                    {getSortIcon('total_costs')}
+                                                </div>
+                                            </th>
+                                            <th
+                                                className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                onClick={() => handleSort('total_invoiced')}
+                                            >
+                                                <div className="flex items-center justify-end">
+                                                    Faturado
+                                                    {getSortIcon('total_invoiced')}
+                                                </div>
+                                            </th>
+                                            <th
+                                                className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                onClick={() => handleSort('total_paid')}
+                                            >
+                                                <div className="flex items-center justify-end">
+                                                    Pago
+                                                    {getSortIcon('total_paid')}
+                                                </div>
+                                            </th>
+                                            <th
+                                                className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase cursor-pointer text-slate-500 hover:text-slate-700"
+                                                onClick={() => handleSort('outstanding')}
+                                            >
+                                                <div className="flex items-center justify-end">
+                                                    Em Aberto
+                                                    {getSortIcon('outstanding')}
+                                                </div>
+                                            </th>
                                             <th className="px-6 py-3 text-xs font-medium tracking-wider text-right uppercase text-slate-500">Lucro</th>
                                         </tr>
                                     </thead>
                                     <tbody className="bg-white divide-y divide-slate-200">
-                                        {costsByClient.length > 0 ? (
-                                            costsByClient.map((client) => {
+                                        {filteredClients.length > 0 ? (
+                                            filteredClients.map((client) => {
                                                 const profit = (client.total_invoiced || 0) - (client.total_costs || 0)
                                                 return (
                                                     <tr key={client.id} className="hover:bg-slate-50">
@@ -680,196 +873,6 @@ export default function Index({
                         </div>
                     )}
                 </div>
-
-                {/* Modal de Nova Transação */}
-                {showModal && (
-                    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50">
-                        <div className="w-full max-w-2xl bg-white rounded-lg shadow-xl">
-                            {/* Header */}
-                            <div className="flex items-center justify-between p-6 border-b border-slate-200">
-                                <div>
-                                    <h3 className="text-xl font-bold text-slate-900">Nova Transação Financeira</h3>
-                                    <p className="mt-1 text-sm text-slate-500">Registre uma entrada ou saída avulsa</p>
-                                </div>
-                                <button
-                                    onClick={() => setShowModal(false)}
-                                    className="p-2 transition-colors rounded-lg hover:bg-slate-100"
-                                >
-                                    <X className="w-5 h-5 text-slate-500" />
-                                </button>
-                            </div>
-
-                            {/* Form */}
-                            <form onSubmit={handleSubmit} className="p-6 space-y-4">
-                                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                                    {/* Data */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700">
-                                            Data da Transação *
-                                        </label>
-                                        <input
-                                            type="date"
-                                            value={data.transaction_date}
-                                            onChange={e => setData('transaction_date', e.target.value)}
-                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            required
-                                        />
-                                        {errors.transaction_date && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.transaction_date}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Tipo */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700">
-                                            Tipo *
-                                        </label>
-                                        <select
-                                            value={data.type}
-                                            onChange={e => setData('type', e.target.value)}
-                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            required
-                                        >
-                                            <option value="income">Entrada (Receita)</option>
-                                            <option value="expense">Saída (Despesa)</option>
-                                        </select>
-                                        {errors.type && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.type}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Categoria */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700">
-                                            Categoria
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={data.category}
-                                            onChange={e => setData('category', e.target.value)}
-                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            placeholder="Ex: Aluguel, Salários, Vendas..."
-                                        />
-                                        {errors.category && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.category}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Valor */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700">
-                                            Valor (MZN) *
-                                        </label>
-                                        <input
-                                            type="number"
-                                            step="0.01"
-                                            value={data.amount}
-                                            onChange={e => setData('amount', e.target.value)}
-                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            placeholder="0.00"
-                                            required
-                                        />
-                                        {errors.amount && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.amount}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Cliente */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700">
-                                            Cliente (opcional)
-                                        </label>
-                                        <select
-                                            value={data.client_id}
-                                            onChange={e => setData('client_id', e.target.value)}
-                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        >
-                                            <option value="">Selecione um cliente...</option>
-                                            {clients.map(client => (
-                                                <option key={client.id} value={client.id}>
-                                                    {client.name}
-                                                </option>
-                                            ))}
-                                        </select>
-                                        {errors.client_id && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.client_id}</p>
-                                        )}
-                                    </div>
-
-                                    {/* Referência */}
-                                    <div>
-                                        <label className="block text-sm font-medium text-slate-700">
-                                            Referência
-                                        </label>
-                                        <input
-                                            type="text"
-                                            value={data.reference}
-                                            onChange={e => setData('reference', e.target.value)}
-                                            className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                            placeholder="Ex: Fatura #123, Nota Fiscal..."
-                                        />
-                                        {errors.reference && (
-                                            <p className="mt-1 text-sm text-red-600">{errors.reference}</p>
-                                        )}
-                                    </div>
-                                </div>
-
-                                {/* Descrição */}
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">
-                                        Descrição *
-                                    </label>
-                                    <textarea
-                                        value={data.description}
-                                        onChange={e => setData('description', e.target.value)}
-                                        rows={3}
-                                        className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Descreva a transação..."
-                                        required
-                                    />
-                                    {errors.description && (
-                                        <p className="mt-1 text-sm text-red-600">{errors.description}</p>
-                                    )}
-                                </div>
-
-                                {/* Notas */}
-                                <div>
-                                    <label className="block text-sm font-medium text-slate-700">
-                                        Notas Adicionais
-                                    </label>
-                                    <textarea
-                                        value={data.notes}
-                                        onChange={e => setData('notes', e.target.value)}
-                                        rows={2}
-                                        className="block w-full px-3 py-2 mt-1 border rounded-lg border-slate-300 focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                                        placeholder="Observações adicionais..."
-                                    />
-                                    {errors.notes && (
-                                        <p className="mt-1 text-sm text-red-600">{errors.notes}</p>
-                                    )}
-                                </div>
-
-                                {/* Actions */}
-                                <div className="flex gap-3 pt-4 border-t border-slate-200">
-                                    <button
-                                        type="button"
-                                        onClick={() => setShowModal(false)}
-                                        className="flex-1 px-4 py-2 text-sm font-medium transition-colors border rounded-lg text-slate-700 border-slate-300 hover:bg-slate-50"
-                                    >
-                                        Cancelar
-                                    </button>
-                                    <button
-                                        type="submit"
-                                        disabled={processing}
-                                        className="flex-1 px-4 py-2 text-sm font-medium text-white transition-colors bg-blue-600 rounded-lg hover:bg-blue-700 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                        {processing ? 'Salvando...' : 'Salvar Transação'}
-                                    </button>
-                                </div>
-                            </form>
-                        </div>
-                    </div>
-                )}
             </div>
         </DashboardLayout>
     )

@@ -39,16 +39,12 @@ class FinancialReportController extends Controller
             // Resumo Financeiro
             $summary = $this->getFinancialSummary($startDate, $endDate);
 
-            // Lista de clientes para o modal de transação
-            $clients = Client::orderBy('name')->get(['id', 'name']);
-
             return Inertia::render('Financial/Index', [
                 'costsByClient' => $costsByClient,
                 'costsByShippingLine' => $costsByShippingLine,
                 'costsByExpenseType' => $costsByExpenseType,
                 'statement' => $statement,
                 'summary' => $summary,
-                'clients' => $clients,
                 'filters' => [
                     'start_date' => $startDate,
                     'end_date' => $endDate,
@@ -75,7 +71,6 @@ class FinancialReportController extends Controller
                     'active_processes' => 0,
                     'completed_processes' => 0,
                 ],
-                'clients' => Client::orderBy('name')->get(['id', 'name']),
                 'filters' => [
                     'start_date' => now()->subMonths(12)->startOfMonth(),
                     'end_date' => now()->endOfMonth(),
